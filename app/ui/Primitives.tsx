@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { SECTION_META, type SectionKey } from "../config/sections";
 
 export type ButtonVariant = "accent" | "ghost" | "quiet" | "danger";
@@ -60,20 +60,22 @@ export function SelectField({
   onChange,
   options,
   compact = false,
+  id,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
   compact?: boolean;
+  id?: string;
 }) {
-  const id = `select-${label.toLowerCase().replaceAll(" ", "-")}`;
+  const fieldId = id ?? `select-${label.toLowerCase().replaceAll(" ", "-")}`;
 
   return (
-    <label className={`field-label ${compact ? "field-label-compact" : ""}`} htmlFor={id}>
+    <label className={`field-label ${compact ? "field-label-compact" : ""}`} htmlFor={fieldId}>
       <span>{label}</span>
       <span className="select-wrap">
-        <select id={id} value={value} onChange={(event) => onChange(event.target.value)}>
+        <select id={fieldId} value={value} onChange={(event) => onChange(event.target.value)}>
           {options.map((option) => (
             <option value={option.value} key={option.value}>
               {option.label}
@@ -233,10 +235,11 @@ export function SkeletonGrid({ count = 3 }: { count?: number }) {
 }
 
 export function FormField({ label, value, onChange, placeholder, multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; multiline?: boolean }) {
+  const id = `field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
   return (
-    <label className="form-field">
+    <label className="form-field" htmlFor={id}>
       <span>{label}</span>
-      {multiline ? <textarea value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={4} /> : <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />}
+      {multiline ? <textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={4} /> : <input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />}
     </label>
   );
 }
@@ -254,17 +257,19 @@ export function FormPanel({ children, title, description, onClose }: { children:
 }
 
 export function Dialog({ children, onClose, ariaLabel }: { children: ReactNode; onClose: () => void; ariaLabel: string }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", handleKeyDown);
+    dialogRef.current?.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
-      <div className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()}>
+       <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()}>
         {children}
       </div>
     </div>

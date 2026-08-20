@@ -1,0 +1,15 @@
+node_modules
+dist
+.next
+.wrangler
+.sites-runtime
+.git
+.github
+tests
+examples
+db
+drizzle
+*.log
+.env
+.env.*
+!.env.example

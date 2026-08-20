@@ -2,8 +2,11 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { NAV_ITEMS, SECTION_META, type SectionKey } from "../config/sections";
+import type { AuthUser } from "../lib/api/types";
 
-export function AppShell({ activeSection, onNavigate, children, style }: { activeSection: SectionKey; onNavigate: (section: SectionKey) => void; children: ReactNode; style?: CSSProperties }) {
+export function AppShell({ activeSection, onNavigate, children, style, user, onLogout, logoutPending }: { activeSection: SectionKey; onNavigate: (section: SectionKey) => void; children: ReactNode; style?: CSSProperties; user: AuthUser; onLogout: () => void; logoutPending?: boolean }) {
+  const displayName = user.username || "Mi espacio";
+  const initials = displayName.split(/\s+/).map((part: string) => part[0]).join("").slice(0, 2).toUpperCase();
   return (
     <div className="app-frame" data-section={activeSection} style={style}>
       <aside className="sidebar">
@@ -33,9 +36,9 @@ export function AppShell({ activeSection, onNavigate, children, style }: { activ
         </div>
 
         <div className="sidebar-footer">
-          <div className="avatar">TC</div>
-          <div><strong>Tomás</strong><span>Mi espacio</span></div>
-          <button type="button" className="more-button" aria-label="Más opciones">•••</button>
+           <div className="avatar">{initials}</div>
+           <div><strong>{displayName}</strong><span>Mi espacio</span></div>
+           <button type="button" className="more-button" onClick={onLogout} disabled={logoutPending} aria-label="Cerrar sesión">{logoutPending ? "..." : "Salir"}</button>
         </div>
       </aside>
 
@@ -45,8 +48,9 @@ export function AppShell({ activeSection, onNavigate, children, style }: { activ
           <div className="breadcrumb"><span>CUADERNO</span><i>/</i><strong>{SECTION_META[activeSection].label.toUpperCase()}</strong></div>
           <div className="topbar-tools">
             <span className="sync-status"><span className="sync-dot" /> TODO EN ORDEN</span>
-            <span className="topbar-date">JUE 20 AGO 2026</span>
-            <button type="button" className="search-button" aria-label="Buscar"><span>⌕</span><kbd>⌘ K</kbd></button>
+             <span className="topbar-date">{new Intl.DateTimeFormat("es-AR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }).format(new Date()).toUpperCase()}</span>
+             <button type="button" className="search-button" aria-label="Buscar"><span>⌕</span><kbd>⌘ K</kbd></button>
+             <button type="button" className="mobile-logout" onClick={onLogout} disabled={logoutPending} aria-label="Cerrar sesión">{logoutPending ? "..." : "Salir"}</button>
           </div>
         </header>
         <div className="mobile-nav" aria-label="Secciones principales">
