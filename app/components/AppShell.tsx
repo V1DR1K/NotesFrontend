@@ -53,10 +53,13 @@ export function AppShell({ activeSection, onNavigate, children, style, user, onL
              <button type="button" className="mobile-logout" onClick={onLogout} disabled={logoutPending} aria-label="Cerrar sesión">{logoutPending ? "..." : "Salir"}</button>
           </div>
         </header>
-        <div className="mobile-nav" aria-label="Secciones principales">
-          {NAV_ITEMS.map((item) => <button className={activeSection === item.key ? "mobile-nav-active" : ""} type="button" onClick={() => onNavigate(item.key)} key={item.key}>{SECTION_META[item.key].icon} {item.short}</button>)}
-        </div>
         <div className="content-wrap">{children}</div>
+        <nav className="mobile-nav" aria-label="Secciones principales">
+          {NAV_ITEMS.map((item) => <button className={activeSection === item.key ? "mobile-nav-active" : ""} type="button" onClick={() => onNavigate(item.key)} aria-current={activeSection === item.key ? "page" : undefined} key={item.key}>
+            <span className="mobile-nav-icon" aria-hidden="true">{SECTION_META[item.key].icon}</span>
+            <span>{item.short}</span>
+          </button>)}
+        </nav>
       </main>
     </div>
   );

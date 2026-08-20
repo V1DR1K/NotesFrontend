@@ -1,8 +1,82 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { SECTION_META, type SectionKey } from "../config/sections";
+
+const DialogCloseContext = createContext<(() => void) | null>(null);
+
+function useDialogHistory(onClose: () => void) {
+  const onCloseRef = useRef(onClose);
+  const dirtyRef = useRef(false);
+  const suppressPopRef = useRef(false);
+  const dialogId = useId();
+  const [discardPromptOpen, setDiscardPromptOpen] = useState(false);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    const dialogState = { ...window.history.state, notesDialogId: dialogId };
+    window.history.pushState(dialogState, "", window.location.href);
+
+    const handlePopState = () => {
+      if (suppressPopRef.current) {
+        suppressPopRef.current = false;
+        onCloseRef.current();
+        return;
+      }
+      if (dirtyRef.current) {
+        window.history.pushState(dialogState, "", window.location.href);
+        setDiscardPromptOpen(true);
+        return;
+      }
+      onCloseRef.current();
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      if (window.history.state?.notesDialogId === dialogId) window.history.back();
+    };
+  }, [dialogId]);
+
+  const closeHistoryEntry = useCallback(() => {
+    if (window.history.state?.notesDialogId !== dialogId) {
+      onCloseRef.current();
+      return;
+    }
+    suppressPopRef.current = true;
+    window.history.back();
+  }, [dialogId]);
+
+  const requestClose = useCallback(() => {
+    if (dirtyRef.current) setDiscardPromptOpen(true);
+    else closeHistoryEntry();
+  }, [closeHistoryEntry]);
+
+  return {
+    requestClose,
+    markDirty: useCallback(() => { dirtyRef.current = true; }, []),
+    discardPromptOpen,
+    cancelDiscard: useCallback(() => setDiscardPromptOpen(false), []),
+    confirmDiscard: closeHistoryEntry,
+  };
+}
+
+function DiscardChangesDialog({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: () => void }) {
+  return (
+    <div className="discard-backdrop" role="presentation" onMouseDown={(event) => { event.stopPropagation(); onCancel(); }}>
+      <div className="confirm-dialog discard-dialog" role="alertdialog" aria-modal="true" aria-labelledby="discard-title" onMouseDown={(event) => event.stopPropagation()}>
+        <span className="dialog-symbol">!</span>
+        <span className="eyebrow">CAMBIOS SIN GUARDAR</span>
+        <h2 id="discard-title">¿Salir sin guardar?</h2>
+        <p>Lo que escribiste se va a perder. ¿Seguro que querés salir?</p>
+        <div className="dialog-actions"><Button variant="quiet" onClick={onCancel}>Seguir editando</Button><Button variant="danger" onClick={onConfirm}>Salir sin guardar</Button></div>
+      </div>
+    </div>
+  );
+}
 
 export type ButtonVariant = "accent" | "ghost" | "quiet" | "danger";
 
@@ -245,11 +319,12 @@ export function FormField({ label, value, onChange, placeholder, multiline = fal
 }
 
 export function FormPanel({ children, title, description, onClose }: { children: ReactNode; title: string; description: string; onClose: () => void }) {
+  const dialogClose = useContext(DialogCloseContext);
   return (
     <section className="form-panel">
       <div className="form-panel-heading">
         <div><span className="eyebrow">NUEVO REGISTRO</span><h2>{title}</h2><p>{description}</p></div>
-        <IconButton label="Cerrar formulario" onClick={onClose}>×</IconButton>
+        <IconButton label="Cerrar formulario" onClick={dialogClose ?? onClose}>×</IconButton>
       </div>
       {children}
     </section>
@@ -258,33 +333,49 @@ export function FormPanel({ children, title, description, onClose }: { children:
 
 export function Dialog({ children, onClose, ariaLabel }: { children: ReactNode; onClose: () => void; ariaLabel: string }) {
   const dialogRef = useRef<HTMLDivElement>(null);
+  const dialog = useDialogHistory(onClose);
+  const { requestClose } = dialog;
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") requestClose();
     };
     window.addEventListener("keydown", handleKeyDown);
     dialogRef.current?.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [requestClose]);
 
   return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
-       <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()}>
-        {children}
-      </div>
+    <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
+      <DialogCloseContext.Provider value={dialog.requestClose}>
+        <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={dialog.markDirty} onChangeCapture={dialog.markDirty} onDropCapture={dialog.markDirty}>
+          {children}
+        </div>
+      </DialogCloseContext.Provider>
+      {dialog.discardPromptOpen ? <DiscardChangesDialog onCancel={dialog.cancelDiscard} onConfirm={dialog.confirmDiscard} /> : null}
     </div>
   );
 }
 
 export function ConfirmDialog({ title, description, onCancel, onConfirm }: { title: string; description: string; onCancel: () => void; onConfirm: () => void }) {
+  const dialog = useDialogHistory(onCancel);
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, []);
   return (
-    <div className="dialog-backdrop" role="presentation" onMouseDown={onCancel}>
+    <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
       <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onMouseDown={(event) => event.stopPropagation()}>
         <span className="dialog-symbol">×</span>
         <span className="eyebrow">ACCIÓN DELICADA</span>
         <h2 id="confirm-title">{title}</h2>
         <p>{description}</p>
-        <div className="dialog-actions"><Button variant="quiet" onClick={onCancel}>Cancelar</Button><Button variant="danger" onClick={onConfirm}>Eliminar</Button></div>
+        <div className="dialog-actions"><Button variant="quiet" onClick={dialog.requestClose}>Cancelar</Button><Button variant="danger" onClick={onConfirm}>Eliminar</Button></div>
       </div>
     </div>
   );

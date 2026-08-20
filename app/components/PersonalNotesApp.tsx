@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "./AppShell";
 import { LoginScreen } from "./LoginScreen";
-import { SECTION_TOKENS, tokenStyle, type SectionKey } from "../config/sections";
+import { NAV_ITEMS, SECTION_TOKENS, tokenStyle, type SectionKey } from "../config/sections";
 import { ApiError, api, getCsrf, unwrapUser } from "../lib/api/client";
 import type { ApiConfig, AuthUser } from "../lib/api/types";
 import { ArchivosModule } from "../modules/ArchivosModule";
@@ -13,12 +13,34 @@ import { MiDiaModule } from "../modules/MiDiaModule";
 import { NotasModule } from "../modules/NotasModule";
 
 export function PersonalNotesApp() {
-  const [activeSection, setActiveSection] = useState<SectionKey>("overview");
+  const [activeSection, setActiveSection] = useState<SectionKey>(() => {
+    if (typeof window === "undefined") return "overview";
+    const section = window.history.state?.notesSection;
+    return NAV_ITEMS.some((item) => item.key === section) ? section as SectionKey : "overview";
+  });
   const [user, setUser] = useState<AuthUser | null>(null);
   const [config, setConfig] = useState<ApiConfig | null>(null);
   const [gate, setGate] = useState<"loading" | "login" | "ready" | "error">("loading");
   const [gateError, setGateError] = useState("");
   const [logoutPending, setLogoutPending] = useState(false);
+
+  const navigate = (section: SectionKey) => {
+    if (section === activeSection) return;
+    window.history.pushState({ ...window.history.state, notesSection: section }, "", window.location.href);
+    setActiveSection(section);
+  };
+
+  useEffect(() => {
+    const currentSection = window.history.state?.notesSection;
+    if (!NAV_ITEMS.some((item) => item.key === currentSection)) window.history.replaceState({ ...window.history.state, notesSection: "overview" }, "", window.location.href);
+
+    const handlePopState = (event: PopStateEvent) => {
+      const section = event.state?.notesSection;
+      if (NAV_ITEMS.some((item) => item.key === section)) setActiveSection(section as SectionKey);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
 
   const loadSession = async () => {
     setGate("loading");
@@ -56,7 +78,7 @@ export function PersonalNotesApp() {
       case "finances": return <FinanzasModule config={config} />;
       case "files": return <ArchivosModule />;
       case "notes": return <NotasModule config={config} />;
-      default: return <HomeView onNavigate={setActiveSection} />;
+      default: return <HomeView onNavigate={navigate} />;
     }
   };
 
@@ -64,5 +86,5 @@ export function PersonalNotesApp() {
   if (gate === "error") return <LoginScreen initialError={gateError} onAuthenticated={handleAuthenticated} onRetry={() => void loadSession()} />;
   if (gate === "login") return <LoginScreen onAuthenticated={handleAuthenticated} />;
   if (!user || !config) return null;
-  return <AppShell activeSection={activeSection} onNavigate={setActiveSection} style={tokenStyle(activeSection)} user={user} onLogout={() => void logout()} logoutPending={logoutPending}>{renderSection()}</AppShell>;
+  return <AppShell activeSection={activeSection} onNavigate={navigate} style={tokenStyle(activeSection)} user={user} onLogout={() => void logout()} logoutPending={logoutPending}>{renderSection()}</AppShell>;
 }
