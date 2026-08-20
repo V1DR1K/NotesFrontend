@@ -2,7 +2,7 @@ name: Notes frontend
 
 on:
   push:
-    branches: [main, dev]
+    branches: [master, dev]
   pull_request:
     branches: [main]
 
@@ -23,7 +23,7 @@ jobs:
       - run: npm run build
 
   publish-and-deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
     needs: verify
     runs-on: ubuntu-latest
     permissions:
