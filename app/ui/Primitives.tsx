@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { SECTION_META, type SectionKey } from "../config/sections";
 
 const DialogCloseContext = createContext<(() => void) | null>(null);
+const DialogDirtyContext = createContext<(() => void) | null>(null);
 
 function useDialogHistory(onClose: () => void) {
   const onCloseRef = useRef(onClose);
@@ -190,6 +191,26 @@ export function FilterPills({
   );
 }
 
+export function MultiSelectChips({
+  selected,
+  options,
+  onChange,
+  ariaLabel,
+}: {
+  selected: string[];
+  options: Array<{ value: string; label: string }>;
+  onChange: (values: string[]) => void;
+  ariaLabel: string;
+}) {
+  const markDialogDirty = useContext(DialogDirtyContext);
+  const toggle = (value: string) => onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value]);
+  return (
+    <div className="choice-chips" role="group" aria-label={ariaLabel}>
+      {options.map((option) => <button className={`choice-chip ${selected.includes(option.value) ? "choice-chip-active" : ""}`} type="button" aria-pressed={selected.includes(option.value)} onClick={() => { markDialogDirty?.(); toggle(option.value); }} key={option.value}>{option.label}</button>)}
+    </div>
+  );
+}
+
 export function Pagination({
   page,
   pages,
@@ -352,9 +373,11 @@ export function Dialog({ children, onClose, ariaLabel }: { children: ReactNode; 
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
       <DialogCloseContext.Provider value={dialog.requestClose}>
+        <DialogDirtyContext.Provider value={dialog.markDirty}>
         <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={dialog.markDirty} onChangeCapture={dialog.markDirty} onDropCapture={dialog.markDirty}>
           {children}
         </div>
+        </DialogDirtyContext.Provider>
       </DialogCloseContext.Provider>
       {dialog.discardPromptOpen ? <DiscardChangesDialog onCancel={dialog.cancelDiscard} onConfirm={dialog.confirmDiscard} /> : null}
     </div>

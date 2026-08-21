@@ -18,6 +18,7 @@ export type ApiOption = {
 
 export type ApiConfig = {
   dayStatuses: ApiOption[];
+  dayFeelings: ApiOption[];
   financeConcepts: ApiOption[];
   financeCategories: ApiOption[];
   noteCategories: ApiOption[];

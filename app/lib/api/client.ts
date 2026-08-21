@@ -208,10 +208,10 @@ export const api = {
   logout: () => request<void>("/auth/logout", { method: "POST" }).then(() => { csrfToken = null; }),
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
   config: async (): Promise<ApiConfig> => {
-    const [dayStatuses, financeConcepts, financeCategories, noteCategories] = await Promise.all([
-      request<unknown>("/config/day-statuses"), request<unknown>("/config/finance-concepts"), request<unknown>("/config/finance-categories"), request<unknown>("/config/note-categories"),
+    const [dayStatuses, dayFeelings, financeConcepts, financeCategories, noteCategories] = await Promise.all([
+      request<unknown>("/config/day-statuses"), request<unknown>("/config/day-feelings"), request<unknown>("/config/finance-concepts"), request<unknown>("/config/finance-categories"), request<unknown>("/config/note-categories"),
     ]);
-    return { dayStatuses: optionList(dayStatuses), financeConcepts: optionList(financeConcepts), financeCategories: optionList(financeCategories), noteCategories: optionList(noteCategories) };
+    return { dayStatuses: optionList(dayStatuses), dayFeelings: optionList(dayFeelings), financeConcepts: optionList(financeConcepts), financeCategories: optionList(financeCategories), noteCategories: optionList(noteCategories) };
   },
   dashboard: () => request<unknown>("/dashboard").then(normalizeDashboard),
   days: (query: URLSearchParams) => request<unknown>(`/day-entries?${query}`).then((payload) => normalizePageItems(payload, normalizeDay)),
