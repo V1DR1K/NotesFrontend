@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "./AppShell";
 import { LoginScreen } from "./LoginScreen";
-import { NAV_ITEMS, SECTION_TOKENS, tokenStyle, type SectionKey } from "../config/sections";
+import { isSectionKey, SECTION_TOKENS, tokenStyle, type SectionKey } from "../config/sections";
 import { ApiError, api, getCsrf, unwrapUser } from "../lib/api/client";
 import type { ApiConfig, AuthUser } from "../lib/api/types";
 import { ArchivosModule } from "../modules/ArchivosModule";
@@ -11,18 +11,21 @@ import { FinanzasModule } from "../modules/FinanzasModule";
 import { HomeView } from "../modules/HomeView";
 import { MiDiaModule } from "../modules/MiDiaModule";
 import { NotasModule } from "../modules/NotasModule";
+import { SettingsModule } from "../modules/SettingsModule";
+import { SearchPalette } from "./SearchPalette";
 
 export function PersonalNotesApp() {
   const [activeSection, setActiveSection] = useState<SectionKey>(() => {
     if (typeof window === "undefined") return "overview";
     const section = window.history.state?.notesSection;
-    return NAV_ITEMS.some((item) => item.key === section) ? section as SectionKey : "overview";
+    return isSectionKey(section) ? section : "overview";
   });
   const [user, setUser] = useState<AuthUser | null>(null);
   const [config, setConfig] = useState<ApiConfig | null>(null);
   const [gate, setGate] = useState<"loading" | "login" | "ready" | "error">("loading");
   const [gateError, setGateError] = useState("");
   const [logoutPending, setLogoutPending] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const navigate = (section: SectionKey) => {
     if (section === activeSection) return;
@@ -32,11 +35,11 @@ export function PersonalNotesApp() {
 
   useEffect(() => {
     const currentSection = window.history.state?.notesSection;
-    if (!NAV_ITEMS.some((item) => item.key === currentSection)) window.history.replaceState({ ...window.history.state, notesSection: "overview" }, "", window.location.href);
+    if (!isSectionKey(currentSection)) window.history.replaceState({ ...window.history.state, notesSection: "overview" }, "", window.location.href);
 
     const handlePopState = (event: PopStateEvent) => {
       const section = event.state?.notesSection;
-      if (NAV_ITEMS.some((item) => item.key === section)) setActiveSection(section as SectionKey);
+      if (isSectionKey(section)) setActiveSection(section);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -71,6 +74,14 @@ export function PersonalNotesApp() {
     document.documentElement.style.setProperty("--page-shadow", tokens.shadow);
   }, [activeSection]);
 
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") { event.preventDefault(); setSearchOpen(true); }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+
   const renderSection = () => {
     if (!config) return null;
     switch (activeSection) {
@@ -78,6 +89,7 @@ export function PersonalNotesApp() {
       case "finances": return <FinanzasModule config={config} />;
       case "files": return <ArchivosModule />;
       case "notes": return <NotasModule config={config} />;
+      case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
       default: return <HomeView onNavigate={navigate} />;
     }
   };
@@ -86,5 +98,5 @@ export function PersonalNotesApp() {
   if (gate === "error") return <LoginScreen initialError={gateError} onAuthenticated={handleAuthenticated} onRetry={() => void loadSession()} />;
   if (gate === "login") return <LoginScreen onAuthenticated={handleAuthenticated} />;
   if (!user || !config) return null;
-  return <AppShell activeSection={activeSection} onNavigate={navigate} style={tokenStyle(activeSection)} user={user} onLogout={() => void logout()} logoutPending={logoutPending}>{renderSection()}</AppShell>;
+  return <AppShell activeSection={activeSection} onNavigate={navigate} onOpenSearch={() => setSearchOpen(true)} onOpenSettings={() => navigate("settings")} style={tokenStyle(activeSection)} user={user} onLogout={() => void logout()} logoutPending={logoutPending}>{renderSection()}{searchOpen ? <SearchPalette onClose={() => setSearchOpen(false)} onNavigate={navigate} /> : null}</AppShell>;
 }

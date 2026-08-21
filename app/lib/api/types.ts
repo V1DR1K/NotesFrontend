@@ -14,6 +14,8 @@ export type ApiOption = {
   shortLabel?: string;
   emoji?: string;
   icon?: string;
+  sortOrder?: number;
+  active?: boolean;
 };
 
 export type ApiConfig = {
@@ -23,6 +25,9 @@ export type ApiConfig = {
   financeCategories: ApiOption[];
   noteCategories: ApiOption[];
 };
+
+export type ConfigKind = "day-statuses" | "day-feelings" | "finance-concepts" | "finance-categories" | "note-categories";
+export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
 
 export type AuthUser = {
   id: string;

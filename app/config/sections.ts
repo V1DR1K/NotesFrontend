@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-export type SectionKey = "overview" | "day" | "finances" | "files" | "notes";
+export type SectionKey = "overview" | "day" | "finances" | "files" | "notes" | "settings";
 
 export type SectionTokens = {
   accent: string;
@@ -46,6 +46,13 @@ export const SECTION_TOKENS: Record<SectionKey, SectionTokens> = {
     shadow: "rgba(232, 169, 211, 0.22)",
     surface: "rgba(232, 169, 211, 0.12)",
     soft: "#f4d8e9",
+  },
+  settings: {
+    accent: "#b6c6c8",
+    contrast: "#142022",
+    shadow: "rgba(182, 198, 200, 0.2)",
+    surface: "rgba(182, 198, 200, 0.1)",
+    soft: "#dce7e8",
   },
 };
 
@@ -97,6 +104,14 @@ export const SECTION_META: Record<SectionKey, {
     icon: "✎",
     action: "Escribir nota",
   },
+  settings: {
+    label: "Configuración",
+    eyebrow: "ORDEN Y PREFERENCIAS / 06",
+    title: "Hacé tuyo el sistema.",
+    description: "Administrá las opciones que aparecen en tus registros y filtros cotidianos.",
+    icon: "⚙",
+    action: "Agregar una opción",
+  },
 };
 
 export const NAV_ITEMS: Array<{ key: SectionKey; short: string }> = [
@@ -116,4 +131,8 @@ export function tokenStyle(section: SectionKey): CSSProperties {
     "--section-surface": tokens.surface,
     "--section-soft": tokens.soft,
   } as CSSProperties;
+}
+
+export function isSectionKey(value: unknown): value is SectionKey {
+  return typeof value === "string" && value in SECTION_META;
 }

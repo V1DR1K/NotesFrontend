@@ -12,6 +12,8 @@ import type {
   LoginRequest,
   Note,
   PageResponse,
+  ConfigKind,
+  SearchResult,
 } from "./types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
@@ -92,6 +94,8 @@ function optionList(value: unknown): ApiOption[] {
       shortLabel: record.shortLabel ? String(record.shortLabel) : undefined,
       emoji: record.emoji ? String(record.emoji) : undefined,
       icon: record.icon ? String(record.icon) : undefined,
+      sortOrder: Number(record.sortOrder ?? 0),
+      active: record.active !== false,
     };
   }).filter((item) => item.code);
 }
@@ -99,7 +103,7 @@ function optionList(value: unknown): ApiOption[] {
 function option(value: unknown): ApiOption | undefined {
   const record = asRecord(value);
   const code = String(record.code ?? record.value ?? "");
-  return code ? { code, label: String(record.label ?? code), shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined } : undefined;
+  return code ? { code, label: String(record.label ?? code), shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined, sortOrder: Number(record.sortOrder ?? 0), active: record.active !== false } : undefined;
 }
 
 function normalizeDay(value: unknown): DayEntry {
@@ -213,6 +217,13 @@ export const api = {
     ]);
     return { dayStatuses: optionList(dayStatuses), dayFeelings: optionList(dayFeelings), financeConcepts: optionList(financeConcepts), financeCategories: optionList(financeCategories), noteCategories: optionList(noteCategories) };
   },
+  createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean }) => {
+    const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
+    return post<unknown>(`/config/${kind}`, payload);
+  },
+  updateConfigOption: (kind: ConfigKind, code: string, body: { label?: string; emoji?: string; sortOrder?: number; active?: boolean }) => patch<unknown>(`/config/${kind}/${encodeURIComponent(code)}`, body),
+  deleteConfigOption: (kind: ConfigKind, code: string) => del(`/config/${kind}/${encodeURIComponent(code)}`),
+  search: (query: string) => get<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
   dashboard: () => request<unknown>("/dashboard").then(normalizeDashboard),
   days: (query: URLSearchParams) => request<unknown>(`/day-entries?${query}`).then((payload) => normalizePageItems(payload, normalizeDay)),
   createDay: (body: { date: string; statusCode: string; feeling: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),

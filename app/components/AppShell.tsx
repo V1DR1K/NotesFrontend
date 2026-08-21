@@ -4,7 +4,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { NAV_ITEMS, SECTION_META, type SectionKey } from "../config/sections";
 import type { AuthUser } from "../lib/api/types";
 
-export function AppShell({ activeSection, onNavigate, children, style, user, onLogout, logoutPending }: { activeSection: SectionKey; onNavigate: (section: SectionKey) => void; children: ReactNode; style?: CSSProperties; user: AuthUser; onLogout: () => void; logoutPending?: boolean }) {
+export function AppShell({ activeSection, onNavigate, onOpenSearch, onOpenSettings, children, style, user, onLogout, logoutPending }: { activeSection: SectionKey; onNavigate: (section: SectionKey) => void; onOpenSearch: () => void; onOpenSettings: () => void; children: ReactNode; style?: CSSProperties; user: AuthUser; onLogout: () => void; logoutPending?: boolean }) {
   const displayName = user.username || "Mi espacio";
   const initials = displayName.split(/\s+/).map((part: string) => part[0]).join("").slice(0, 2).toUpperCase();
   return (
@@ -49,7 +49,8 @@ export function AppShell({ activeSection, onNavigate, children, style, user, onL
           <div className="topbar-tools">
             <span className="sync-status"><span className="sync-dot" /> TODO EN ORDEN</span>
              <span className="topbar-date">{new Intl.DateTimeFormat("es-AR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }).format(new Date()).toUpperCase()}</span>
-             <button type="button" className="search-button" aria-label="Buscar"><span>⌕</span><kbd>⌘ K</kbd></button>
+             <button type="button" className="settings-button" onClick={onOpenSettings} aria-label="Abrir configuración">⚙</button>
+             <button type="button" className="search-button" onClick={onOpenSearch} aria-label="Buscar"><span>⌕</span><kbd>⌘ K</kbd></button>
              <button type="button" className="mobile-logout" onClick={onLogout} disabled={logoutPending} aria-label="Cerrar sesión">{logoutPending ? "..." : "Salir"}</button>
           </div>
         </header>

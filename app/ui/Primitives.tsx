@@ -352,7 +352,7 @@ export function FormPanel({ children, title, description, onClose }: { children:
   );
 }
 
-export function Dialog({ children, onClose, ariaLabel }: { children: ReactNode; onClose: () => void; ariaLabel: string }) {
+export function Dialog({ children, onClose, ariaLabel, trackChanges = true }: { children: ReactNode; onClose: () => void; ariaLabel: string; trackChanges?: boolean }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialog = useDialogHistory(onClose);
   const { requestClose } = dialog;
@@ -373,8 +373,8 @@ export function Dialog({ children, onClose, ariaLabel }: { children: ReactNode; 
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
       <DialogCloseContext.Provider value={dialog.requestClose}>
-        <DialogDirtyContext.Provider value={dialog.markDirty}>
-        <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={dialog.markDirty} onChangeCapture={dialog.markDirty} onDropCapture={dialog.markDirty}>
+        <DialogDirtyContext.Provider value={trackChanges ? dialog.markDirty : null}>
+        <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={trackChanges ? dialog.markDirty : undefined} onChangeCapture={trackChanges ? dialog.markDirty : undefined} onDropCapture={trackChanges ? dialog.markDirty : undefined}>
           {children}
         </div>
         </DialogDirtyContext.Provider>

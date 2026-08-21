@@ -25,12 +25,13 @@ function feelingLabel(value: string, options: Array<{ code: string; label: strin
 export function DayView({ config }: { config: ApiConfig }) {
   const [filter, setFilter] = useState("all");
   const [feelings, setFeelings] = useState<string[]>([]);
+  const [date, setDate] = useState(todayIso());
   const [page, setPage] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [draft, setDraft] = useState({ date: todayIso(), statusCode: config.dayStatuses[0]?.code ?? "", feelings: [] as string[], description: "" });
-  const data = useDayData(page, filter, feelings);
+  const data = useDayData(page, filter, feelings, date);
   const mutation = useMutationError();
   const statusLabel = (code: string) => config.dayStatuses.find((item) => item.code === code)?.label ?? code;
   const statusEmoji = (code: string) => config.dayStatuses.find((item) => item.code === code)?.emoji ?? "◌";
@@ -62,6 +63,8 @@ export function DayView({ config }: { config: ApiConfig }) {
       <div className="form-actions"><Button variant="quiet" onClick={() => setComposerOpen(false)}>Cancelar</Button><Button onClick={() => void save()} disabled={!draft.date || !draft.statusCode || !draft.feelings.length || !draft.description.trim() || mutation.error?.status === -1}>{editingId ? "Guardar cambios" : "Guardar registro"} <span aria-hidden="true">↗</span></Button></div>
     </FormPanel></Dialog> : null}
      <ModuleToolbar resultLabel={`${data.data?.totalElements ?? 0} registros`}>
+       <label className="toolbar-date-field" htmlFor="day-filter-date"><span>Fecha exacta</span><input id="day-filter-date" type="date" value={date} onChange={(event) => { setDate(event.target.value); setPage(0); }} /></label>
+       {date ? <Button className="filter-clear" variant="quiet" onClick={() => { setDate(""); setPage(0); }}>Ver historial</Button> : null}
        <FilterPills active={filter} onChange={(value) => { setFilter(value); setPage(0); }} options={[{ value: "all", label: "Todos" }, ...config.dayStatuses.map((option) => ({ value: option.code, label: option.label }))]} />
        <MultiSelectChips selected={feelings} options={config.dayFeelings.map(({ code, label }) => ({ value: code, label }))} onChange={(next) => { setFeelings(next); setPage(0); }} ariaLabel="Filtrar por sensación" />
        <SelectField label="Ordenar" compact value="recent" onChange={() => undefined} options={[{ value: "recent", label: "Más recientes" }]} />
