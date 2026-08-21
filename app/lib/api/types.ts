@@ -21,12 +21,11 @@ export type ApiOption = {
 export type ApiConfig = {
   dayStatuses: ApiOption[];
   dayFeelings: ApiOption[];
-  financeConcepts: ApiOption[];
-  financeCategories: ApiOption[];
+  financeItems: ApiOption[];
   noteCategories: ApiOption[];
 };
 
-export type ConfigKind = "day-statuses" | "day-feelings" | "finance-concepts" | "finance-categories" | "note-categories";
+export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories";
 export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
 
 export type AuthUser = {
@@ -61,10 +60,8 @@ export type FinanceMovement = {
   id: string;
   date: string;
   bucket: FinanceBucket | string;
-  conceptCode: string;
-  categoryCode: string;
-  concept?: ApiOption;
-  category?: ApiOption;
+  itemCode: string;
+  item?: ApiOption;
   amountArs?: number | string;
   amount?: FinanceAmount;
   note?: string;

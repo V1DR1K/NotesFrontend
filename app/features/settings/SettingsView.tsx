@@ -5,15 +5,14 @@ import type { ApiConfig, ApiOption, ConfigKind } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { Button, ConfirmDialog, Dialog, FormField, FormPanel, IconButton, SectionHero } from "../../ui/Primitives";
 
-type ConfigKey = "dayStatuses" | "dayFeelings" | "financeConcepts" | "financeCategories" | "noteCategories";
+type ConfigKey = "dayStatuses" | "dayFeelings" | "financeItems" | "noteCategories";
 type ConfigGroup = { kind: ConfigKind; key: ConfigKey; label: string; description: string; emoji: boolean };
 type Draft = { code: string; label: string; emoji: string; sortOrder: string; active: boolean };
 
 const GROUPS: ConfigGroup[] = [
   { kind: "day-statuses", key: "dayStatuses", label: "Estados del día", description: "Los colores que describen cómo estuvo tu día.", emoji: true },
   { kind: "day-feelings", key: "dayFeelings", label: "Sensaciones", description: "Las opciones que aparecen al registrar cómo te sentiste.", emoji: false },
-  { kind: "finance-concepts", key: "financeConcepts", label: "Conceptos financieros", description: "Los motivos que explican cada movimiento.", emoji: false },
-  { kind: "finance-categories", key: "financeCategories", label: "Categorías financieras", description: "La clasificación que organiza tus movimientos.", emoji: false },
+  { kind: "finance-items", key: "financeItems", label: "Clasificaciones financieras", description: "Las opciones disponibles para registrar cada movimiento.", emoji: false },
   { kind: "note-categories", key: "noteCategories", label: "Categorías de notas", description: "Las etiquetas disponibles para tus ideas.", emoji: false },
 ];
 

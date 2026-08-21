@@ -120,9 +120,8 @@ function normalizeNote(value: unknown): Note {
 
 function normalizeMovement(value: unknown): FinanceMovement {
   const record = asRecord(value);
-  const concept = option(record.concept);
-  const category = option(record.category);
-  return { ...record as unknown as FinanceMovement, id: String(record.id ?? ""), date: String(record.date ?? ""), bucket: String(record.bucket ?? ""), conceptCode: concept?.code ?? String(record.conceptCode ?? ""), categoryCode: category?.code ?? String(record.categoryCode ?? ""), concept, category, amount: record.amount as FinanceMovement["amount"] };
+  const item = option(record.item);
+  return { ...record as unknown as FinanceMovement, id: String(record.id ?? ""), date: String(record.date ?? ""), bucket: String(record.bucket ?? ""), itemCode: item?.code ?? String(record.itemCode ?? ""), item, amount: record.amount as FinanceMovement["amount"] };
 }
 
 function normalizeSummary(value: unknown): FinanceSummary {
@@ -212,10 +211,10 @@ export const api = {
   logout: () => request<void>("/auth/logout", { method: "POST" }).then(() => { csrfToken = null; }),
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
   config: async (): Promise<ApiConfig> => {
-    const [dayStatuses, dayFeelings, financeConcepts, financeCategories, noteCategories] = await Promise.all([
-      request<unknown>("/config/day-statuses"), request<unknown>("/config/day-feelings"), request<unknown>("/config/finance-concepts"), request<unknown>("/config/finance-categories"), request<unknown>("/config/note-categories"),
+    const [dayStatuses, dayFeelings, financeItems, noteCategories] = await Promise.all([
+      request<unknown>("/config/day-statuses"), request<unknown>("/config/day-feelings"), request<unknown>("/config/finance-items"), request<unknown>("/config/note-categories"),
     ]);
-    return { dayStatuses: optionList(dayStatuses), dayFeelings: optionList(dayFeelings), financeConcepts: optionList(financeConcepts), financeCategories: optionList(financeCategories), noteCategories: optionList(noteCategories) };
+    return { dayStatuses: optionList(dayStatuses), dayFeelings: optionList(dayFeelings), financeItems: optionList(financeItems), noteCategories: optionList(noteCategories) };
   },
   createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
@@ -234,8 +233,8 @@ export const api = {
   updateNote: (id: string, body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>(`/notes/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeNote),
   deleteNote: (id: string) => request<void>(`/notes/${encodeURIComponent(id)}`, { method: "DELETE" }),
   movements: (query: URLSearchParams) => request<unknown>(`/finance/movements?${query}`).then((payload) => normalizePageItems(payload, normalizeMovement)),
-  createMovement: (body: { date: string; bucket: string; conceptCode: string; categoryCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
-  updateMovement: (id: string, body: { date: string; bucket: string; conceptCode: string; categoryCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
+  createMovement: (body: { date: string; bucket: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
+  updateMovement: (id: string, body: { date: string; bucket: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
   deleteMovement: (id: string) => request<void>(`/finance/movements/${encodeURIComponent(id)}`, { method: "DELETE" }),
   financeSummary: (query: URLSearchParams) => request<FinanceSummary>(`/finance/summary?${query}`),
   exchangeRate: () => request<ExchangeRate>("/finance/exchange-rate/usd"),
