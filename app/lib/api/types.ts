@@ -32,6 +32,7 @@ export type AuthUser = {
   id: string;
   username: string;
   role: string;
+  mustChangePassword: boolean;
 };
 
 export type DayStatus = { code: string; label?: string; shortLabel?: string; emoji?: string };

@@ -181,7 +181,16 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
     await getCsrf(true);
     return request<T>(path, init, true);
   }
-  if (!response.ok) throw problemError(payload, response.status);
+  if (response.status === 401 && !retried && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) {
+    try {
+      await request<unknown>("/auth/refresh", { method: "POST" }, true);
+      return request<T>(path, init, true);
+    } catch { /* The original 401 is the useful result when refresh is unavailable. */ }
+  }
+  if (!response.ok) {
+    if (response.status === 401 && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) window.dispatchEvent(new Event("notes:session-expired"));
+    throw problemError(payload, response.status);
+  }
   return payload as T;
 }
 
@@ -210,6 +219,7 @@ export const api = {
   login: (credentials: LoginRequest) => request<AuthUser | { user: AuthUser }>("/auth/login", { method: "POST", body: credentials }),
   logout: () => request<void>("/auth/logout", { method: "POST" }).then(() => { csrfToken = null; }),
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
+  changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "POST", body }),
   config: async (): Promise<ApiConfig> => {
     const [dayStatuses, dayFeelings, financeItems, noteCategories] = await Promise.all([
       request<unknown>("/config/day-statuses"), request<unknown>("/config/day-feelings"), request<unknown>("/config/finance-items"), request<unknown>("/config/note-categories"),

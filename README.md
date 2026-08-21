@@ -20,11 +20,13 @@ No se guardan tokens en `localStorage`: las sesiones viajan con
 
 ## Backend
 
-El cliente cubre autenticación, configuración, dashboard, días, notas,
+El cliente cubre autenticación central, configuración, dashboard, días, notas,
 movimientos financieros, carpetas y archivos multipart. Todas las mutaciones
 obtienen `GET /api/auth/csrf` y envían `X-XSRF-TOKEN`; un `403` renueva el token
 una vez y reintenta la operación. Los errores ProblemDetail se convierten en
-mensajes aptos para la interfaz.
+mensajes aptos para la interfaz. El access JWT y el refresh token permanecen en
+cookies HttpOnly; el cliente renueva el access token por `/api/auth/refresh` y
+muestra el cambio de contraseña requerido por Auth central.
 
 La paginación interna respeta las páginas 0-based del backend y solo muestra
 controles 1-based al usuario.

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "./AppShell";
 import { LoginScreen } from "./LoginScreen";
+import { ChangePasswordScreen } from "./ChangePasswordScreen";
 import { isSectionKey, SECTION_TOKENS, tokenStyle, type SectionKey } from "../config/sections";
 import { ApiError, api, getCsrf, unwrapUser } from "../lib/api/client";
 import type { ApiConfig, AuthUser } from "../lib/api/types";
@@ -22,7 +23,7 @@ export function PersonalNotesApp() {
   });
   const [user, setUser] = useState<AuthUser | null>(null);
   const [config, setConfig] = useState<ApiConfig | null>(null);
-  const [gate, setGate] = useState<"loading" | "login" | "ready" | "error">("loading");
+  const [gate, setGate] = useState<"loading" | "login" | "password" | "ready" | "error">("loading");
   const [gateError, setGateError] = useState("");
   const [logoutPending, setLogoutPending] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -52,15 +53,21 @@ export function PersonalNotesApp() {
       await getCsrf();
       const session = unwrapUser(await api.me());
       setUser(session);
-      setConfig(await api.config());
-      setGate("ready");
+      if (session.mustChangePassword) { setConfig(null); setGate("password"); }
+      else { setConfig(await api.config()); setGate("ready"); }
     } catch (reason) {
-      if (reason instanceof ApiError && (reason.status === 401 || reason.status === 403)) setGate("login");
+      if (reason instanceof ApiError && reason.status === 401) setGate("login");
       else { setGateError(reason instanceof ApiError ? reason.message : "No se pudo conectar con Cuaderno."); setGate("error"); }
     }
   };
 
   useEffect(() => { queueMicrotask(() => void loadSession()); }, []);
+
+  useEffect(() => {
+    const expireSession = () => { setUser(null); setConfig(null); setGate("login"); };
+    window.addEventListener("notes:session-expired", expireSession);
+    return () => window.removeEventListener("notes:session-expired", expireSession);
+  }, []);
 
   const handleAuthenticated = async () => { await loadSession(); };
   const logout = async () => {
@@ -97,6 +104,7 @@ export function PersonalNotesApp() {
   if (gate === "loading") return <main className="app-loading" aria-live="polite"><span className="login-mark" aria-hidden="true">✦</span><p>Abriendo tu cuaderno...</p><span className="visually-hidden">Ordená el ruido.</span></main>;
   if (gate === "error") return <LoginScreen initialError={gateError} onAuthenticated={handleAuthenticated} onRetry={() => void loadSession()} />;
   if (gate === "login") return <LoginScreen onAuthenticated={handleAuthenticated} />;
+  if (gate === "password") return <ChangePasswordScreen onChanged={() => void loadSession()} />;
   if (!user || !config) return null;
   return <AppShell activeSection={activeSection} onNavigate={navigate} onOpenSearch={() => setSearchOpen(true)} onOpenSettings={() => navigate("settings")} style={tokenStyle(activeSection)} user={user} onLogout={() => void logout()} logoutPending={logoutPending}>{renderSection()}{searchOpen ? <SearchPalette onClose={() => setSearchOpen(false)} onNavigate={navigate} /> : null}</AppShell>;
 }
