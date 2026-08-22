@@ -72,7 +72,8 @@ export function PersonalNotesApp() {
   const handleAuthenticated = async () => { await loadSession(); };
   const logout = async () => {
     setLogoutPending(true);
-    try { await api.logout(); } finally { setLogoutPending(false); setUser(null); setConfig(null); setGate("login"); }
+    try { await api.logout(); } catch { /* Local sign-out still completes if central revocation fails. */ }
+    finally { setLogoutPending(false); setUser(null); setConfig(null); setGate("login"); }
   };
 
   useEffect(() => {

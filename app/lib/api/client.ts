@@ -218,7 +218,10 @@ export async function getCsrf(force = false): Promise<string | null> {
 
 export const api = {
   login: (credentials: LoginRequest) => request<AuthUser | { user: AuthUser }>("/auth/login", { method: "POST", body: credentials }),
-  logout: () => request<void>("/auth/logout", { method: "POST" }).then(() => { csrfToken = null; }),
+  logout: async () => {
+    try { await request<void>("/auth/logout", { method: "POST" }); }
+    finally { csrfToken = null; }
+  },
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "POST", body }),
   config: async (): Promise<ApiConfig> => {
