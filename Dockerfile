@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS dependencies
+FROM node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 AS dependencies
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -7,15 +7,15 @@ FROM dependencies AS builder
 COPY . .
 RUN npm run lint && npm run build
 
-FROM node:24-bookworm-slim AS runner
+FROM node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03 AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOST=0.0.0.0
 RUN addgroup --system app && adduser --system --ingroup app app
-COPY --from=dependencies --chown=app:app /app/node_modules ./node_modules
+COPY --from=builder --chown=app:app /app/package.json /app/package-lock.json ./
+RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 COPY --from=builder --chown=app:app /app/dist ./dist
-COPY --from=builder --chown=app:app /app/package.json ./package.json
 COPY --from=builder --chown=app:app /app/vite.config.ts ./vite.config.ts
 USER app
 EXPOSE 3000

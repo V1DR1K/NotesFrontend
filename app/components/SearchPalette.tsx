@@ -15,15 +15,15 @@ export function SearchPalette({ onClose, onNavigate }: { onClose: () => void; on
   const [error, setError] = useState("");
   const [resolvedQuery, setResolvedQuery] = useState("");
   const deferredQuery = useDeferredValue(query);
-  const cleanQuery = deferredQuery.trim();
+  const cleanQuery = deferredQuery.trim().slice(0, 120);
   const loading = cleanQuery.length >= 2 && resolvedQuery !== cleanQuery;
   const visibleError = resolvedQuery === cleanQuery ? error : "";
 
   useEffect(() => {
     if (cleanQuery.length < 2) return;
     let cancelled = false;
-    void api.search(cleanQuery).then((next) => { if (!cancelled) { setResults(next); setError(""); setResolvedQuery(cleanQuery); } }).catch((reason) => { if (!cancelled) { setError(reason instanceof Error ? reason.message : "No se pudo buscar."); setResolvedQuery(cleanQuery); } });
-    return () => { cancelled = true; };
+    const timer = window.setTimeout(() => { void api.search(cleanQuery).then((next) => { if (!cancelled) { setResults(next); setError(""); setResolvedQuery(cleanQuery); } }).catch((reason) => { if (!cancelled) { setError(reason instanceof Error ? reason.message : "No se pudo buscar."); setResolvedQuery(cleanQuery); } }); }, 250);
+    return () => { cancelled = true; window.clearTimeout(timer); };
   }, [cleanQuery]);
 
   const select = (result: SearchResult) => {

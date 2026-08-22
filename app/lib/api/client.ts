@@ -33,9 +33,10 @@ export class ApiError extends Error {
 }
 
 function apiUrl(path: string) {
-  if (/^https?:\/\//i.test(path)) return path;
+  if (/^https?:\/\//i.test(path)) throw new Error("API paths must be same-origin");
   if (path === API_BASE || path.startsWith(`${API_BASE}/`)) return path;
   if (/^https?:\/\//i.test(API_BASE) && path.startsWith("/")) {
+    if (typeof window !== "undefined" && new URL(API_BASE, window.location.origin).origin !== window.location.origin) throw new Error("Configured API origin must be same-origin");
     const basePath = new URL(API_BASE).pathname.replace(/\/$/, "");
     if (path === basePath || path.startsWith(`${basePath}/`)) return new URL(path, API_BASE).toString();
   }
