@@ -367,9 +367,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .day-filter-section-heading h3 { margin: 7px 0 0; color: var(--ink); font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.04em; }
 .day-filter-section-heading > span { color: var(--section-accent); font: 9px var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
 .day-filter-statuses .filter-pills { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-.day-filter-statuses .filter-pill { justify-content: flex-start; min-height: 40px; border-color: var(--line); background: rgba(12, 14, 17, .5); }
+.day-filter-statuses .filter-pill { justify-content: flex-start; min-height: 40px; color: #fff; border-color: var(--line); background: rgba(12, 14, 17, .5); }
 .day-filter-statuses .filter-pill:hover { border-color: var(--line-strong); }
-.day-filter-statuses .filter-pill-active { border-color: var(--section-accent); background: var(--section-surface); }
+.day-filter-statuses .filter-pill-active { color: #fff; border-color: var(--section-accent); background: var(--section-surface); }
 .day-filter-chips { max-height: min(32dvh, 270px); padding: 2px 5px 4px 0; overflow-y: auto; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; }
 .day-filter-chips::-webkit-scrollbar { width: 5px; }
 .day-filter-chips::-webkit-scrollbar-thumb { background: var(--section-accent); border-radius: 999px; }
