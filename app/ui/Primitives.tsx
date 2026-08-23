@@ -89,6 +89,8 @@ export function Button({
   disabled = false,
   className = "",
   ariaLabel,
+  ariaHasPopup,
+  ariaExpanded,
 }: {
   children: ReactNode;
   variant?: ButtonVariant;
@@ -97,6 +99,8 @@ export function Button({
   disabled?: boolean;
   className?: string;
   ariaLabel?: string;
+  ariaHasPopup?: "dialog" | "menu" | "listbox" | true;
+  ariaExpanded?: boolean;
 }) {
   return (
     <button
@@ -105,6 +109,8 @@ export function Button({
       onClick={onClick}
       disabled={disabled}
       aria-label={ariaLabel}
+      aria-haspopup={ariaHasPopup}
+      aria-expanded={ariaExpanded}
     >
       {children}
     </button>
