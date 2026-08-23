@@ -351,6 +351,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .choice-chip { min-height: 40px; padding: 0 13px; color: var(--muted-strong); background: rgba(12, 14, 17, .5); border: 1px solid var(--line); font-size: 10px; transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease; }
 .choice-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); transform: translateY(-1px); }
 .choice-chip-active { color: var(--section-contrast); background: var(--section-accent); border-color: var(--section-accent); }
+.ai-suggestion-status { display: block; margin-top: 7px; color: var(--section-accent); font: 9px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
 
 @keyframes rise-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

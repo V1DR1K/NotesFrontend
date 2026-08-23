@@ -44,6 +44,7 @@ export type DayEntry = {
   feeling: string;
   description: string;
 };
+export type DaySuggestion = { enabled: boolean; statusCode: string; feelingCodes: string[] };
 
 export type NoteCategory = { code: string; label?: string };
 export type Note = {
