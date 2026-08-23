@@ -19,6 +19,7 @@ import type {
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
 let csrfToken: string | null = null;
+let refreshPromise: Promise<unknown> | null = null;
 type ApiRequestInit = Omit<RequestInit, "body"> & { body?: BodyInit | object | null };
 
 export class ApiError extends Error {
@@ -185,7 +186,11 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
   }
   if (response.status === 401 && !retried && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) {
     try {
-      await request<unknown>("/auth/refresh", { method: "POST" }, true);
+      // Auth central rotates refresh tokens, so concurrent 401s must share one refresh.
+      if (!refreshPromise) {
+        refreshPromise = request<unknown>("/auth/refresh", { method: "POST" }, true).finally(() => { refreshPromise = null; });
+      }
+      await refreshPromise;
       return request<T>(path, init, true);
     } catch { /* The original 401 is the useful result when refresh is unavailable. */ }
   }
