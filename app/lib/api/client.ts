@@ -18,7 +18,12 @@ import type {
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
 let csrfToken: string | null = null;
-let refreshPromise: Promise<unknown> | null = null;
+let csrfPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
+let sessionCleanupPromise: Promise<void> | null = null;
+const REFRESH_LOCK_KEY = "notes.auth.refresh.lock";
+const REFRESH_MARKER_KEY = "notes.auth.refresh.marker";
+const TAB_ID = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 type ApiRequestInit = Omit<RequestInit, "body"> & { body?: BodyInit | object | null };
 
 export class ApiError extends Error {
@@ -54,7 +59,7 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-function problemError(payload: unknown, status: number) {
+function problemError(payload: unknown, status: number, path = "") {
   if (typeof payload === "string") return new ApiError(payload || "No se pudo completar la solicitud.", status);
   if (!payload || typeof payload !== "object") return new ApiError("No se pudo completar la solicitud.", status);
 
@@ -76,7 +81,7 @@ function problemError(payload: unknown, status: number) {
 
   const detail = String(problem.detail ?? problem.message ?? problem.title ?? "");
   const hasSpanishCopy = /[áéíóúñ¿¡]|\b(no|usuario|contraseña|fecha|importe|archivo|carpeta|nota|registro)\b/i.test(detail);
-  const spanish = hasSpanishCopy ? detail : status === 401 ? "Usuario o contraseña incorrectos." : status === 403 ? "No tenés permiso para realizar esta acción." : status === 404 ? "No encontramos ese registro." : status >= 500 ? "El servidor no pudo completar la solicitud." : "Revisá los datos e intentá otra vez.";
+  const spanish = hasSpanishCopy ? detail : status === 401 && path === "/auth/login" ? "Usuario o contraseña incorrectos." : status === 401 ? "Tu sesión venció. Volvé a ingresar." : status === 403 ? "No tenés permiso para realizar esta acción." : status === 404 ? "No encontramos ese registro." : status >= 500 ? "El servidor no pudo completar la solicitud." : "Revisá los datos e intentá otra vez.";
   return new ApiError(spanish, status, fieldErrors);
 }
 
@@ -162,6 +167,57 @@ export function normalizePage<T>(payload: unknown): PageResponse<T> {
   };
 }
 
+function sleep(milliseconds: number) { return new Promise((resolve) => window.setTimeout(resolve, milliseconds)); }
+
+function refreshedAfter(startedAt: number) { return Number(localStorage.getItem(REFRESH_MARKER_KEY) ?? 0) > startedAt; }
+
+async function refreshWithLocalLock(startedAt: number, action: () => Promise<boolean>) {
+  const lockValue = `${TAB_ID}:${Date.now()}`;
+  const deadline = Date.now() + 12000;
+  let acquired = false;
+  while (Date.now() < deadline) {
+    if (refreshedAfter(startedAt)) return true;
+    const current = localStorage.getItem(REFRESH_LOCK_KEY);
+    if (!current || Number(current.split(":")[1] ?? 0) < Date.now() - 12000) {
+      localStorage.setItem(REFRESH_LOCK_KEY, lockValue);
+      acquired = localStorage.getItem(REFRESH_LOCK_KEY) === lockValue;
+      if (acquired) break;
+    }
+    await sleep(50);
+  }
+  if (!acquired) return false;
+  try { return await action(); }
+  finally { if (localStorage.getItem(REFRESH_LOCK_KEY) === lockValue) localStorage.removeItem(REFRESH_LOCK_KEY); }
+}
+
+async function refreshSession(startedAt: number) {
+  if (!refreshPromise) {
+    const action = async () => {
+      if (refreshedAfter(startedAt)) return true;
+      await request<unknown>("/auth/refresh", { method: "POST" }, true);
+      localStorage.setItem(REFRESH_MARKER_KEY, String(Date.now()));
+      return true;
+    };
+    refreshPromise = typeof navigator !== "undefined" && navigator.locks
+      ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, action)
+      : refreshWithLocalLock(startedAt, action);
+    refreshPromise = refreshPromise.finally(() => { refreshPromise = null; });
+  }
+  return refreshPromise;
+}
+
+async function expireSession() {
+  if (!sessionCleanupPromise) {
+    sessionCleanupPromise = request<void>("/auth/logout", { method: "POST" }, true).catch(() => undefined).finally(() => {
+      sessionCleanupPromise = null;
+      csrfToken = null;
+      csrfPromise = null;
+      window.dispatchEvent(new Event("notes:session-expired"));
+    });
+  }
+  return sessionCleanupPromise;
+}
+
 async function request<T>(path: string, init: ApiRequestInit = {}, retried = false): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
   const mutating = !["GET", "HEAD", "OPTIONS"].includes(method);
@@ -185,17 +241,16 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
   }
   if (response.status === 401 && !retried && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) {
     try {
-      // Auth central rotates refresh tokens, so concurrent 401s must share one refresh.
-      if (!refreshPromise) {
-        refreshPromise = request<unknown>("/auth/refresh", { method: "POST" }, true).finally(() => { refreshPromise = null; });
-      }
-      await refreshPromise;
-      return request<T>(path, init, true);
-    } catch { /* The original 401 is the useful result when refresh is unavailable. */ }
+      const refreshed = await refreshSession(Date.now());
+      if (refreshed) return request<T>(path, init, true);
+    } catch (reason) {
+      if (reason instanceof ApiError && reason.status >= 500) throw reason;
+    }
+    await expireSession();
   }
   if (!response.ok) {
     if (response.status === 401 && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) window.dispatchEvent(new Event("notes:session-expired"));
-    throw problemError(payload, response.status);
+    throw problemError(payload, response.status, path);
   }
   return payload as T;
 }
@@ -213,12 +268,16 @@ export async function download(path: string) {
 
 export async function getCsrf(force = false): Promise<string | null> {
   if (csrfToken && !force) return csrfToken;
-  const response = await fetch(apiUrl("/auth/csrf"), { credentials: "include", headers: { Accept: "application/json" } });
-  const payload = await readJson(response);
-  if (!response.ok) throw problemError(payload, response.status);
-  const record = asRecord(payload);
-  csrfToken = typeof payload === "string" ? payload : String(record.token ?? record.csrfToken ?? record.xsrfToken ?? response.headers.get("X-XSRF-TOKEN") ?? "") || null;
-  return csrfToken;
+  if (!force && csrfPromise) return csrfPromise;
+  csrfPromise = (async () => {
+    const response = await fetch(apiUrl("/auth/csrf"), { credentials: "include", headers: { Accept: "application/json" } });
+    const payload = await readJson(response);
+    if (!response.ok) throw problemError(payload, response.status, "/auth/csrf");
+    const record = asRecord(payload);
+    csrfToken = typeof payload === "string" ? payload : String(record.token ?? record.csrfToken ?? record.xsrfToken ?? response.headers.get("X-XSRF-TOKEN") ?? "") || null;
+    return csrfToken;
+  })().finally(() => { csrfPromise = null; });
+  return csrfPromise;
 }
 
 export const api = {
