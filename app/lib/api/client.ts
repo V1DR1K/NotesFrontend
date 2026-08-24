@@ -24,6 +24,7 @@ let sessionCleanupPromise: Promise<void> | null = null;
 const REFRESH_LOCK_KEY = "notes.auth.refresh.lock";
 const REFRESH_MARKER_KEY = "notes.auth.refresh.marker";
 const SESSION_EXPIRED_KEY = "notes.auth.expired";
+const SESSION_PRESENT_KEY = "notes.auth.present";
 const TAB_ID = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 type ApiRequestInit = Omit<RequestInit, "body"> & { body?: BodyInit | object | null };
 
@@ -40,8 +41,14 @@ function clearSessionState() {
     localStorage.removeItem(REFRESH_LOCK_KEY);
     localStorage.removeItem(REFRESH_MARKER_KEY);
     localStorage.removeItem(SESSION_EXPIRED_KEY);
+    localStorage.removeItem(SESSION_PRESENT_KEY);
   } catch { /* storage can be unavailable in private contexts */ }
   document.cookie = "XSRF-TOKEN=; Max-Age=0; Path=/; SameSite=Lax; Secure";
+}
+
+export function hasSessionHint() {
+  if (typeof window === "undefined") return false;
+  try { return localStorage.getItem(SESSION_PRESENT_KEY) === "1"; } catch { return true; }
 }
 
 function dispatchSessionExpired() {
@@ -317,7 +324,11 @@ export async function getCsrf(force = false): Promise<string | null> {
 }
 
 export const api = {
-  login: (credentials: LoginRequest) => request<AuthUser | { user: AuthUser }>("/auth/login", { method: "POST", body: credentials }),
+  login: async (credentials: LoginRequest) => {
+    const payload = await request<AuthUser | { user: AuthUser }>("/auth/login", { method: "POST", body: credentials });
+    try { localStorage.setItem(SESSION_PRESENT_KEY, "1"); } catch { /* storage can be unavailable in private contexts */ }
+    return payload;
+  },
   logout: async () => {
     try { await request<void>("/auth/logout", { method: "POST" }); }
     finally { broadcastSessionExpired(); }

@@ -5,7 +5,7 @@ import { AppShell } from "./AppShell";
 import { LoginScreen } from "./LoginScreen";
 import { ChangePasswordScreen } from "./ChangePasswordScreen";
 import { isSectionKey, SECTION_TOKENS, tokenStyle, type SectionKey } from "../config/sections";
-import { ApiError, api, getCsrf, unwrapUser } from "../lib/api/client";
+import { ApiError, api, getCsrf, hasSessionHint, unwrapUser } from "../lib/api/client";
 import type { ApiConfig, AuthUser } from "../lib/api/types";
 import { ArchivosModule } from "../modules/ArchivosModule";
 import { FinanzasModule } from "../modules/FinanzasModule";
@@ -49,6 +49,7 @@ export function PersonalNotesApp() {
   const loadSession = async () => {
     setGate("loading");
     setGateError("");
+    if (!hasSessionHint()) { setGate("login"); return; }
     try {
       await getCsrf();
       const session = unwrapUser(await api.me());
