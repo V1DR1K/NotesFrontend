@@ -79,6 +79,15 @@ export type FinanceSummary = {
   cash?: FinanceAmount | number | string;
   exchangeRate?: ExchangeRate;
 };
+export type FinanceDailySummary = { date: string; income: number | string; expense: number | string };
+export type FinanceCategorySummary = { itemCode: string; total: number | string };
+export type FinanceAnalytics = {
+  from: string;
+  to: string;
+  daily: FinanceDailySummary[];
+  incomeCategories: FinanceCategorySummary[];
+  expenseCategories: FinanceCategorySummary[];
+};
 
 export type ExchangeRate = { currency: string; buy: number | string; sell: number | string; average: number | string; fetchedAt?: string; source?: string };
 

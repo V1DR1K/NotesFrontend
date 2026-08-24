@@ -4,6 +4,22 @@ export const todayIso = () => {
   return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
 };
 
+export function monthBounds(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0)).getUTCDate();
+  return { from: `${month}-01`, to: `${month}-${String(lastDay).padStart(2, "0")}` };
+}
+
+export function currentMonth() {
+  return todayIso().slice(0, 7);
+}
+
+export function shiftMonth(month: string, offset: number) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const date = new Date(Date.UTC(year, monthNumber - 1 + offset, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}`;
+}
+
 export function dateLabel(value?: string, includeTime = false) {
   if (!value) return "Sin fecha";
   const date = new Date(value.length === 10 ? `${value}T12:00:00` : value);

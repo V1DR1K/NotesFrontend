@@ -4,8 +4,10 @@ import { useState } from "react";
 import type { ApiConfig } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { useMutationError } from "../../lib/api/hooks";
-import { dateLabel, todayIso, fieldError } from "../../lib/presentation";
+import { currentMonth, dateLabel, todayIso, fieldError } from "../../lib/presentation";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, MultiSelectChips, Pagination, SectionHero, SelectField, SkeletonGrid, StatusDot } from "../../ui/Primitives";
+import { DayCalendar } from "./DayCalendar";
+import { useDayCalendarData } from "./useDayCalendarData";
 import { useDayData } from "./useDayData";
 
 function parseFeelings(value: string) {
@@ -33,8 +35,10 @@ export function DayView({ config }: { config: ApiConfig }) {
   const [analyzingIds, setAnalyzingIds] = useState<string[]>([]);
   const [analysisNotice, setAnalysisNotice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(currentMonth());
   const [draft, setDraft] = useState({ date: todayIso(), description: "" });
   const data = useDayData(page, filter, feelings, date);
+  const calendarData = useDayCalendarData(calendarMonth);
   const mutation = useMutationError();
   const statusOptions = config.dayStatuses.filter((option) => option.active !== false);
   const feelingOptions = config.dayFeelings.filter((option) => option.active !== false);
@@ -86,7 +90,8 @@ export function DayView({ config }: { config: ApiConfig }) {
   const activeFilterCount = (filter === "all" ? 0 : 1) + feelings.length;
 
   return <div className="view module-view">
-    <SectionHero section="day" onAction={startNew} rightSlot={<div className="streak-card"><span className="eyebrow">RACHA ACTUAL</span><strong>—</strong><span>calculada con tus registros</span><div className="streak-dots"><i /><i /><i /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /></div></div>} />
+     <SectionHero section="day" onAction={startNew} rightSlot={<div className="streak-card"><span className="eyebrow">RACHA ACTUAL</span><strong>—</strong><span>calculada con tus registros</span><div className="streak-dots"><i /><i /><i /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /></div></div>} />
+     {calendarData.error ? <div className="analysis-notice" role="status">No se pudo cargar el calendario. El listado sigue disponible.</div> : <DayCalendar month={calendarMonth} entries={calendarData.data?.content ?? []} selectedDate={date} onMonthChange={setCalendarMonth} onSelectDate={(selected) => { setDate(selected); setPage(0); }} />}
     {composerOpen ? <Dialog ariaLabel="Registrar un día" onClose={() => setComposerOpen(false)}><FormPanel title={editingId ? "Editar el registro" : "Registrar el día"} description="Escribí lo que pasó. La IA va a identificar el balance y las sensaciones presentes." onClose={() => setComposerOpen(false)}>
       <div className="form-grid form-grid-day">
         <label className="form-field" htmlFor="day-date"><span>Fecha</span><input id="day-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label>

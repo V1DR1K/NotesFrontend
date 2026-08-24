@@ -5,6 +5,7 @@ import type {
   Dashboard,
   DayEntry,
   FinanceMovement,
+  FinanceAnalytics,
   FinanceSummary,
   ExchangeRate,
   FileFolder,
@@ -178,6 +179,25 @@ function normalizeMovement(value: unknown): FinanceMovement {
 function normalizeSummary(value: unknown): FinanceSummary {
   const record = asRecord(value);
   return { from: String(record.from ?? ""), to: String(record.to ?? ""), income: record.income as FinanceSummary["income"], expense: record.expense as FinanceSummary["expense"], invested: record.invested as FinanceSummary["invested"], cash: record.cash as FinanceSummary["cash"], exchangeRate: record.exchangeRate as ExchangeRate | undefined };
+}
+
+function normalizeAnalytics(value: unknown): FinanceAnalytics {
+  const record = asRecord(value);
+  const daily = Array.isArray(record.daily) ? record.daily : [];
+  const categories = (candidate: unknown) => Array.isArray(candidate) ? candidate.map((item) => {
+    const entry = asRecord(item);
+    return { itemCode: String(entry.itemCode ?? ""), total: entry.total as number | string };
+  }).filter((item) => item.itemCode) : [];
+  return {
+    from: String(record.from ?? ""),
+    to: String(record.to ?? ""),
+    daily: daily.map((item) => {
+      const entry = asRecord(item);
+      return { date: String(entry.date ?? ""), income: entry.income as number | string, expense: entry.expense as number | string };
+    }).filter((item) => item.date),
+    incomeCategories: categories(record.incomeCategories),
+    expenseCategories: categories(record.expenseCategories),
+  };
 }
 
 function normalizeDashboard(value: unknown): Dashboard {
@@ -363,6 +383,7 @@ export const api = {
   updateMovement: (id: string, body: { date: string; bucket: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
   deleteMovement: (id: string) => request<void>(`/finance/movements/${encodeURIComponent(id)}`, { method: "DELETE" }),
   financeSummary: (query: URLSearchParams) => request<FinanceSummary>(`/finance/summary?${query}`),
+  financeAnalytics: (query: URLSearchParams) => request<unknown>(`/finance/analytics?${query}`).then(normalizeAnalytics),
   exchangeRate: () => request<ExchangeRate>("/finance/exchange-rate/usd"),
   folders: () => request<unknown>("/file-folders").then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
