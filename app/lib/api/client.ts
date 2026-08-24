@@ -23,8 +23,33 @@ let refreshPromise: Promise<boolean> | null = null;
 let sessionCleanupPromise: Promise<void> | null = null;
 const REFRESH_LOCK_KEY = "notes.auth.refresh.lock";
 const REFRESH_MARKER_KEY = "notes.auth.refresh.marker";
+const SESSION_EXPIRED_KEY = "notes.auth.expired";
 const TAB_ID = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 type ApiRequestInit = Omit<RequestInit, "body"> & { body?: BodyInit | object | null };
+
+function resetSessionState() {
+  csrfToken = null;
+  csrfPromise = null;
+}
+
+function dispatchSessionExpired() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("notes:session-expired"));
+}
+
+function broadcastSessionExpired() {
+  resetSessionState();
+  if (typeof window === "undefined") return;
+  try { localStorage.setItem(SESSION_EXPIRED_KEY, String(Date.now())); } catch { /* storage can be unavailable in private contexts */ }
+  dispatchSessionExpired();
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key !== SESSION_EXPIRED_KEY || !event.newValue) return;
+    resetSessionState();
+    dispatchSessionExpired();
+  });
+}
 
 export class ApiError extends Error {
   status: number;
@@ -210,9 +235,7 @@ async function expireSession() {
   if (!sessionCleanupPromise) {
     sessionCleanupPromise = request<void>("/auth/logout", { method: "POST" }, true).catch(() => undefined).finally(() => {
       sessionCleanupPromise = null;
-      csrfToken = null;
-      csrfPromise = null;
-      window.dispatchEvent(new Event("notes:session-expired"));
+      broadcastSessionExpired();
     });
   }
   return sessionCleanupPromise;
@@ -284,7 +307,7 @@ export const api = {
   login: (credentials: LoginRequest) => request<AuthUser | { user: AuthUser }>("/auth/login", { method: "POST", body: credentials }),
   logout: async () => {
     try { await request<void>("/auth/logout", { method: "POST" }); }
-    finally { csrfToken = null; }
+    finally { broadcastSessionExpired(); }
   },
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "POST", body }),
