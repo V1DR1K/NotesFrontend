@@ -53,11 +53,12 @@ export function FinancesView({ config }: { config: ApiConfig }) {
   const startNew = () => { setEditingId(null); setDraft({ date: todayIso(), bucket: "EXPENSE", amount: "", itemCode: config.financeItems[0]?.code ?? "", note: "" }); mutation.clearError(); setComposerOpen(true); };
   const startEdit = (movement: FinanceMovement) => { setEditingId(movement.id); setDraft({ date: movement.date, bucket: movement.bucket.toUpperCase(), amount: String(movementARS(movement)), itemCode: movement.itemCode, note: movement.note ?? "" }); mutation.clearError(); setComposerOpen(true); };
   const save = async () => {
+    if (mutation.pending) return;
     const amount = Number(draft.amount);
     if (!draft.date || !draft.bucket || !draft.itemCode || !Number.isFinite(amount) || amount <= 0) return;
     try { const body = { date: draft.date, bucket: draft.bucket, itemCode: draft.itemCode, amountArs: amount, note: draft.note.trim() || undefined }; await mutation.run(() => editingId ? api.updateMovement(editingId, body) : api.createMovement(body)); setComposerOpen(false); data.reload(); } catch { /* the mutation error is shown in the form */ }
   };
-  const remove = async () => { if (!pendingDelete) return; try { await mutation.run(() => api.deleteMovement(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
+  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteMovement(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
   const openSync = (account: FinanceAccount) => { setSyncingAccount(account); setSyncBalance(String(account.balanceArs)); mutation.clearError(); };
   const syncAccount = async () => {
     const amount = Number(syncBalance);

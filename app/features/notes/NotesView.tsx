@@ -23,19 +23,19 @@ export function NotesView({ config }: { config: ApiConfig }) {
   const startNew = () => { setEditingId(null); setDraft({ title: "", body: "", categoryCode: config.noteCategories[0]?.code ?? "", date: todayIso() }); mutation.clearError(); setComposerOpen(true); };
   const startEdit = (note: Note) => { setEditingId(note.id); setDraft({ title: note.title, body: note.body, categoryCode: note.categoryCode, date: note.date }); mutation.clearError(); setComposerOpen(true); };
   const save = async () => {
-    if (!draft.title.trim() || !draft.body.trim() || !draft.categoryCode || !draft.date) return;
+    if (!draft.title.trim() || !draft.body.trim() || !draft.categoryCode || !draft.date || mutation.pending) return;
     try {
       const body = { title: draft.title.trim(), body: draft.body.trim(), categoryCode: draft.categoryCode, date: draft.date };
       await mutation.run(() => editingId ? api.updateNote(editingId, body) : api.createNote(body));
       setComposerOpen(false); data.reload();
     } catch { /* the mutation error is shown in the form */ }
   };
-  const remove = async () => { if (!pendingDelete) return; try { await mutation.run(() => api.deleteNote(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
+  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteNote(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
   const pageCount = data.data?.totalPages ?? 0;
 
   return <div className="view module-view">
     <SectionHero section="notes" onAction={startNew} rightSlot={<div className="notes-stamp"><VisualTile emoji="✎" label="Notas" /><div><span className="eyebrow">ÚLTIMA NOTA</span><strong>{notes[0]?.title ?? "Todavía no hay notas"}</strong><span>{notes[0] ? dateLabel(notes[0].date, true) : "Empezá cuando quieras"}</span></div></div>} />
-    {composerOpen ? <Dialog ariaLabel="Escribir una nota" onClose={() => setComposerOpen(false)}><FormPanel title={editingId ? "Editar nota" : "Escribir una nota"} description="Una nota simple, con fecha y categoría para volver a encontrarla." onClose={() => setComposerOpen(false)}><div className="form-grid form-grid-notes">
+    {composerOpen ? <Dialog ariaLabel="Escribir una nota" onClose={() => setComposerOpen(false)}><FormPanel eyebrow={editingId ? "EDITAR NOTA" : "NUEVA NOTA"} onSubmit={() => void save()} title={editingId ? "Editar nota" : "Escribir una nota"} description="Una nota simple, con fecha y categoría para volver a encontrarla." onClose={() => setComposerOpen(false)}><div className="form-grid form-grid-notes">
       <FormField label="Título" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Una idea para mañana" /><SelectField label="Categoría" id="note-category" value={draft.categoryCode} onChange={(categoryCode) => setDraft({ ...draft, categoryCode })} options={config.noteCategories.map(({ code, label }) => ({ value: code, label }))} /><label className="form-field" htmlFor="note-date"><span>Fecha</span><input id="note-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label><div className="form-field-full"><FormField label="Nota" value={draft.body} onChange={(body) => setDraft({ ...draft, body })} placeholder="Escribí lo que quieras conservar..." multiline /></div>
     </div>{mutation.error ? <div className="inline-error" role="alert" aria-live="polite">{mutation.error.message || fieldError(mutation.error, "title", "body", "categoryCode", "date")}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={() => setComposerOpen(false)}>Cancelar</Button><Button onClick={() => void save()} disabled={!draft.title.trim() || !draft.body.trim() || !draft.categoryCode || !draft.date}>{editingId ? "Guardar cambios" : "Guardar nota"} <span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
     <ModuleToolbar resultLabel={`${data.data?.totalElements ?? 0} notas`}><FilterPills active={filter} onChange={(value) => { setFilter(value); setPage(0); }} options={[{ value: "all", label: "Todas" }, ...config.noteCategories.map(({ code, label }) => ({ value: code, label }))]} /><SelectField label="Ordenar" compact value={sort} onChange={setSort} options={[{ value: "recent", label: "Más recientes" }, { value: "old", label: "Más antiguas" }]} /></ModuleToolbar>

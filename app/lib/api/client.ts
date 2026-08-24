@@ -83,6 +83,20 @@ export class ApiError extends Error {
   }
 }
 
+function normalizeAuthUser(value: unknown): AuthUser {
+  const record = asRecord(value);
+  if (!record.id || !record.username) throw new ApiError("La sesión recibida no es válida.", 502);
+  return { id: String(record.id), username: String(record.username), role: String(record.role ?? "USER"), mustChangePassword: Boolean(record.mustChangePassword) };
+}
+
+function normalizeSession(value: unknown): AuthSession {
+  const record = asRecord(value);
+  const accessToken = String(record.accessToken ?? "");
+  const refreshToken = String(record.refreshToken ?? "");
+  if (!accessToken || !refreshToken) throw new ApiError("El servicio de sesión devolvió una respuesta inválida.", 502);
+  return { accessToken, refreshToken, tokenType: String(record.tokenType ?? "Bearer"), expiresIn: Number(record.expiresIn ?? 0), user: normalizeAuthUser(record.user) };
+}
+
 function apiUrl(path: string) {
   if (/^https?:\/\//i.test(path)) throw new Error("API paths must be same-origin");
   if (path === API_BASE || path.startsWith(`${API_BASE}/`)) return path;
@@ -269,8 +283,8 @@ async function refreshTokens() {
   });
   const payload = await readJson(response);
   if (!response.ok) return null;
-  const session = payload as Partial<AuthSession>;
-  if (!session.accessToken || !session.refreshToken) return null;
+  let session: AuthSession;
+  try { session = normalizeSession(payload); } catch { return null; }
   localStorage.setItem(TOKEN_KEY, session.accessToken);
   localStorage.setItem(REFRESH_KEY, session.refreshToken);
   if (session.user) localStorage.setItem(USER_KEY, JSON.stringify(session.user));
@@ -347,7 +361,7 @@ async function downloadWithToken(path: string, retried: boolean): Promise<Blob> 
 
 export const api = {
   login: async (credentials: LoginRequest) => {
-    const payload = await request<AuthSession>("/auth/login", { method: "POST", body: credentials });
+    const payload = normalizeSession(await request<unknown>("/auth/login", { method: "POST", body: credentials }));
     localStorage.setItem(TOKEN_KEY, payload.accessToken);
     localStorage.setItem(REFRESH_KEY, payload.refreshToken);
     localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
@@ -404,5 +418,5 @@ export const api = {
 };
 
 export function unwrapUser(payload: AuthUser | { user: AuthUser }): AuthUser {
-  return "user" in payload && payload.user ? payload.user : payload as AuthUser;
+  return normalizeAuthUser("user" in payload && payload.user ? payload.user : payload);
 }

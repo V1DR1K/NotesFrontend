@@ -30,11 +30,11 @@ export function FilesView() {
   const folders = data.data?.[1];
   const kinds = Array.from(new Set((files?.content ?? []).map((file) => file.kind))).filter(Boolean);
   const selectedFolder = folders?.content.find((folder) => folder.id === folderId);
-  const handleFile = async (file: File) => { try { await mutation.run(() => api.uploadFile(file, uploadFolderId || undefined)); setUploadComposerOpen(false); setUploadFolderId(""); data.reload(); } catch { /* shown in the dialog */ } };
-  const createFolder = async () => { const cleanName = folderName.trim(); if (!cleanName) return; try { const folder = await mutation.run(() => api.createFolder(cleanName)); setFolderName(""); setFolderComposerOpen(false); setFolderId(folder.id); data.reload(); } catch { /* shown in the dialog */ } };
+  const handleFile = async (file: File) => { if (mutation.pending) return; try { await mutation.run(() => api.uploadFile(file, uploadFolderId || undefined)); setUploadComposerOpen(false); setUploadFolderId(""); data.reload(); } catch { /* shown in the dialog */ } };
+  const createFolder = async () => { const cleanName = folderName.trim(); if (!cleanName || mutation.pending) return; try { const folder = await mutation.run(() => api.createFolder(cleanName)); setFolderName(""); setFolderComposerOpen(false); setFolderId(folder.id); data.reload(); } catch { /* shown in the dialog */ } };
   const startRename = (file: FileItem) => { setRenameId(file.id); setRenameValue(file.name); mutation.clearError(); };
-  const saveRename = async () => { if (!renameId || !renameValue.trim()) return; try { await mutation.run(() => api.updateFile(renameId, { name: renameValue.trim() })); setRenameId(null); data.reload(); } catch { /* shown in the dialog */ } };
-  const remove = async () => { if (!pendingDelete) return; try { await mutation.run(() => api.deleteFile(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
+  const saveRename = async () => { if (!renameId || !renameValue.trim() || mutation.pending) return; try { await mutation.run(() => api.updateFile(renameId, { name: renameValue.trim() })); setRenameId(null); data.reload(); } catch { /* shown in the dialog */ } };
+  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteFile(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
   const download = async (file: FileItem) => { try { const blob = await api.downloadFile(file); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = file.name; anchor.click(); URL.revokeObjectURL(url); } catch (reason) { mutation.captureError(reason); } };
 
   return <div className="view module-view">

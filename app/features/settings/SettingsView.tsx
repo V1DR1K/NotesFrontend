@@ -23,6 +23,7 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [pendingDelete, setPendingDelete] = useState<{ group: ConfigGroup; option: ApiOption } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
   const openCreate = (group: ConfigGroup) => { setError(""); setDraft(emptyDraft()); setEditing({ group }); };
@@ -42,9 +43,11 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
     } finally { setSaving(false); }
   };
   const remove = async () => {
-    if (!pendingDelete) return;
+    if (!pendingDelete || saving || deleting) return;
+    setDeleting(true);
     try { await api.deleteConfigOption(pendingDelete.group.kind, pendingDelete.option.code); onConfigChanged(await api.config()); setPendingDelete(null); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo eliminar la opción."); }
+    finally { setDeleting(false); }
   };
 
   return <div className="view settings-view">
@@ -64,7 +67,7 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
         </section>;
       })}
     </div>
-    {editing ? <Dialog ariaLabel={`${editing.option ? "Editar" : "Agregar"} ${editing.group.label.toLowerCase()}`} onClose={closeEditor}><FormPanel title={editing.option ? `Editar ${editing.group.label.toLowerCase()}` : `Agregar ${editing.group.label.toLowerCase()}`} description="Este cambio se verá en los formularios y filtros de tu cuaderno." onClose={closeEditor}>
+    {editing ? <Dialog ariaLabel={`${editing.option ? "Editar" : "Agregar"} ${editing.group.label.toLowerCase()}`} onClose={closeEditor}><FormPanel eyebrow={editing.option ? "EDITAR OPCIÓN" : "NUEVA OPCIÓN"} onSubmit={() => void save()} title={editing.option ? `Editar ${editing.group.label.toLowerCase()}` : `Agregar ${editing.group.label.toLowerCase()}`} description="Este cambio se verá en los formularios y filtros de tu cuaderno." onClose={closeEditor}>
       <div className="settings-form-grid"><FormField label="Nombre visible" value={draft.label} onChange={(label) => setDraft({ ...draft, label })} placeholder="Ej. Personal" />{editing.option ? <label className="form-field" htmlFor="settings-code"><span>Código</span><input id="settings-code" value={draft.code} readOnly /></label> : <FormField label="Código interno" value={draft.code} onChange={(code) => setDraft({ ...draft, code })} placeholder="Ej. personal" />}{editing.group.emoji ? <FormField label="Símbolo" value={draft.emoji} onChange={(emoji) => setDraft({ ...draft, emoji })} placeholder="Ej. ✦" /> : null}<label className="form-field" htmlFor="settings-order"><span>Orden</span><input id="settings-order" type="number" inputMode="numeric" min="0" step="1" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: event.target.value })} /></label><label className="settings-active"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} /><span>Disponible en formularios y filtros</span></label></div>
       {error ? <div className="inline-error" role="alert">{error}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeEditor} disabled={saving}>Cancelar</Button><Button onClick={() => void save()} disabled={saving || !draft.label.trim() || (!editing.option && !draft.code.trim())}>{saving ? "Guardando..." : "Guardar opción"}<span aria-hidden="true">↗</span></Button></div>
     </FormPanel></Dialog> : null}

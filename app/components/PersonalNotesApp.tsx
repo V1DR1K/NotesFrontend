@@ -18,7 +18,7 @@ import { SearchPalette } from "./SearchPalette";
 export function PersonalNotesApp() {
   const [activeSection, setActiveSection] = useState<SectionKey>(() => {
     if (typeof window === "undefined") return "overview";
-    const section = window.history.state?.notesSection;
+    const section = new URLSearchParams(window.location.search).get("section") ?? window.history.state?.notesSection;
     return isSectionKey(section) ? section : "overview";
   });
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -30,16 +30,22 @@ export function PersonalNotesApp() {
 
   const navigate = (section: SectionKey) => {
     if (section === activeSection) return;
-    window.history.pushState({ ...window.history.state, notesSection: section }, "", window.location.href);
+    const url = new URL(window.location.href);
+    url.searchParams.set("section", section);
+    window.history.pushState({ ...window.history.state, notesSection: section }, "", url);
     setActiveSection(section);
   };
 
   useEffect(() => {
-    const currentSection = window.history.state?.notesSection;
-    if (!isSectionKey(currentSection)) window.history.replaceState({ ...window.history.state, notesSection: "overview" }, "", window.location.href);
+    const currentSection = new URLSearchParams(window.location.search).get("section") ?? window.history.state?.notesSection;
+    if (!isSectionKey(currentSection)) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("section", "overview");
+      window.history.replaceState({ ...window.history.state, notesSection: "overview" }, "", url);
+    }
 
     const handlePopState = (event: PopStateEvent) => {
-      const section = event.state?.notesSection;
+      const section = new URLSearchParams(window.location.search).get("section") ?? event.state?.notesSection;
       if (isSectionKey(section)) setActiveSection(section);
     };
     window.addEventListener("popstate", handlePopState);

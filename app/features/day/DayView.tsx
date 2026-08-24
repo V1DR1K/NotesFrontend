@@ -88,7 +88,7 @@ export function DayView({ config }: { config: ApiConfig }) {
     finally { setSaving(false); }
   };
 
-  const remove = async () => { if (!pendingDelete) return; try { await mutation.run(() => api.deleteDay(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
+  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteDay(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
   const pageCount = data.data?.totalPages ?? 0;
   const activeFilterCount = (filter === "all" ? 0 : 1) + feelings.length;
   const exactDate = from === to ? from : "";
@@ -96,7 +96,7 @@ export function DayView({ config }: { config: ApiConfig }) {
   return <div className="view module-view">
      <SectionHero section="day" onAction={startNew} rightSlot={<div className="streak-card"><span className="eyebrow">RACHA ACTUAL</span><strong>—</strong><span>calculada con tus registros</span><div className="streak-dots"><i /><i /><i /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /></div></div>} />
      {calendarData.error ? <div className="analysis-notice" role="status">No se pudo cargar el calendario. El listado sigue disponible.</div> : <DayCalendar month={calendarMonth} entries={calendarData.data?.content ?? []} selectedDate={exactDate} onMonthChange={setCalendarMonth} onSelectDate={(selected) => { setFrom(selected); setTo(selected); setPage(0); }} />}
-    {composerOpen ? <Dialog ariaLabel="Registrar un día" onClose={() => setComposerOpen(false)}><FormPanel title={editingId ? "Editar el registro" : "Registrar el día"} description="Escribí lo que pasó. La IA va a identificar el balance y las sensaciones presentes." onClose={() => setComposerOpen(false)}>
+    {composerOpen ? <Dialog ariaLabel="Registrar un día" onClose={() => setComposerOpen(false)}><FormPanel eyebrow={editingId ? "EDITAR REGISTRO" : "NUEVO REGISTRO"} onSubmit={() => void save()} title={editingId ? "Editar el registro" : "Registrar el día"} description="Escribí lo que pasó. La IA va a identificar el balance y las sensaciones presentes." onClose={() => setComposerOpen(false)}>
       <div className="form-grid form-grid-day">
         <label className="form-field" htmlFor="day-date"><span>Fecha</span><input id="day-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label>
         <div className="form-field-full"><FormField label="Descripción del día" value={draft.description} onChange={(description) => setDraft({ ...draft, description })} placeholder="¿Qué pasó hoy y qué estuvo presente?" multiline /><span className="analysis-helper">La descripción se guarda aunque el análisis necesite un reintento.</span></div>

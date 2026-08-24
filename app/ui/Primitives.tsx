@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ButtonHTMLAttributes, FormEvent, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import { SECTION_META, type SectionKey } from "../config/sections";
 
@@ -91,6 +91,7 @@ export function Button({
   ariaLabel,
   ariaHasPopup,
   ariaExpanded,
+  ...buttonProps
 }: {
   children: ReactNode;
   variant?: ButtonVariant;
@@ -101,7 +102,7 @@ export function Button({
   ariaLabel?: string;
   ariaHasPopup?: "dialog" | "menu" | "listbox" | true;
   ariaExpanded?: boolean;
-}) {
+} & Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children" | "type" | "disabled" | "className" | "onClick" | "aria-label" | "aria-haspopup" | "aria-expanded">) {
   return (
     <button
       className={`button button-${variant} ${className}`}
@@ -111,6 +112,7 @@ export function Button({
       aria-label={ariaLabel}
       aria-haspopup={ariaHasPopup}
       aria-expanded={ariaExpanded}
+      {...buttonProps}
     >
       {children}
     </button>
@@ -142,6 +144,7 @@ export function SelectField({
   options,
   compact = false,
   id,
+  ...selectProps
 }: {
   label: string;
   value: string;
@@ -149,14 +152,15 @@ export function SelectField({
   options: Array<{ value: string; label: string }>;
   compact?: boolean;
   id?: string;
-}) {
-  const fieldId = id ?? `select-${label.toLowerCase().replaceAll(" ", "-")}`;
+} & Omit<SelectHTMLAttributes<HTMLSelectElement>, "value" | "onChange" | "id" | "children" | "className">) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
 
   return (
     <label className={`field-label ${compact ? "field-label-compact" : ""}`} htmlFor={fieldId}>
       <span>{label}</span>
       <span className="select-wrap">
-        <select id={fieldId} value={value} onChange={(event) => onChange(event.target.value)}>
+        <select id={fieldId} value={value} onChange={(event) => onChange(event.target.value)} {...selectProps}>
           {options.map((option) => (
             <option value={option.value} key={option.value}>
               {option.label}
@@ -179,13 +183,12 @@ export function FilterPills({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="filter-pills" role="tablist" aria-label="Filtros">
+    <div className="filter-pills" role="group" aria-label="Filtros">
       {options.map((option) => (
         <button
           className={`filter-pill ${active === option.value ? "filter-pill-active" : ""}`}
           type="button"
-          role="tab"
-          aria-selected={active === option.value}
+          aria-pressed={active === option.value}
           key={option.value}
           onClick={() => onChange(option.value)}
         >
@@ -335,26 +338,27 @@ export function SkeletonGrid({ count = 3 }: { count?: number }) {
   );
 }
 
-export function FormField({ label, value, onChange, placeholder, multiline = false }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; multiline?: boolean }) {
-  const id = `field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+export function FormField({ label, value, onChange, placeholder, multiline = false, id, ...fieldProps }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; multiline?: boolean; id?: string } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "id" | "placeholder" | "className"> & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange" | "id" | "placeholder" | "className">) {
+  const generatedId = useId();
+  const fieldId = id ?? generatedId;
   return (
-    <label className="form-field" htmlFor={id}>
+    <label className="form-field" htmlFor={fieldId}>
       <span>{label}</span>
-      {multiline ? <textarea id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={4} /> : <input id={id} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />}
+      {multiline ? <textarea id={fieldId} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={4} {...fieldProps as TextareaHTMLAttributes<HTMLTextAreaElement>} /> : <input id={fieldId} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} {...fieldProps as InputHTMLAttributes<HTMLInputElement>} />}
     </label>
   );
 }
 
-export function FormPanel({ children, title, description, onClose }: { children: ReactNode; title: string; description: string; onClose: () => void }) {
+export function FormPanel({ children, title, description, onClose, onSubmit, eyebrow = "NUEVO REGISTRO" }: { children: ReactNode; title: string; description: string; onClose: () => void; onSubmit?: () => void; eyebrow?: string }) {
   const dialogClose = useContext(DialogCloseContext);
   return (
-    <section className="form-panel">
+    <form className="form-panel" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); onSubmit?.(); }}>
       <div className="form-panel-heading">
-        <div><span className="eyebrow">NUEVO REGISTRO</span><h2>{title}</h2><p>{description}</p></div>
+        <div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>
         <IconButton label="Cerrar formulario" onClick={dialogClose ?? onClose}>×</IconButton>
       </div>
       {children}
-    </section>
+    </form>
   );
 }
 
@@ -363,8 +367,16 @@ export function Dialog({ children, onClose, ariaLabel, trackChanges = true }: { 
   const dialog = useDialogHistory(onClose);
   const { requestClose } = dialog;
   useEffect(() => {
+    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") requestClose();
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = Array.from(dialogRef.current.querySelectorAll<HTMLElement>("button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex=\"-1\")]"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     window.addEventListener("keydown", handleKeyDown);
     dialogRef.current?.querySelector<HTMLElement>("input, textarea, select, button")?.focus();
@@ -373,6 +385,7 @@ export function Dialog({ children, onClose, ariaLabel, trackChanges = true }: { 
     return () => {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleKeyDown);
+      previousActiveElement?.focus();
     };
   }, [requestClose]);
 
@@ -392,14 +405,17 @@ export function Dialog({ children, onClose, ariaLabel, trackChanges = true }: { 
 
 export function ConfirmDialog({ title, description, onCancel, onConfirm }: { title: string; description: string; onCancel: () => void; onConfirm: () => void }) {
   const dialog = useDialogHistory(onCancel);
+  const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const previousActiveElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previousOverflow; };
+    dialogRef.current?.querySelector<HTMLElement>("button:not([disabled])")?.focus();
+    return () => { document.body.style.overflow = previousOverflow; previousActiveElement?.focus(); };
   }, []);
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
-      <div className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onMouseDown={(event) => event.stopPropagation()}>
+      <div ref={dialogRef} className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onMouseDown={(event) => event.stopPropagation()}>
         <span className="dialog-symbol">×</span>
         <span className="eyebrow">ACCIÓN DELICADA</span>
         <h2 id="confirm-title">{title}</h2>
