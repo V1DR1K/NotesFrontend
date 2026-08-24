@@ -1,6 +1,7 @@
 import type {
   ApiConfig,
   ApiOption,
+  AuthSession,
   AuthUser,
   Dashboard,
   DayEntry,
@@ -18,38 +19,36 @@ import type {
 } from "./types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
-let csrfToken: string | null = null;
-let csrfPromise: Promise<string | null> | null = null;
-let refreshPromise: Promise<boolean> | null = null;
-let sessionCleanupPromise: Promise<void> | null = null;
+const TOKEN_KEY = "notes.token";
+const REFRESH_KEY = "notes.refreshToken";
+const USER_KEY = "notes.user";
+let refreshPromise: Promise<string | null> | null = null;
 const REFRESH_LOCK_KEY = "notes.auth.refresh.lock";
 const REFRESH_MARKER_KEY = "notes.auth.refresh.marker";
 const SESSION_EXPIRED_KEY = "notes.auth.expired";
-const SESSION_PRESENT_KEY = "notes.auth.present";
 const TAB_ID = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 type ApiRequestInit = Omit<RequestInit, "body"> & { body?: BodyInit | object | null };
 
 function resetSessionState() {
-  csrfToken = null;
-  csrfPromise = null;
+  refreshPromise = null;
 }
 
 function clearSessionState() {
   resetSessionState();
-  refreshPromise = null;
   if (typeof window === "undefined") return;
   try {
     localStorage.removeItem(REFRESH_LOCK_KEY);
     localStorage.removeItem(REFRESH_MARKER_KEY);
     localStorage.removeItem(SESSION_EXPIRED_KEY);
-    localStorage.removeItem(SESSION_PRESENT_KEY);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(USER_KEY);
   } catch { /* storage can be unavailable in private contexts */ }
-  document.cookie = "XSRF-TOKEN=; Max-Age=0; Path=/; SameSite=Lax; Secure";
 }
 
 export function hasSessionHint() {
   if (typeof window === "undefined") return false;
-  try { return localStorage.getItem(SESSION_PRESENT_KEY) === "1"; } catch { return true; }
+  try { return Boolean(localStorage.getItem(TOKEN_KEY)); } catch { return false; }
 }
 
 function dispatchSessionExpired() {
@@ -235,12 +234,12 @@ function sleep(milliseconds: number) { return new Promise((resolve) => window.se
 
 function refreshedAfter(startedAt: number) { return Number(localStorage.getItem(REFRESH_MARKER_KEY) ?? 0) > startedAt; }
 
-async function refreshWithLocalLock(startedAt: number, action: () => Promise<boolean>) {
+async function refreshWithLocalLock(startedAt: number, action: () => Promise<string | null>) {
   const lockValue = `${TAB_ID}:${Date.now()}`;
   const deadline = Date.now() + 12000;
   let acquired = false;
   while (Date.now() < deadline) {
-    if (refreshedAfter(startedAt)) return true;
+    if (refreshedAfter(startedAt)) return localStorage.getItem(TOKEN_KEY);
     const current = localStorage.getItem(REFRESH_LOCK_KEY);
     if (!current || Number(current.split(":")[1] ?? 0) < Date.now() - 12000) {
       localStorage.setItem(REFRESH_LOCK_KEY, lockValue);
@@ -249,45 +248,50 @@ async function refreshWithLocalLock(startedAt: number, action: () => Promise<boo
     }
     await sleep(50);
   }
-  if (!acquired) return false;
+  if (!acquired) return null;
   try { return await action(); }
   finally { if (localStorage.getItem(REFRESH_LOCK_KEY) === lockValue) localStorage.removeItem(REFRESH_LOCK_KEY); }
 }
 
-async function refreshSession(startedAt: number) {
+async function refreshTokens() {
+  const refreshToken = localStorage.getItem(REFRESH_KEY);
+  if (!refreshToken) return null;
+  const response = await fetch(apiUrl("/auth/refresh"), {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken }),
+  });
+  const payload = await readJson(response);
+  if (!response.ok) return null;
+  const session = payload as Partial<AuthSession>;
+  if (!session.accessToken || !session.refreshToken) return null;
+  localStorage.setItem(TOKEN_KEY, session.accessToken);
+  localStorage.setItem(REFRESH_KEY, session.refreshToken);
+  if (session.user) localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+  localStorage.setItem(REFRESH_MARKER_KEY, String(Date.now()));
+  return session.accessToken;
+}
+
+function refreshSession(startedAt: number) {
   if (!refreshPromise) {
     const action = async () => {
-      if (refreshedAfter(startedAt)) return true;
-      await request<unknown>("/auth/refresh", { method: "POST" }, true);
-      localStorage.setItem(REFRESH_MARKER_KEY, String(Date.now()));
-      return true;
+      if (refreshedAfter(startedAt)) return localStorage.getItem(TOKEN_KEY);
+      return refreshTokens();
     };
-    refreshPromise = typeof navigator !== "undefined" && navigator.locks
+    const coordinated = typeof navigator !== "undefined" && navigator.locks
       ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, action)
       : refreshWithLocalLock(startedAt, action);
-    refreshPromise = refreshPromise.finally(() => { refreshPromise = null; });
+    refreshPromise = coordinated.finally(() => { refreshPromise = null; });
   }
   return refreshPromise;
 }
 
-async function expireSession() {
-  if (!sessionCleanupPromise) {
-    sessionCleanupPromise = request<void>("/auth/logout", { method: "POST" }, true).catch(() => undefined).finally(() => {
-      sessionCleanupPromise = null;
-      broadcastSessionExpired();
-    });
-  }
-  return sessionCleanupPromise;
-}
-
 async function request<T>(path: string, init: ApiRequestInit = {}, retried = false): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
-  const mutating = !["GET", "HEAD", "OPTIONS"].includes(method);
-  if (mutating && !csrfToken) await getCsrf();
-
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
-  if (mutating && csrfToken) headers.set("X-XSRF-TOKEN", csrfToken);
+  const accessToken = localStorage.getItem(TOKEN_KEY);
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
   let body = init.body;
   if (body && !isFormData && typeof body !== "string") {
@@ -295,21 +299,15 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
     body = JSON.stringify(body);
   }
 
-  const response = await fetch(apiUrl(path), { ...init, method, headers, body: body as BodyInit | null | undefined, credentials: "include" });
+  const response = await fetch(apiUrl(path), { ...init, method, headers, body: body as BodyInit | null | undefined });
   const payload = await readJson(response);
   if (response.status === 401 && path === "/auth/refresh") broadcastSessionExpired();
-  if (response.status === 403 && mutating && !retried) {
-    await getCsrf(true);
-    return request<T>(path, init, true);
-  }
   if (response.status === 401 && !retried && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) {
     try {
       const refreshed = await refreshSession(Date.now());
       if (refreshed) return request<T>(path, init, true);
-    } catch (reason) {
-      if (reason instanceof ApiError && reason.status >= 500) throw reason;
-    }
-    await expireSession();
+    } catch { /* The session-expired event below handles a rejected refresh. */ }
+    broadcastSessionExpired();
   }
   if (!response.ok) {
     if (response.status === 401 && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) window.dispatchEvent(new Event("notes:session-expired"));
@@ -324,37 +322,40 @@ export function patch<T>(path: string, body: object) { return request<T>(path, {
 export function del<T = void>(path: string) { return request<T>(path, { method: "DELETE" }); }
 export function upload<T>(path: string, body: FormData) { return request<T>(path, { method: "POST", body }); }
 export async function download(path: string) {
-  const response = await fetch(apiUrl(path), { credentials: "include", headers: { Accept: "*/*" } });
+  return downloadWithToken(path, false);
+}
+
+async function downloadWithToken(path: string, retried: boolean): Promise<Blob> {
+  const headers = new Headers({ Accept: "*/*" });
+  const accessToken = localStorage.getItem(TOKEN_KEY);
+  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
+  const response = await fetch(apiUrl(path), { headers });
+  if (response.status === 401 && !retried) {
+    const refreshed = await refreshSession(Date.now()).catch(() => null);
+    if (refreshed) return downloadWithToken(path, true);
+    broadcastSessionExpired();
+  }
   if (!response.ok) throw problemError(await readJson(response), response.status);
   return response.blob();
 }
 
-export async function getCsrf(force = false): Promise<string | null> {
-  if (csrfToken && !force) return csrfToken;
-  if (!force && csrfPromise) return csrfPromise;
-  csrfPromise = (async () => {
-    const response = await fetch(apiUrl("/auth/csrf"), { credentials: "include", headers: { Accept: "application/json" } });
-    const payload = await readJson(response);
-    if (!response.ok) throw problemError(payload, response.status, "/auth/csrf");
-    const record = asRecord(payload);
-    csrfToken = typeof payload === "string" ? payload : String(record.token ?? record.csrfToken ?? record.xsrfToken ?? response.headers.get("X-XSRF-TOKEN") ?? "") || null;
-    return csrfToken;
-  })().finally(() => { csrfPromise = null; });
-  return csrfPromise;
-}
-
 export const api = {
   login: async (credentials: LoginRequest) => {
-    const payload = await request<AuthUser | { user: AuthUser }>("/auth/login", { method: "POST", body: credentials });
-    try { localStorage.setItem(SESSION_PRESENT_KEY, "1"); } catch { /* storage can be unavailable in private contexts */ }
+    const payload = await request<AuthSession>("/auth/login", { method: "POST", body: credentials });
+    localStorage.setItem(TOKEN_KEY, payload.accessToken);
+    localStorage.setItem(REFRESH_KEY, payload.refreshToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
     return payload;
   },
   logout: async () => {
-    try { await request<void>("/auth/logout", { method: "POST" }); }
+    const refreshToken = localStorage.getItem(REFRESH_KEY);
+    try {
+      await request<void>("/auth/logout", { method: "POST", body: refreshToken ? { refreshToken } : undefined });
+    }
     finally { broadcastSessionExpired(); }
   },
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
-  changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "POST", body }),
+  changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "PUT", body }),
   config: async (): Promise<ApiConfig> => {
     const [dayStatuses, dayFeelings, financeItems, noteCategories] = await Promise.all([
       request<unknown>("/config/day-statuses"), request<unknown>("/config/day-feelings"), request<unknown>("/config/finance-items"), request<unknown>("/config/note-categories"),

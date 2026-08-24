@@ -35,6 +35,14 @@ export type AuthUser = {
   mustChangePassword: boolean;
 };
 
+export type AuthSession = {
+  accessToken: string;
+  refreshToken: string;
+  tokenType: string;
+  expiresIn: number;
+  user: AuthUser;
+};
+
 export type DayStatus = { code: string; label?: string; shortLabel?: string; emoji?: string };
 export type DayAnalysisStatus = "PENDING" | "COMPLETED";
 export type DayEntry = {
