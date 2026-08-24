@@ -203,6 +203,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .status-red { color: #ed8e8e; background: #ed8e8e; }
 .status-copy { color: var(--muted); font-size: 9px; }
 .day-mood { margin-left: auto; color: var(--section-accent); font-family: var(--font-display); font-size: 26px; }
+.day-feeling-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 19px; }
+.day-feeling-tag { padding: 4px 7px; color: var(--section-accent); background: var(--section-surface); font-size: 9px; }
+.day-analysis-pending { display: flex; align-items: flex-start; gap: 11px; margin-top: 28px; padding: 12px; color: var(--muted-strong); background: var(--section-surface); border: 1px dashed var(--line-strong); }
+.day-analysis-mark { color: var(--section-accent); font-family: var(--font-display); font-size: 25px; line-height: 1; }
+.day-analysis-pending strong, .day-analysis-pending span { display: block; }
+.day-analysis-pending strong { color: var(--ink); font-family: var(--font-display); font-size: 15px; font-weight: 500; }
+.day-analysis-pending span { margin-top: 4px; color: var(--muted); font-size: 9px; line-height: 1.45; }
 .tag-row { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 20px; }
 .tag { padding: 4px 7px; color: var(--section-accent); background: var(--section-surface); font-size: 9px; }
 .card-footer { position: absolute; right: 18px; bottom: 17px; left: 18px; padding-top: 13px; border-top: 1px solid var(--line); }
@@ -253,6 +260,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .settings-group-heading h2 { margin: 8px 0 5px; font-family: var(--font-display); font-size: 25px; letter-spacing: -.04em; line-height: 1; }
 .settings-group-heading p { max-width: 32ch; margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .settings-group-heading .button { min-height: 36px; padding: 0 12px; font-size: 10px; }
+.settings-fixed-label { padding: 7px 8px; color: var(--section-accent); border: 1px solid var(--line); font: 8px var(--font-mono); letter-spacing: .1em; }
 .settings-list { display: grid; gap: 1px; margin-top: 22px; border-top: 1px solid var(--line); }
 .settings-row { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 11px 0; border-bottom: 1px solid var(--line); }
 .settings-row-inactive { opacity: .5; }
@@ -307,6 +315,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .form-field input::placeholder, .form-field textarea::placeholder { color: var(--muted); }
 .form-field-full { grid-column: 1 / -1; }
 .form-field-full > .form-field { width: 100%; }
+.analysis-helper { display: block; margin-top: 7px; color: var(--section-accent); font: 9px var(--font-mono); letter-spacing: .04em; }
 .form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; padding-top: 17px; border-top: 1px solid var(--line); }
 .status-picker { display: flex; gap: 5px; min-height: 40px; }
 .status-choice { display: inline-flex; align-items: center; gap: 7px; padding: 0 10px; color: var(--muted); background: rgba(12, 14, 17, .5); border: 1px solid var(--line); font-size: 10px; }
@@ -315,6 +324,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 .card-link-button { padding: 0; color: var(--section-accent); background: transparent; border: 0; cursor: pointer; }
 .inline-error { margin-top: 16px; padding: 11px 13px; color: var(--danger); background: rgba(237, 142, 142, .08); border: 1px solid rgba(237, 142, 142, .24); font-size: 11px; line-height: 1.5; }
+.analysis-notice { margin-top: 16px; padding: 11px 13px; color: var(--section-accent); background: var(--section-surface); border: 1px solid var(--line); font-size: 10px; line-height: 1.5; }
 .app-loading { min-height: 100vh; display: grid; place-items: center; align-content: center; gap: 16px; color: var(--muted-strong); background: var(--canvas); }
 .app-loading .login-mark { margin: 0; }
 .login-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at 50% 0, var(--section-surface), transparent 36rem), var(--canvas); }

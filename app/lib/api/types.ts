@@ -36,15 +36,17 @@ export type AuthUser = {
 };
 
 export type DayStatus = { code: string; label?: string; shortLabel?: string; emoji?: string };
+export type DayAnalysisStatus = "PENDING" | "COMPLETED";
 export type DayEntry = {
   id: string;
   date: string;
+  analysisStatus: DayAnalysisStatus;
   statusCode: string;
   status?: DayStatus;
   feeling: string;
   description: string;
 };
-export type DaySuggestion = { enabled: boolean; statusCode: string; feelingCodes: string[] };
+export type DaySuggestion = { analyzed: boolean; statusCode: string; feelingCodes: string[] };
 
 export type NoteCategory = { code: string; label?: string };
 export type Note = {

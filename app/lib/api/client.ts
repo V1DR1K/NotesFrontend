@@ -4,7 +4,6 @@ import type {
   AuthUser,
   Dashboard,
   DayEntry,
-  DaySuggestion,
   FinanceMovement,
   FinanceSummary,
   ExchangeRate,
@@ -112,7 +111,7 @@ function option(value: unknown): ApiOption | undefined {
 function normalizeDay(value: unknown): DayEntry {
   const record = asRecord(value);
   const status = option(record.status);
-  return { ...record as unknown as DayEntry, id: String(record.id ?? ""), date: String(record.date ?? ""), statusCode: status?.code ?? String(record.statusCode ?? ""), status };
+  return { ...record as unknown as DayEntry, id: String(record.id ?? ""), date: String(record.date ?? ""), analysisStatus: record.analysisStatus === "COMPLETED" ? "COMPLETED" : "PENDING", statusCode: status?.code ?? String(record.statusCode ?? ""), status, feeling: String(record.feeling ?? ""), description: String(record.description ?? "") };
 }
 
 function normalizeNote(value: unknown): Note {
@@ -245,9 +244,9 @@ export const api = {
   search: (query: string) => get<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
   dashboard: () => request<unknown>("/dashboard").then(normalizeDashboard),
   days: (query: URLSearchParams) => request<unknown>(`/day-entries?${query}`).then((payload) => normalizePageItems(payload, normalizeDay)),
-  createDay: (body: { date: string; statusCode: string; feeling: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),
-  updateDay: (id: string, body: { date: string; statusCode: string; feeling: string; description: string }) => request<unknown>(`/day-entries/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeDay),
-  suggestDay: (description: string) => post<DaySuggestion>("/day-entries/suggestions", { description }),
+  createDay: (body: { date: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),
+  updateDay: (id: string, body: { date: string; description: string }) => request<unknown>(`/day-entries/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeDay),
+  analyzeDay: (id: string) => request<unknown>(`/day-entries/${encodeURIComponent(id)}/analyze`, { method: "POST" }).then(normalizeDay),
   deleteDay: (id: string) => request<void>(`/day-entries/${encodeURIComponent(id)}`, { method: "DELETE" }),
   notes: (query: URLSearchParams) => request<unknown>(`/notes?${query}`).then((payload) => normalizePageItems(payload, normalizeNote)),
   createNote: (body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>("/notes", { method: "POST", body }).then(normalizeNote),

@@ -6,11 +6,11 @@ import { api } from "../../lib/api/client";
 import { Button, ConfirmDialog, Dialog, FormField, FormPanel, IconButton, SectionHero } from "../../ui/Primitives";
 
 type ConfigKey = "dayStatuses" | "dayFeelings" | "financeItems" | "noteCategories";
-type ConfigGroup = { kind: ConfigKind; key: ConfigKey; label: string; description: string; emoji: boolean };
+type ConfigGroup = { kind: ConfigKind; key: ConfigKey; label: string; description: string; emoji: boolean; fixed?: boolean };
 type Draft = { code: string; label: string; emoji: string; sortOrder: string; active: boolean };
 
 const GROUPS: ConfigGroup[] = [
-  { kind: "day-statuses", key: "dayStatuses", label: "Estados del día", description: "Los colores que describen cómo estuvo tu día.", emoji: true },
+  { kind: "day-statuses", key: "dayStatuses", label: "Semáforo del día", description: "Los tres colores fijos para describir el balance general del día.", emoji: true, fixed: true },
   { kind: "day-feelings", key: "dayFeelings", label: "Sensaciones", description: "Las opciones que aparecen al registrar cómo te sentiste.", emoji: false },
   { kind: "finance-items", key: "financeItems", label: "Clasificaciones financieras", description: "Las opciones disponibles para registrar cada movimiento.", emoji: false },
   { kind: "note-categories", key: "noteCategories", label: "Categorías de notas", description: "Las etiquetas disponibles para tus ideas.", emoji: false },
@@ -53,12 +53,12 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
       {GROUPS.map((group) => {
         const options = config[group.key] as ApiOption[];
         return <section className="settings-group" key={group.kind}>
-          <div className="settings-group-heading"><div><span className="eyebrow">CONFIGURACIÓN</span><h2>{group.label}</h2><p>{group.description}</p></div><Button variant="ghost" onClick={() => openCreate(group)}>+ Agregar</Button></div>
+           <div className="settings-group-heading"><div><span className="eyebrow">CONFIGURACIÓN</span><h2>{group.label}</h2><p>{group.description}</p></div>{group.fixed ? <span className="settings-fixed-label">FIJO</span> : <Button variant="ghost" onClick={() => openCreate(group)}>+ Agregar</Button>}</div>
           <div className="settings-list">
             {options.length ? options.map((option) => <div className={`settings-row ${option.active === false ? "settings-row-inactive" : ""}`} key={option.code}>
               <div className="settings-option-mark">{group.emoji && option.emoji ? option.emoji : <span>◆</span>}</div>
               <div className="settings-option-copy"><strong>{option.label}</strong><span>{option.code}{option.active === false ? " · inactivo" : ""}</span></div>
-              <div className="settings-row-actions"><IconButton label={`Editar ${option.label}`} onClick={() => openEdit(group, option)}>✎</IconButton><IconButton label={`Eliminar ${option.label}`} onClick={() => setPendingDelete({ group, option })} variant="danger">×</IconButton></div>
+               {!group.fixed ? <div className="settings-row-actions"><IconButton label={`Editar ${option.label}`} onClick={() => openEdit(group, option)}>✎</IconButton><IconButton label={`Eliminar ${option.label}`} onClick={() => setPendingDelete({ group, option })} variant="danger">×</IconButton></div> : null}
             </div>) : <p className="settings-empty">Todavía no hay opciones configuradas.</p>}
           </div>
         </section>;
