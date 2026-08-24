@@ -1,10 +1,11 @@
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 
-export function useDayData(page: number, statusCode: string, feelings: string[], date: string) {
+export function useDayData(page: number, statusCode: string, feelings: string[], from: string, to: string) {
   const query = new URLSearchParams({ page: String(page), size: "6" });
   if (statusCode !== "all") query.set("statusCode", statusCode);
-  if (date) query.set("date", date);
+  if (from) query.set("from", from);
+  if (to) query.set("to", to);
   feelings.forEach((feeling) => query.append("feeling", feeling));
-  return useApiQuery(`days:${page}:${statusCode}:${feelings.join(",")}:${date}`, () => api.days(query));
+  return useApiQuery(`days:${page}:${statusCode}:${feelings.join(",")}:${from}:${to}`, () => api.days(query));
 }

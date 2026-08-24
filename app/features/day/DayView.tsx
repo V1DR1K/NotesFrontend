@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ApiConfig } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { useMutationError } from "../../lib/api/hooks";
-import { currentMonth, dateLabel, todayIso, fieldError } from "../../lib/presentation";
+import { currentMonth, dateLabel, fieldError, monthBounds, todayIso } from "../../lib/presentation";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, MultiSelectChips, Pagination, SectionHero, SelectField, SkeletonGrid, StatusDot } from "../../ui/Primitives";
 import { DayCalendar } from "./DayCalendar";
 import { useDayCalendarData } from "./useDayCalendarData";
@@ -24,7 +24,10 @@ function statusTone(code: string): "green" | "yellow" | "red" {
 export function DayView({ config }: { config: ApiConfig }) {
   const [filter, setFilter] = useState("all");
   const [feelings, setFeelings] = useState<string[]>([]);
-  const [date, setDate] = useState("");
+  const defaultMonth = currentMonth();
+  const defaultRange = monthBounds(defaultMonth);
+  const [from, setFrom] = useState(defaultRange.from);
+  const [to, setTo] = useState(defaultRange.to);
   const [page, setPage] = useState(0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [draftFilter, setDraftFilter] = useState("all");
@@ -37,7 +40,7 @@ export function DayView({ config }: { config: ApiConfig }) {
   const [saving, setSaving] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(currentMonth());
   const [draft, setDraft] = useState({ date: todayIso(), description: "" });
-  const data = useDayData(page, filter, feelings, date);
+  const data = useDayData(page, filter, feelings, from, to);
   const calendarData = useDayCalendarData(calendarMonth);
   const mutation = useMutationError();
   const statusOptions = config.dayStatuses.filter((option) => option.active !== false);
@@ -88,10 +91,11 @@ export function DayView({ config }: { config: ApiConfig }) {
   const remove = async () => { if (!pendingDelete) return; try { await mutation.run(() => api.deleteDay(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
   const pageCount = data.data?.totalPages ?? 0;
   const activeFilterCount = (filter === "all" ? 0 : 1) + feelings.length;
+  const exactDate = from === to ? from : "";
 
   return <div className="view module-view">
      <SectionHero section="day" onAction={startNew} rightSlot={<div className="streak-card"><span className="eyebrow">RACHA ACTUAL</span><strong>—</strong><span>calculada con tus registros</span><div className="streak-dots"><i /><i /><i /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /></div></div>} />
-     {calendarData.error ? <div className="analysis-notice" role="status">No se pudo cargar el calendario. El listado sigue disponible.</div> : <DayCalendar month={calendarMonth} entries={calendarData.data?.content ?? []} selectedDate={date} onMonthChange={setCalendarMonth} onSelectDate={(selected) => { setDate(selected); setPage(0); }} />}
+     {calendarData.error ? <div className="analysis-notice" role="status">No se pudo cargar el calendario. El listado sigue disponible.</div> : <DayCalendar month={calendarMonth} entries={calendarData.data?.content ?? []} selectedDate={exactDate} onMonthChange={setCalendarMonth} onSelectDate={(selected) => { setFrom(selected); setTo(selected); setPage(0); }} />}
     {composerOpen ? <Dialog ariaLabel="Registrar un día" onClose={() => setComposerOpen(false)}><FormPanel title={editingId ? "Editar el registro" : "Registrar el día"} description="Escribí lo que pasó. La IA va a identificar el balance y las sensaciones presentes." onClose={() => setComposerOpen(false)}>
       <div className="form-grid form-grid-day">
         <label className="form-field" htmlFor="day-date"><span>Fecha</span><input id="day-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label>
@@ -106,9 +110,10 @@ export function DayView({ config }: { config: ApiConfig }) {
       <section className="day-filter-section day-filter-feelings" aria-labelledby="day-filter-feelings-title"><div className="day-filter-section-heading"><div><span className="eyebrow">02 / SENSACIONES</span><h3 id="day-filter-feelings-title">Qué estuvo presente</h3></div><span>{draftFeelings.length ? `${draftFeelings.length} elegidas` : "Todas"}</span></div><div className="day-filter-chips"><MultiSelectChips selected={draftFeelings} options={feelingOptions.map(({ code, label }) => ({ value: code, label }))} onChange={setDraftFeelings} ariaLabel="Sensaciones para filtrar" /></div></section>
       <div className="day-filter-actions"><Button variant="quiet" onClick={clearDraftFilters}>Limpiar filtros</Button><Button onClick={applyFilters}>Aplicar filtros <span aria-hidden="true">↗</span></Button></div>
     </section></Dialog> : null}
-    <ModuleToolbar resultLabel={`${data.data?.totalElements ?? 0} registros`}>
-      <label className="toolbar-date-field" htmlFor="day-filter-date"><span>{date ? "Fecha exacta" : "Historial"}</span><input id="day-filter-date" type="date" value={date} onChange={(event) => { setDate(event.target.value); setPage(0); }} /></label>
-      {date ? <Button className="filter-clear" variant="quiet" onClick={() => { setDate(""); setPage(0); }}>Ver historial</Button> : <span className="history-state">HISTORIAL COMPLETO</span>}
+     <ModuleToolbar resultLabel={`${data.data?.totalElements ?? 0} registros`}>
+       <label className="toolbar-date-field" htmlFor="day-filter-from"><span>Desde</span><input id="day-filter-from" type="date" value={from} onChange={(event) => { setFrom(event.target.value); setPage(0); }} /></label>
+       <label className="toolbar-date-field" htmlFor="day-filter-to"><span>Hasta</span><input id="day-filter-to" type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(0); }} /></label>
+       {from !== defaultRange.from || to !== defaultRange.to ? <Button className="filter-clear" variant="quiet" onClick={() => { setFrom(defaultRange.from); setTo(defaultRange.to); setPage(0); }}>Mes actual</Button> : <span className="history-state">MES ACTUAL</span>}
       <Button className="day-filter-trigger" variant="quiet" onClick={openFilters} ariaHasPopup="dialog" ariaExpanded={filtersOpen}><span>Filtros</span>{activeFilterCount ? <span className="day-filter-count">{activeFilterCount}</span> : null}<span className="day-filter-chevron" aria-hidden="true">⌄</span></Button>
       <SelectField label="Ordenar" compact value="recent" onChange={() => undefined} options={[{ value: "recent", label: "Más recientes" }]} />
     </ModuleToolbar>
