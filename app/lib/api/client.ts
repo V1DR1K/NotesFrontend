@@ -7,6 +7,7 @@ import type {
   DayEntry,
   FinanceMovement,
   FinanceAnalytics,
+  FinanceAccount,
   FinanceSummary,
   ExchangeRate,
   FileFolder,
@@ -199,6 +200,11 @@ function normalizeAnalytics(value: unknown): FinanceAnalytics {
   };
 }
 
+function normalizeAccount(value: unknown): FinanceAccount {
+  const record = asRecord(value);
+  return { code: String(record.code ?? ""), label: String(record.label ?? record.code ?? "Cuenta"), type: String(record.type ?? ""), balanceArs: record.balanceArs as number | string, annualRatePercent: record.annualRatePercent as number | string, growthMode: String(record.growthMode ?? "MANUAL"), balanceAsOf: String(record.balanceAsOf ?? "") };
+}
+
 function normalizeDashboard(value: unknown): Dashboard {
   const record = asRecord(value);
   return {
@@ -385,6 +391,8 @@ export const api = {
   deleteMovement: (id: string) => request<void>(`/finance/movements/${encodeURIComponent(id)}`, { method: "DELETE" }),
   financeSummary: (query: URLSearchParams) => request<FinanceSummary>(`/finance/summary?${query}`),
   financeAnalytics: (query: URLSearchParams) => request<unknown>(`/finance/analytics?${query}`).then(normalizeAnalytics),
+  financeAccounts: () => request<unknown>("/finance/accounts").then((payload) => Array.isArray(payload) ? payload.map(normalizeAccount).filter((account) => account.code) : []),
+  syncFinanceAccount: (code: string, body: { balanceArs: number }) => request<unknown>(`/finance/accounts/${encodeURIComponent(code)}/balance`, { method: "PUT", body }).then(normalizeAccount),
   exchangeRate: () => request<ExchangeRate>("/finance/exchange-rate/usd"),
   folders: () => request<unknown>("/file-folders").then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),

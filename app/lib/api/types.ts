@@ -96,6 +96,15 @@ export type FinanceAnalytics = {
   incomeCategories: FinanceCategorySummary[];
   expenseCategories: FinanceCategorySummary[];
 };
+export type FinanceAccount = {
+  code: string;
+  label: string;
+  type: "CASH" | "INVESTMENT" | "CRYPTO" | string;
+  balanceArs: number | string;
+  annualRatePercent: number | string;
+  growthMode: "DAILY_TNA" | "MANUAL" | string;
+  balanceAsOf: string;
+};
 
 export type ExchangeRate = { currency: string; buy: number | string; sell: number | string; average: number | string; fetchedAt?: string; source?: string };
 
