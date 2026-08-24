@@ -32,12 +32,24 @@ function resetSessionState() {
   csrfPromise = null;
 }
 
+function clearSessionState() {
+  resetSessionState();
+  refreshPromise = null;
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(REFRESH_LOCK_KEY);
+    localStorage.removeItem(REFRESH_MARKER_KEY);
+    localStorage.removeItem(SESSION_EXPIRED_KEY);
+  } catch { /* storage can be unavailable in private contexts */ }
+  document.cookie = "XSRF-TOKEN=; Max-Age=0; Path=/; SameSite=Lax; Secure";
+}
+
 function dispatchSessionExpired() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("notes:session-expired"));
 }
 
 function broadcastSessionExpired() {
-  resetSessionState();
+  clearSessionState();
   if (typeof window === "undefined") return;
   try { localStorage.setItem(SESSION_EXPIRED_KEY, String(Date.now())); } catch { /* storage can be unavailable in private contexts */ }
   dispatchSessionExpired();
@@ -46,7 +58,7 @@ function broadcastSessionExpired() {
 if (typeof window !== "undefined") {
   window.addEventListener("storage", (event) => {
     if (event.key !== SESSION_EXPIRED_KEY || !event.newValue) return;
-    resetSessionState();
+    clearSessionState();
     dispatchSessionExpired();
   });
 }
@@ -258,6 +270,7 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
 
   const response = await fetch(apiUrl(path), { ...init, method, headers, body: body as BodyInit | null | undefined, credentials: "include" });
   const payload = await readJson(response);
+  if (response.status === 401 && path === "/auth/refresh") broadcastSessionExpired();
   if (response.status === 403 && mutating && !retried) {
     await getCsrf(true);
     return request<T>(path, init, true);
