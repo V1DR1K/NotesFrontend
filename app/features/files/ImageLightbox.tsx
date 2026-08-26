@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { FileItem } from "../../lib/api/types";
 import { AuthImage } from "./AuthImage";
 
@@ -34,7 +33,7 @@ export function ImageLightbox({ images, startIndex, onClose }: ImageLightboxProp
 
   if (!photo) return null;
 
-  return createPortal(
+  return (
     <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label="Foto ampliada" onMouseDown={onClose}>
       <button className="photo-lightbox-close" type="button" onClick={onClose} aria-label="Cerrar">&#x2715;</button>
       <div className="photo-lightbox-body" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => { const t = e.changedTouches[0]; if (t) touchStart.current = { x: t.clientX, y: t.clientY }; }} onTouchEnd={(e) => { const s = touchStart.current; const t = e.changedTouches[0]; touchStart.current = undefined; if (!s || !t) return; const dx = t.clientX - s.x; const dy = t.clientY - s.y; if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { dx < 0 ? next() : prev(); } }}>
@@ -46,7 +45,6 @@ export function ImageLightbox({ images, startIndex, onClose }: ImageLightboxProp
         </div>}
         {images.length > 1 && <div className="photo-lightbox-dots" role="tablist">{images.map((img, i) => <button key={img.id} type="button" role="tab" aria-selected={i === selected} className={i === selected ? "is-selected" : ""} onClick={() => setSelected(i)} aria-label={`Foto ${i + 1}`} />)}</div>}
       </div>
-    </div>,
-    document.body,
+    </div>
   );
 }
