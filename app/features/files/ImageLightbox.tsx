@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, createPortal } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { FileItem } from "../../lib/api/types";
 import { AuthImage } from "./AuthImage";
 
