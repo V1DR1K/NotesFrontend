@@ -283,6 +283,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .tag { padding: 4px 7px; color: var(--section-accent); background: var(--section-surface); font-size: 9px; }
 .card-footer { margin-top: auto; padding-top: 13px; border-top: 1px solid var(--line); }
 .card-footer .eyebrow { color: var(--muted); font-size: 8px; }
+.card-footer .card-link-button + .card-link-button { margin-left: 8px; }
 .card-arrow { font-size: 14px; }
 
 .finance-card { min-height: 290px; }
@@ -591,6 +592,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .finance-card h2 { margin-bottom: 12px; }
   .finance-amount { font-size: 24px; }
   .card-footer { position: static; margin-top: 16px; padding-top: 11px; }
+  .card-footer .card-link-button + .card-link-button { margin-left: 8px; }
   .settings-grid { grid-template-columns: 1fr; gap: 10px; padding-top: 28px; }
   .settings-group { padding: 17px; }
   .settings-group-heading { gap: 10px; }
