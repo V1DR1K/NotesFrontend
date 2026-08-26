@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, createPortal } from "react";
 import type { FileItem } from "../../lib/api/types";
+import { AuthImage } from "./AuthImage";
 
 type ImageLightboxProps = {
   images: FileItem[];
@@ -22,23 +23,21 @@ export function ImageLightbox({ images, startIndex, onClose }: ImageLightboxProp
       if (e.key === "ArrowLeft") prev();
     };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = prevOverflow;
     };
   }, [onClose]);
 
   if (!photo) return null;
 
-  const src = photo.downloadUrl || `/files/${encodeURIComponent(photo.id)}/download`;
-
   return createPortal(
     <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label="Foto ampliada" onMouseDown={onClose}>
       <button className="photo-lightbox-close" type="button" onClick={onClose} aria-label="Cerrar">&#x2715;</button>
       <div className="photo-lightbox-body" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => { const t = e.changedTouches[0]; if (t) touchStart.current = { x: t.clientX, y: t.clientY }; }} onTouchEnd={(e) => { const s = touchStart.current; const t = e.changedTouches[0]; touchStart.current = undefined; if (!s || !t) return; const dx = t.clientX - s.x; const dy = t.clientY - s.y; if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { dx < 0 ? next() : prev(); } }}>
-        <img src={src} alt={photo.name} />
+        <AuthImage file={photo} alt={photo.name} loading="eager" />
         {images.length > 1 && <div className="photo-lightbox-controls">
           <button type="button" onClick={prev} aria-label="Anterior">&#x2039;</button>
           <span>{selected + 1} / {images.length}</span>
