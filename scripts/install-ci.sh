@@ -186,4 +186,8 @@ await writeFile(
   }, null, 2)}\n`,
 );
 NODE
+if [[ "${SITES_KEEP_NPM_CACHE:-0}" != "1" ]]; then
+  npm cache clean --force --cache "${expected_cache}" >/dev/null 2>&1 || true
+fi
+rm -rf "${runtime_root}/preflight"
 echo "[sites] npm ci passed and vinext is available"

@@ -12,10 +12,13 @@ oscuro y editorial de la maqueta, pero no depende de fixtures en runtime.
 - `npm run lint`
 - `npm run build`
 - `npm test`
+- `npm run clean:runtime`
 
 `NEXT_PUBLIC_API_BASE` configura la base pública de la API. Por defecto es
 `/api`, por lo que el frontend desplegado usa `https://notes.neticar.com.ar/api`.
 La sesión usa cookies `HttpOnly`, `Secure` y `SameSite=Strict`.
+Los artefactos temporales de Sites se pueden limpiar con `npm run clean:runtime`;
+`npm run install:ci` limpia automáticamente la caché npm y el preflight al terminar.
 
 ## Backend
 
