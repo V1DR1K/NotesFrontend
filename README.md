@@ -1,7 +1,7 @@
 # Cuaderno
 
-Frontend Vinext/Next para `notes.neticar.com.ar`, conectado al backend real de
-Notas mediante bearer tokens en `Authorization`. La interfaz conserva el lenguaje visual
+Frontend Vinext sobre Vite para `notes.neticar.com.ar`, conectado al backend real de
+Notas mediante cookies de sesión HttpOnly. La interfaz conserva el lenguaje visual
 oscuro y editorial de la maqueta, pero no depende de fixtures en runtime.
 
 ## Desarrollo
@@ -15,7 +15,7 @@ oscuro y editorial de la maqueta, pero no depende de fixtures en runtime.
 
 `NEXT_PUBLIC_API_BASE` configura la base pública de la API. Por defecto es
 `/api`, por lo que el frontend desplegado usa `https://notes.neticar.com.ar/api`.
-El MVP guarda los tokens en `localStorage` y los envía explícitamente como bearer.
+La sesión usa cookies `HttpOnly`, `Secure` y `SameSite=Strict`.
 
 ## Backend
 
