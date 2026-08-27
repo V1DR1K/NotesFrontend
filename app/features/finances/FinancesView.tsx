@@ -34,7 +34,7 @@ export function FinancesView({ config }: { config: ApiConfig }) {
   const [syncBalance, setSyncBalance] = useState("");
   const [syncing, setSyncing] = useState(false);
   const [draft, setDraft] = useState({ date: todayIso(), bucket: "EXPENSE", accountCode: "mercadopago", amount: "", itemCode: firstFinanceItem("mercadopago", "EXPENSE", [], config.financeItems), note: "" });
-  const data = useFinanceData(page, bucket, from, to, itemCode);
+  const data = useFinanceData(page, bucket, from, to, itemCode, sort);
   const mutation = useMutationError();
   const [movements, summary, analytics, ratePayload, accountsPayload] = data.data;
   const accounts = accountsPayload ?? [];
@@ -51,7 +51,7 @@ export function FinancesView({ config }: { config: ApiConfig }) {
   const investedAccounts = accounts.filter((account) => account.type === "INVESTMENT" || account.type === "CRYPTO");
   const invested = investedAccounts.length ? investedAccounts.reduce((total, account) => total + asNumber(account.balanceArs), 0) : periodInvested;
   const cash = cashAccount ? asNumber(cashAccount.balanceArs) : summaryValue(summary, ["cash", "availableCash"], income - expense - periodInvested);
-  const visible = [...(movements?.content ?? [])].sort((a, b) => sort === "large" ? asNumber(movementARS(b)) - asNumber(movementARS(a)) : b.date.localeCompare(a.date));
+  const visible = movements?.content ?? [];
   const itemLabel = (code: string) => config.financeItems.find((item) => item.code === code)?.label ?? code;
   const startNew = () => { const accountCode = cashAccount?.code ?? "mercadopago"; const bucket = "EXPENSE"; setEditingId(null); setDraft({ date: todayIso(), bucket, accountCode, amount: "", itemCode: firstFinanceItem(accountCode, bucket, accounts, config.financeItems), note: "" }); mutation.clearError(); setComposerOpen(true); };
   const startEdit = (movement: FinanceMovement) => { const accountCode = movement.accountCode || cashAccount?.code || "mercadopago"; setEditingId(movement.id); setDraft({ date: movement.date, bucket: movement.bucket.toUpperCase(), accountCode, amount: String(movementARS(movement)), itemCode: movement.itemCode, note: movement.note ?? "" }); mutation.clearError(); setComposerOpen(true); };

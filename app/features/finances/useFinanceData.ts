@@ -1,14 +1,14 @@
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 
-export function useFinanceData(page: number, bucket: string, from: string, to: string, itemCode: string) {
-  const query = new URLSearchParams({ page: String(page), size: "8" });
+export function useFinanceData(page: number, bucket: string, from: string, to: string, itemCode: string, sort: string) {
+  const query = new URLSearchParams({ page: String(page), size: "8", sort: sort === "large" ? "amountArs,desc" : "date,desc" });
   if (bucket !== "all") query.set("bucket", bucket);
   if (from) query.set("from", from);
   if (to) query.set("to", to);
   if (itemCode !== "all") query.set("itemCode", itemCode);
   const rangeQuery = new URLSearchParams({ from, to });
-  const movements = useApiQuery(`finance:movements:${page}:${bucket}:${from}:${to}:${itemCode}`, (signal) => api.movements(query, signal));
+  const movements = useApiQuery(`finance:movements:${page}:${bucket}:${from}:${to}:${itemCode}:${sort}`, (signal) => api.movements(query, signal));
   const summary = useApiQuery(`finance:summary:${from}:${to}`, (signal) => api.financeSummary(rangeQuery, signal));
   const analytics = useApiQuery(`finance:analytics:${from}:${to}`, (signal) => api.financeAnalytics(rangeQuery, signal));
   const exchangeRate = useApiQuery("finance:exchange-rate", (signal) => api.exchangeRate(signal));

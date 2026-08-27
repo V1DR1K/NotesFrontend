@@ -1,8 +1,8 @@
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 
-export function useNotesData(page: number, categoryCode: string) {
-  const query = new URLSearchParams({ page: String(page), size: "6" });
+export function useNotesData(page: number, categoryCode: string, sort: string) {
+  const query = new URLSearchParams({ page: String(page), size: "6", sort: sort === "old" ? "date,asc" : "date,desc" });
   if (categoryCode !== "all") query.set("categoryCode", categoryCode);
-  return useApiQuery(`notes:${page}:${categoryCode}`, (signal) => api.notes(query, signal));
+  return useApiQuery(`notes:${page}:${categoryCode}:${sort}`, (signal) => api.notes(query, signal));
 }

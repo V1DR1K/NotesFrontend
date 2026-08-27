@@ -18,10 +18,10 @@ export function NotesView({ config }: { config: ApiConfig }) {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const activeCategories = config.noteCategories.filter((item) => item.active !== false);
   const [draft, setDraft] = useState({ title: "", body: "", categoryCode: activeCategories[0]?.code ?? "", date: todayIso() });
-  const data = useNotesData(page, filter);
+  const data = useNotesData(page, filter, sort);
   const mutation = useMutationError();
   const categoryLabel = (code: string) => config.noteCategories.find((item) => item.code === code)?.label ?? code;
-  const notes = [...(data.data?.content ?? [])].sort((a, b) => sort === "old" ? a.date.localeCompare(b.date) : b.date.localeCompare(a.date));
+  const notes = data.data?.content ?? [];
   const startNew = () => { setEditingId(null); setDraft({ title: "", body: "", categoryCode: activeCategories[0]?.code ?? "", date: todayIso() }); mutation.clearError(); setComposerOpen(true); };
   const startEdit = (note: Note) => { setEditingId(note.id); setDraft({ title: note.title, body: note.body, categoryCode: note.categoryCode, date: note.date }); mutation.clearError(); setComposerOpen(true); };
   const save = async () => {
