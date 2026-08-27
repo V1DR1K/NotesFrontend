@@ -417,8 +417,8 @@ export const api = {
   folders: () => request<unknown>("/file-folders").then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
   files: (query: URLSearchParams) => request<unknown>(`/files?${query}`).then((payload) => normalizePageItems(payload, normalizeFile)),
-  uploadFile: (file: File, folderId?: string, description?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); if (description) body.append("description", description); return request<unknown>("/files", { method: "POST", body }).then(normalizeFile); },
-  updateFile: (id: string, body: { name?: string; description?: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
+  uploadFile: (file: File, folderId?: string, name?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); if (name) body.append("name", name); return request<unknown>("/files", { method: "POST", body }).then(normalizeFile); },
+  updateFile: (id: string, body: { name: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
   deleteFile: (id: string) => request<void>(`/files/${encodeURIComponent(id)}`, { method: "DELETE" }),
   downloadFile: (file: FileItem) => download(file.downloadUrl || `/files/${encodeURIComponent(file.id)}/download`),
 };

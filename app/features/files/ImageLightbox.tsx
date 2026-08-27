@@ -37,7 +37,7 @@ export function ImageLightbox({ images, startIndex, onClose }: ImageLightboxProp
     <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label="Foto ampliada" onMouseDown={onClose}>
       <button className="photo-lightbox-close" type="button" onClick={onClose} aria-label="Cerrar">&#x2715;</button>
       <div className="photo-lightbox-body" onMouseDown={(e) => e.stopPropagation()} onTouchStart={(e) => { const t = e.changedTouches[0]; if (t) touchStart.current = { x: t.clientX, y: t.clientY }; }} onTouchEnd={(e) => { const s = touchStart.current; const t = e.changedTouches[0]; touchStart.current = undefined; if (!s || !t) return; const dx = t.clientX - s.x; const dy = t.clientY - s.y; if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { dx < 0 ? next() : prev(); } }}>
-         <AuthImage file={photo} alt={photo.description} loading="eager" />
+         <AuthImage file={photo} alt={photo.name} loading="eager" />
         {images.length > 1 && <div className="photo-lightbox-controls">
           <button type="button" onClick={prev} aria-label="Anterior">&#x2039;</button>
           <span>{selected + 1} / {images.length}</span>

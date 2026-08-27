@@ -26,8 +26,8 @@ token por `/api/auth/refresh` y muestra el cambio de contraseña requerido por A
 central.
 
 La paginación interna respeta las páginas 0-based del backend y solo muestra
-controles 1-based al usuario. Los archivos conservan su nombre técnico de descarga
-y tienen además un título/descripción editable y buscable. Las clasificaciones de
+controles 1-based al usuario. El nombre de los archivos es también su título,
+editable y buscable. Las clasificaciones de
 Finanzas se filtran por su tipo configurado: ingreso, egreso o transferencia.
 
 ## Docker y CI
