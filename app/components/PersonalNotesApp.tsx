@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "./AppShell";
 import { LoginScreen } from "./LoginScreen";
 import { ChangePasswordScreen } from "./ChangePasswordScreen";
 import { isSectionKey, SECTION_TOKENS, tokenStyle, type SectionKey } from "../config/sections";
 import { ApiError, api, hasSessionHint, unwrapUser } from "../lib/api/client";
+import { clearApiQueryCache } from "../lib/api/hooks";
 import type { ApiConfig, AuthUser } from "../lib/api/types";
 import { ArchivosModule } from "../modules/ArchivosModule";
 import { FinanzasModule } from "../modules/FinanzasModule";
@@ -27,6 +28,7 @@ export function PersonalNotesApp() {
   const [gateError, setGateError] = useState("");
   const [logoutPending, setLogoutPending] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const sessionUserId = useRef<string | null>(null);
 
   const navigate = (section: SectionKey) => {
     if (section === activeSection) return;
@@ -58,11 +60,13 @@ export function PersonalNotesApp() {
     if (!hasSessionHint()) { setGate("login"); return; }
     try {
       const session = unwrapUser(await api.me());
+      if (sessionUserId.current && sessionUserId.current !== session.id) clearApiQueryCache();
+      sessionUserId.current = session.id;
       setUser(session);
       if (session.mustChangePassword) { setConfig(null); setGate("password"); }
       else { setConfig(await api.config()); setGate("ready"); }
     } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 401) setGate("login");
+      if (reason instanceof ApiError && reason.status === 401) { sessionUserId.current = null; clearApiQueryCache(); setGate("login"); }
       else { setGateError(reason instanceof ApiError ? reason.message : "No se pudo conectar con Cuaderno."); setGate("error"); }
     }
   };
@@ -70,7 +74,7 @@ export function PersonalNotesApp() {
   useEffect(() => { queueMicrotask(() => void loadSession()); }, []);
 
   useEffect(() => {
-    const expireSession = () => { setUser(null); setConfig(null); setGate("login"); };
+    const expireSession = () => { sessionUserId.current = null; clearApiQueryCache(); setUser(null); setConfig(null); setGate("login"); };
     window.addEventListener("notes:session-expired", expireSession);
     return () => window.removeEventListener("notes:session-expired", expireSession);
   }, []);
@@ -79,7 +83,7 @@ export function PersonalNotesApp() {
   const logout = async () => {
     setLogoutPending(true);
     try { await api.logout(); } catch { /* Local sign-out still completes if central revocation fails. */ }
-    finally { setLogoutPending(false); setUser(null); setConfig(null); setGate("login"); }
+    finally { sessionUserId.current = null; clearApiQueryCache(); setLogoutPending(false); setUser(null); setConfig(null); setGate("login"); }
   };
 
   useEffect(() => {
