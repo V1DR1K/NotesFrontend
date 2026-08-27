@@ -402,10 +402,14 @@ export const api = {
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "PUT", body }),
   config: async (signal?: AbortSignal): Promise<ApiConfig> => {
-    const [dayStatuses, dayFeelings, financeItems, noteCategories] = await Promise.all([
+    const results = await Promise.allSettled([
       request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }),
     ]);
-    return { dayStatuses: optionList(dayStatuses), dayFeelings: optionList(dayFeelings), financeItems: optionList(financeItems), noteCategories: optionList(noteCategories) };
+    const options = (result: PromiseSettledResult<unknown>) => {
+      if (result.status !== "fulfilled") return [];
+      try { return optionList(result.value); } catch { return []; }
+    };
+    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]) };
   },
   createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
