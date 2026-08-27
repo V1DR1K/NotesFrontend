@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { AppShell } from "./AppShell";
 import { LoginScreen } from "./LoginScreen";
 import { ChangePasswordScreen } from "./ChangePasswordScreen";
@@ -8,13 +8,14 @@ import { isSectionKey, SECTION_TOKENS, tokenStyle, type SectionKey } from "../co
 import { ApiError, api, hasSessionHint, unwrapUser } from "../lib/api/client";
 import { clearApiQueryCache } from "../lib/api/hooks";
 import type { ApiConfig, AuthUser } from "../lib/api/types";
-import { ArchivosModule } from "../modules/ArchivosModule";
-import { FinanzasModule } from "../modules/FinanzasModule";
-import { HomeView } from "../modules/HomeView";
-import { MiDiaModule } from "../modules/MiDiaModule";
-import { NotasModule } from "../modules/NotasModule";
-import { SettingsModule } from "../modules/SettingsModule";
-import { SearchPalette } from "./SearchPalette";
+
+const ArchivosModule = lazy(() => import("../modules/ArchivosModule").then((module) => ({ default: module.ArchivosModule })));
+const FinanzasModule = lazy(() => import("../modules/FinanzasModule").then((module) => ({ default: module.FinanzasModule })));
+const HomeView = lazy(() => import("../modules/HomeView").then((module) => ({ default: module.HomeView })));
+const MiDiaModule = lazy(() => import("../modules/MiDiaModule").then((module) => ({ default: module.MiDiaModule })));
+const NotasModule = lazy(() => import("../modules/NotasModule").then((module) => ({ default: module.NotasModule })));
+const SettingsModule = lazy(() => import("../modules/SettingsModule").then((module) => ({ default: module.SettingsModule })));
+const SearchPalette = lazy(() => import("./SearchPalette").then((module) => ({ default: module.SearchPalette })));
 
 export function PersonalNotesApp() {
   const [activeSection, setActiveSection] = useState<SectionKey>(() => {
@@ -106,14 +107,17 @@ export function PersonalNotesApp() {
 
   const renderSection = () => {
     if (!config) return null;
-    switch (activeSection) {
-      case "day": return <MiDiaModule config={config} focusId={focusId} />;
-      case "finances": return <FinanzasModule config={config} focusId={focusId} />;
-      case "files": return <ArchivosModule focusId={focusId} />;
-      case "notes": return <NotasModule config={config} focusId={focusId} />;
-      case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
-      default: return <HomeView onNavigate={navigate} />;
-    }
+    const section = (() => {
+      switch (activeSection) {
+        case "day": return <MiDiaModule config={config} focusId={focusId} />;
+        case "finances": return <FinanzasModule config={config} focusId={focusId} />;
+        case "files": return <ArchivosModule focusId={focusId} />;
+        case "notes": return <NotasModule config={config} focusId={focusId} />;
+        case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
+        default: return <HomeView onNavigate={navigate} />;
+      }
+    })();
+    return <Suspense fallback={<div className="app-loading" aria-live="polite"><p>Abriendo el módulo...</p></div>}>{section}</Suspense>;
   };
 
   if (gate === "loading") return <main className="app-loading" aria-live="polite"><span className="login-mark" aria-hidden="true">✦</span><p>Abriendo tu cuaderno...</p><span className="visually-hidden">Ordená el ruido.</span></main>;
