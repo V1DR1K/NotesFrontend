@@ -81,14 +81,15 @@ function normalizeAuthUser(value: unknown): AuthUser {
 }
 
 function apiUrl(path: string) {
-  if (/^https?:\/\//i.test(path)) throw new Error("API paths must be same-origin");
-  if (path === API_BASE || path.startsWith(`${API_BASE}/`)) return path;
-  if (/^https?:\/\//i.test(API_BASE) && path.startsWith("/")) {
-    if (typeof window !== "undefined" && new URL(API_BASE, window.location.origin).origin !== window.location.origin) throw new Error("Configured API origin must be same-origin");
-    const basePath = new URL(API_BASE).pathname.replace(/\/$/, "");
-    if (path === basePath || path.startsWith(`${basePath}/`)) return new URL(path, API_BASE).toString();
-  }
-  return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) throw new Error("API paths must be same-origin relative paths");
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+  const base = new URL(API_BASE, origin);
+  if (base.origin !== origin) throw new Error("Configured API origin must be same-origin");
+  const basePath = base.pathname.replace(/\/$/, "");
+  const requestPath = path === basePath || path.startsWith(`${basePath}/`) ? path : `${basePath}${path}`;
+  const resolved = new URL(requestPath, origin);
+  if (resolved.origin !== origin || !(resolved.pathname === basePath || resolved.pathname.startsWith(`${basePath}/`))) throw new Error("API path escaped the configured origin");
+  return `${resolved.pathname}${resolved.search}${resolved.hash}`;
 }
 
 async function readJson(response: Response): Promise<unknown> {
