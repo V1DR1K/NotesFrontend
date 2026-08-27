@@ -16,7 +16,10 @@ export type ApiOption = {
   icon?: string;
   sortOrder?: number;
   active?: boolean;
+  financeType?: FinanceItemType;
 };
+
+export type FinanceItemType = "INCOME" | "EXPENSE" | "TRANSFER";
 
 export type ApiConfig = {
   dayStatuses: ApiOption[];
@@ -113,6 +116,7 @@ export type FileFolder = { id: string; name: string; fileCount?: number };
 export type FileItem = {
   id: string;
   name: string;
+  description: string;
   extension?: string;
   mimeType?: string;
   sizeBytes?: number | string;

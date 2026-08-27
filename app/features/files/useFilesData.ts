@@ -1,11 +1,12 @@
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 
-export function useFilesData(page: number, kind: string, folderId: string) {
+export function useFilesData(page: number, kind: string, folderId: string, search: string) {
   const query = new URLSearchParams({ page: String(page), size: "8" });
   if (kind !== "all") query.set("kind", kind);
   if (folderId !== "all") query.set("folderId", folderId);
-  const files = useApiQuery(`files:${page}:${kind}:${folderId}`, () => api.files(query));
+  if (search.trim()) query.set("search", search.trim());
+  const files = useApiQuery(`files:${page}:${kind}:${folderId}:${search}`, () => api.files(query));
   const folders = useApiQuery("file-folders", () => api.folders());
   return {
     data: files.data && folders.data ? [files.data, folders.data] as const : null,

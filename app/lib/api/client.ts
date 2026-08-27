@@ -162,6 +162,7 @@ function optionList(value: unknown): ApiOption[] {
       icon: record.icon ? String(record.icon) : undefined,
       sortOrder: Number(record.sortOrder ?? 0),
       active: record.active !== false,
+      financeType: record.financeType === "INCOME" || record.financeType === "EXPENSE" || record.financeType === "TRANSFER" ? record.financeType : undefined,
     };
   }).filter((item) => item.code);
 }
@@ -169,7 +170,7 @@ function optionList(value: unknown): ApiOption[] {
 function option(value: unknown): ApiOption | undefined {
   const record = asRecord(value);
   const code = String(record.code ?? record.value ?? "");
-  return code ? { code, label: String(record.label ?? code), shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined, sortOrder: Number(record.sortOrder ?? 0), active: record.active !== false } : undefined;
+  return code ? { code, label: String(record.label ?? code), shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined, sortOrder: Number(record.sortOrder ?? 0), active: record.active !== false, financeType: record.financeType === "INCOME" || record.financeType === "EXPENSE" || record.financeType === "TRANSFER" ? record.financeType : undefined } : undefined;
 }
 
 function normalizeDay(value: unknown): DayEntry {
@@ -219,13 +220,18 @@ function normalizeAccount(value: unknown): FinanceAccount {
   return { code: String(record.code ?? ""), label: String(record.label ?? record.code ?? "Cuenta"), type: String(record.type ?? ""), balanceArs: record.balanceArs as number | string, annualRatePercent: record.annualRatePercent as number | string, growthMode: String(record.growthMode ?? "MANUAL"), balanceAsOf: String(record.balanceAsOf ?? "") };
 }
 
+function normalizeFile(value: unknown): FileItem {
+  const record = asRecord(value);
+  return { ...record as unknown as FileItem, id: String(record.id ?? ""), name: String(record.name ?? ""), description: String(record.description ?? record.name ?? ""), extension: record.extension ? String(record.extension) : undefined, mimeType: record.mimeType ? String(record.mimeType) : undefined, sizeBytes: record.sizeBytes as number | string | undefined, kind: String(record.kind ?? "OTHER"), folder: record.folder as FileItem["folder"], downloadUrl: record.downloadUrl ? String(record.downloadUrl) : undefined, uploadedAt: record.uploadedAt ? String(record.uploadedAt) : undefined };
+}
+
 function normalizeDashboard(value: unknown): Dashboard {
   const record = asRecord(value);
   return {
     counters: { days: Number(record.dayEntriesCount ?? 0), notes: Number(record.notesCount ?? 0), files: Number(record.filesCount ?? 0), movements: Number(record.financeMovementsCount ?? 0) },
     financeSummary: normalizeSummary(record.financeSummary),
     recentNotes: Array.isArray(record.recentNotes) ? record.recentNotes.map(normalizeNote) : [],
-    recentFiles: Array.isArray(record.recentFiles) ? record.recentFiles as FileItem[] : [],
+    recentFiles: Array.isArray(record.recentFiles) ? record.recentFiles.map(normalizeFile) : [],
     recentDays: Array.isArray(record.recentDays) ? record.recentDays.map(normalizeDay) : [],
     recentMovements: Array.isArray(record.recentMovements) ? record.recentMovements.map(normalizeMovement) : [],
   };
@@ -382,11 +388,11 @@ export const api = {
     ]);
     return { dayStatuses: optionList(dayStatuses), dayFeelings: optionList(dayFeelings), financeItems: optionList(financeItems), noteCategories: optionList(noteCategories) };
   },
-  createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean }) => {
+  createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
     return post<unknown>(`/config/${kind}`, payload);
   },
-  updateConfigOption: (kind: ConfigKind, code: string, body: { label?: string; emoji?: string; sortOrder?: number; active?: boolean }) => patch<unknown>(`/config/${kind}/${encodeURIComponent(code)}`, body),
+  updateConfigOption: (kind: ConfigKind, code: string, body: { label?: string; emoji?: string; sortOrder?: number; active?: boolean; financeType?: string }) => patch<unknown>(`/config/${kind}/${encodeURIComponent(code)}`, body),
   deleteConfigOption: (kind: ConfigKind, code: string) => del(`/config/${kind}/${encodeURIComponent(code)}`),
   search: (query: string) => get<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
   dashboard: () => request<unknown>("/dashboard").then(normalizeDashboard),
@@ -410,9 +416,9 @@ export const api = {
   exchangeRate: () => request<ExchangeRate>("/finance/exchange-rate/usd"),
   folders: () => request<unknown>("/file-folders").then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
-  files: (query: URLSearchParams) => request<unknown>(`/files?${query}`).then((payload) => normalizePage<FileItem>(payload)),
-  uploadFile: (file: File, folderId?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); return request<FileItem>("/files", { method: "POST", body }); },
-  updateFile: (id: string, body: { name: string }) => request<FileItem>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }),
+  files: (query: URLSearchParams) => request<unknown>(`/files?${query}`).then((payload) => normalizePageItems(payload, normalizeFile)),
+  uploadFile: (file: File, folderId?: string, description?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); if (description) body.append("description", description); return request<unknown>("/files", { method: "POST", body }).then(normalizeFile); },
+  updateFile: (id: string, body: { name?: string; description?: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
   deleteFile: (id: string) => request<void>(`/files/${encodeURIComponent(id)}`, { method: "DELETE" }),
   downloadFile: (file: FileItem) => download(file.downloadUrl || `/files/${encodeURIComponent(file.id)}/download`),
 };
