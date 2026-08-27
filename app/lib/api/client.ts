@@ -133,16 +133,28 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? value as Record<string, unknown> : {};
 }
 
+function validatedRecord(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) throw new ApiError(`La respuesta de ${label} no es válida.`, 502);
+  return value as Record<string, unknown>;
+}
+
+function textField(record: Record<string, unknown>, field: string, label: string) {
+  if (typeof record[field] !== "string" || !record[field]) throw new ApiError(`La respuesta de ${label} no contiene ${field}.`, 502);
+  return record[field] as string;
+}
+
 function financeType(value: unknown): FinanceItemType | undefined {
   return value === "INCOME" || value === "EXPENSE" || value === "TRANSFER" ? value : undefined;
 }
 
 function optionList(value: unknown): ApiOption[] {
-  const candidate = Array.isArray(value) ? value : asRecord(value).content;
-  const list: unknown[] = Array.isArray(candidate) ? candidate : [];
+  const candidate = Array.isArray(value) ? value : validatedRecord(value, "configuración").content;
+  if (!Array.isArray(candidate)) throw new ApiError("La respuesta de configuración no es válida.", 502);
+  const list: unknown[] = candidate;
   return list.map((item) => {
-    const record = asRecord(item);
+    const record = validatedRecord(item, "configuración");
     const code = String(record.code ?? record.value ?? record.id ?? "");
+    if (!code) throw new ApiError("La respuesta de configuración contiene una opción inválida.", 502);
     return {
       code,
       label: String(record.label ?? record.name ?? record.displayName ?? code),
@@ -163,55 +175,59 @@ function option(value: unknown): ApiOption | undefined {
 }
 
 function normalizeDay(value: unknown): DayEntry {
-  const record = asRecord(value);
+  const record = validatedRecord(value, "días");
   const status = option(record.status);
-  return { ...record as unknown as DayEntry, id: String(record.id ?? ""), date: String(record.date ?? ""), analysisStatus: record.analysisStatus === "COMPLETED" ? "COMPLETED" : "PENDING", statusCode: status?.code ?? String(record.statusCode ?? ""), status, feeling: String(record.feeling ?? ""), description: String(record.description ?? "") };
+  return { ...record as unknown as DayEntry, id: textField(record, "id", "días"), date: textField(record, "date", "días"), analysisStatus: record.analysisStatus === "COMPLETED" ? "COMPLETED" : "PENDING", statusCode: status?.code ?? String(record.statusCode ?? ""), status, feeling: String(record.feeling ?? ""), description: textField(record, "description", "días") };
 }
 
 function normalizeNote(value: unknown): Note {
-  const record = asRecord(value);
+  const record = validatedRecord(value, "notas");
   const category = option(record.category);
-  return { ...record as unknown as Note, id: String(record.id ?? ""), title: String(record.title ?? ""), body: String(record.body ?? ""), categoryCode: category?.code ?? String(record.categoryCode ?? ""), category, date: String(record.date ?? "") };
+  return { ...record as unknown as Note, id: textField(record, "id", "notas"), title: textField(record, "title", "notas"), body: textField(record, "body", "notas"), categoryCode: category?.code ?? String(record.categoryCode ?? ""), category, date: textField(record, "date", "notas") };
 }
 
 function normalizeMovement(value: unknown): FinanceMovement {
-  const record = asRecord(value);
+  const record = validatedRecord(value, "movimientos");
   const item = option(record.item);
-  return { ...record as unknown as FinanceMovement, id: String(record.id ?? ""), date: String(record.date ?? ""), bucket: String(record.bucket ?? ""), accountCode: String(record.accountCode ?? "mercadopago"), itemCode: item?.code ?? String(record.itemCode ?? ""), item, amount: record.amount as FinanceMovement["amount"] };
+  return { ...record as unknown as FinanceMovement, id: textField(record, "id", "movimientos"), date: textField(record, "date", "movimientos"), bucket: textField(record, "bucket", "movimientos"), accountCode: textField(record, "accountCode", "movimientos"), itemCode: item?.code ?? textField(record, "itemCode", "movimientos"), item, amount: record.amount as FinanceMovement["amount"] };
 }
 
 function normalizeSummary(value: unknown): FinanceSummary {
-  const record = asRecord(value);
+  const record = validatedRecord(value, "resumen financiero");
   return { from: String(record.from ?? ""), to: String(record.to ?? ""), income: record.income as FinanceSummary["income"], expense: record.expense as FinanceSummary["expense"], invested: record.invested as FinanceSummary["invested"], cash: record.cash as FinanceSummary["cash"], exchangeRate: record.exchangeRate as ExchangeRate | undefined };
 }
 
 function normalizeAnalytics(value: unknown): FinanceAnalytics {
-  const record = asRecord(value);
-  const daily = Array.isArray(record.daily) ? record.daily : [];
-  const categories = (candidate: unknown) => Array.isArray(candidate) ? candidate.map((item) => {
-    const entry = asRecord(item);
-    return { itemCode: String(entry.itemCode ?? ""), total: entry.total as number | string };
-  }).filter((item) => item.itemCode) : [];
+  const record = validatedRecord(value, "analytics financieros");
+  if (!Array.isArray(record.daily) || !Array.isArray(record.incomeCategories) || !Array.isArray(record.expenseCategories)) throw new ApiError("La respuesta de analytics financieros no es válida.", 502);
+  const daily = record.daily;
+  const categories = (candidate: unknown) => {
+    if (!Array.isArray(candidate)) throw new ApiError("La respuesta de categorías financieras no es válida.", 502);
+    return candidate.map((item) => {
+      const entry = validatedRecord(item, "categorías financieras");
+      return { itemCode: textField(entry, "itemCode", "categorías financieras"), total: entry.total as number | string };
+    });
+  };
   return {
     from: String(record.from ?? ""),
     to: String(record.to ?? ""),
     daily: daily.map((item) => {
       const entry = asRecord(item);
       return { date: String(entry.date ?? ""), income: entry.income as number | string, expense: entry.expense as number | string };
-    }).filter((item) => item.date),
+      }).filter((item) => item.date),
     incomeCategories: categories(record.incomeCategories),
     expenseCategories: categories(record.expenseCategories),
   };
 }
 
 function normalizeAccount(value: unknown): FinanceAccount {
-  const record = asRecord(value);
-  return { code: String(record.code ?? ""), label: String(record.label ?? record.code ?? "Cuenta"), type: String(record.type ?? ""), balanceArs: record.balanceArs as number | string, annualRatePercent: record.annualRatePercent as number | string, growthMode: String(record.growthMode ?? "MANUAL"), balanceAsOf: String(record.balanceAsOf ?? "") };
+  const record = validatedRecord(value, "cuentas financieras");
+  return { code: textField(record, "code", "cuentas financieras"), label: textField(record, "label", "cuentas financieras"), type: String(record.type ?? ""), balanceArs: record.balanceArs as number | string, annualRatePercent: record.annualRatePercent as number | string, growthMode: String(record.growthMode ?? "MANUAL"), balanceAsOf: String(record.balanceAsOf ?? "") };
 }
 
 function normalizeFile(value: unknown): FileItem {
-  const record = asRecord(value);
-  return { ...record as unknown as FileItem, id: String(record.id ?? ""), name: String(record.name ?? ""), description: String(record.description ?? record.name ?? ""), extension: record.extension ? String(record.extension) : undefined, mimeType: record.mimeType ? String(record.mimeType) : undefined, sizeBytes: record.sizeBytes as number | string | undefined, kind: String(record.kind ?? "OTHER"), folder: record.folder as FileItem["folder"], downloadUrl: record.downloadUrl ? String(record.downloadUrl) : undefined, uploadedAt: record.uploadedAt ? String(record.uploadedAt) : undefined };
+  const record = validatedRecord(value, "archivos");
+  return { ...record as unknown as FileItem, id: textField(record, "id", "archivos"), name: textField(record, "name", "archivos"), description: String(record.description ?? record.name ?? ""), extension: record.extension ? String(record.extension) : undefined, mimeType: record.mimeType ? String(record.mimeType) : undefined, sizeBytes: record.sizeBytes as number | string | undefined, kind: textField(record, "kind", "archivos"), folder: record.folder as FileItem["folder"], downloadUrl: record.downloadUrl ? String(record.downloadUrl) : undefined, uploadedAt: record.uploadedAt ? String(record.uploadedAt) : undefined };
 }
 
 function normalizeDashboard(value: unknown): Dashboard {
@@ -234,15 +250,36 @@ function normalizePageItems<T>(payload: unknown, normalize: (value: unknown) => 
 export function normalizePage<T>(payload: unknown): PageResponse<T> {
   const record = asRecord(payload);
   if (Array.isArray(payload)) return { content: payload as T[], page: 0, size: payload.length, totalElements: payload.length, totalPages: payload.length ? 1 : 0, first: true, last: true };
+  if (!Array.isArray(record.content)) throw new ApiError("La respuesta paginada no es válida.", 502);
+  const page = Number(record.page ?? 0);
+  const size = Number(record.size ?? 0);
+  const totalElements = Number(record.totalElements ?? 0);
+  const totalPages = Number(record.totalPages ?? 0);
+  if (![page, size, totalElements, totalPages].every((item) => Number.isInteger(item) && item >= 0)) throw new ApiError("La paginación recibida no es válida.", 502);
   return {
-    content: Array.isArray(record.content) ? record.content as T[] : [],
-    page: Number(record.page ?? 0),
-    size: Number(record.size ?? 0),
-    totalElements: Number(record.totalElements ?? 0),
-    totalPages: Number(record.totalPages ?? 0),
+    content: record.content as T[],
+    page,
+    size,
+    totalElements,
+    totalPages,
     first: Boolean(record.first ?? true),
     last: Boolean(record.last ?? true),
   };
+}
+
+function normalizeSearchResults(value: unknown): SearchResult[] {
+  if (!Array.isArray(value)) throw new ApiError("La respuesta de búsqueda no es válida.", 502);
+  return value.map((item) => {
+    const record = validatedRecord(item, "búsqueda");
+    const section = textField(record, "section", "búsqueda");
+    if (!["day", "finances", "files", "notes"].includes(section)) throw new ApiError("La respuesta de búsqueda contiene una sección inválida.", 502);
+    return { section: section as SearchResult["section"], id: textField(record, "id", "búsqueda"), title: textField(record, "title", "búsqueda"), detail: textField(record, "detail", "búsqueda"), date: record.date ? String(record.date) : undefined };
+  });
+}
+
+function normalizeExchangeRate(value: unknown): ExchangeRate {
+  const record = validatedRecord(value, "cotización");
+  return { currency: textField(record, "currency", "cotización"), buy: record.buy as number | string, sell: record.sell as number | string, average: record.average as number | string, fetchedAt: record.fetchedAt ? String(record.fetchedAt) : undefined, source: record.source ? String(record.source) : undefined };
 }
 
 function sleep(milliseconds: number) { return new Promise((resolve) => window.setTimeout(resolve, milliseconds)); }
@@ -376,7 +413,7 @@ export const api = {
   },
   updateConfigOption: (kind: ConfigKind, code: string, body: { label?: string; emoji?: string; sortOrder?: number; active?: boolean; financeType?: string }) => patch<unknown>(`/config/${kind}/${encodeURIComponent(code)}`, body),
   deleteConfigOption: (kind: ConfigKind, code: string) => del(`/config/${kind}/${encodeURIComponent(code)}`),
-  search: (query: string, signal?: AbortSignal) => get<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`, { signal }),
+  search: (query: string, signal?: AbortSignal) => get<unknown>(`/search?q=${encodeURIComponent(query)}`, { signal }).then(normalizeSearchResults),
   dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
   days: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/day-entries?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeDay)),
   createDay: (body: { date: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),
@@ -391,11 +428,11 @@ export const api = {
   createMovement: (body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
   updateMovement: (id: string, body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
   deleteMovement: (id: string) => request<void>(`/finance/movements/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  financeSummary: (query: URLSearchParams, signal?: AbortSignal) => request<FinanceSummary>(`/finance/summary?${query}`, { signal }),
+  financeSummary: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/summary?${query}`, { signal }).then(normalizeSummary),
   financeAnalytics: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/analytics?${query}`, { signal }).then(normalizeAnalytics),
   financeAccounts: (signal?: AbortSignal) => request<unknown>("/finance/accounts", { signal }).then((payload) => Array.isArray(payload) ? payload.map(normalizeAccount).filter((account) => account.code) : []),
   syncFinanceAccount: (code: string, body: { balanceArs: number }) => request<unknown>(`/finance/accounts/${encodeURIComponent(code)}/balance`, { method: "PUT", body }).then(normalizeAccount),
-  exchangeRate: (signal?: AbortSignal) => request<ExchangeRate>("/finance/exchange-rate/usd", { signal }),
+  exchangeRate: (signal?: AbortSignal) => request<unknown>("/finance/exchange-rate/usd", { signal }).then(normalizeExchangeRate),
   folders: (signal?: AbortSignal) => request<unknown>("/file-folders", { signal }).then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
   files: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/files?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeFile)),
