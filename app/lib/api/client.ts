@@ -187,7 +187,7 @@ function normalizeNote(value: unknown): Note {
 function normalizeMovement(value: unknown): FinanceMovement {
   const record = asRecord(value);
   const item = option(record.item);
-  return { ...record as unknown as FinanceMovement, id: String(record.id ?? ""), date: String(record.date ?? ""), bucket: String(record.bucket ?? ""), itemCode: item?.code ?? String(record.itemCode ?? ""), item, amount: record.amount as FinanceMovement["amount"] };
+  return { ...record as unknown as FinanceMovement, id: String(record.id ?? ""), date: String(record.date ?? ""), bucket: String(record.bucket ?? ""), accountCode: String(record.accountCode ?? "mercadopago"), itemCode: item?.code ?? String(record.itemCode ?? ""), item, amount: record.amount as FinanceMovement["amount"] };
 }
 
 function normalizeSummary(value: unknown): FinanceSummary {
@@ -400,8 +400,8 @@ export const api = {
   updateNote: (id: string, body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>(`/notes/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeNote),
   deleteNote: (id: string) => request<void>(`/notes/${encodeURIComponent(id)}`, { method: "DELETE" }),
   movements: (query: URLSearchParams) => request<unknown>(`/finance/movements?${query}`).then((payload) => normalizePageItems(payload, normalizeMovement)),
-  createMovement: (body: { date: string; bucket: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
-  updateMovement: (id: string, body: { date: string; bucket: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
+  createMovement: (body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
+  updateMovement: (id: string, body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
   deleteMovement: (id: string) => request<void>(`/finance/movements/${encodeURIComponent(id)}`, { method: "DELETE" }),
   financeSummary: (query: URLSearchParams) => request<FinanceSummary>(`/finance/summary?${query}`),
   financeAnalytics: (query: URLSearchParams) => request<unknown>(`/finance/analytics?${query}`).then(normalizeAnalytics),

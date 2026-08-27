@@ -72,6 +72,7 @@ export type FinanceMovement = {
   id: string;
   date: string;
   bucket: FinanceBucket | string;
+  accountCode: string;
   itemCode: string;
   item?: ApiOption;
   amountArs?: number | string;
