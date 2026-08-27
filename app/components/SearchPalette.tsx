@@ -9,7 +9,7 @@ import { SECTION_META, type SectionKey } from "../config/sections";
 
 const sectionLabels: Record<SearchResult["section"], string> = { day: SECTION_META.day.label, finances: SECTION_META.finances.label, files: SECTION_META.files.label, notes: SECTION_META.notes.label };
 
-export function SearchPalette({ onClose, onNavigate }: { onClose: () => void; onNavigate: (section: SectionKey) => void }) {
+export function SearchPalette({ onClose, onNavigate }: { onClose: () => void; onNavigate: (section: SectionKey, targetId?: string) => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [error, setError] = useState("");
@@ -29,7 +29,7 @@ export function SearchPalette({ onClose, onNavigate }: { onClose: () => void; on
 
   const select = (result: SearchResult) => {
     onClose();
-    queueMicrotask(() => onNavigate(result.section));
+    queueMicrotask(() => onNavigate(result.section, result.id));
   };
 
   return <Dialog ariaLabel="Buscar en tu cuaderno" trackChanges={false} onClose={onClose}>

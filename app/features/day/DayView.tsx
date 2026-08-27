@@ -9,6 +9,7 @@ import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, Fil
 import { DayCalendar } from "./DayCalendar";
 import { useDayCalendarData } from "./useDayCalendarData";
 import { useDayData } from "./useDayData";
+import { useFocusTarget } from "../../lib/ui/useFocusTarget";
 
 function parseFeelings(value: string) {
   const tokens = value.split("|").map((item) => item.trim()).filter(Boolean);
@@ -21,9 +22,10 @@ function statusTone(code: string): "green" | "yellow" | "red" {
   return "red";
 }
 
-export function DayView({ config }: { config: ApiConfig }) {
+export function DayView({ config, focusId }: { config: ApiConfig; focusId?: string | null }) {
   const [filter, setFilter] = useState("all");
   const [feelings, setFeelings] = useState<string[]>([]);
+  const [sort, setSort] = useState("recent");
   const defaultMonth = currentMonth();
   const defaultRange = monthBounds(defaultMonth);
   const [from, setFrom] = useState(defaultRange.from);
@@ -40,11 +42,12 @@ export function DayView({ config }: { config: ApiConfig }) {
   const [saving, setSaving] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(currentMonth());
   const [draft, setDraft] = useState({ date: todayIso(), description: "" });
-  const data = useDayData(page, filter, feelings, from, to);
+  const data = useDayData(page, filter, feelings, from, to, sort);
   const calendarData = useDayCalendarData(calendarMonth);
   const mutation = useMutationError();
   const statusOptions = config.dayStatuses.filter((option) => option.active !== false);
   const feelingOptions = config.dayFeelings.filter((option) => option.active !== false);
+  useFocusTarget(focusId, Boolean(data.data));
   const statusLabel = (code: string) => statusOptions.find((item) => item.code === code)?.label ?? code;
   const statusEmoji = (code: string) => statusOptions.find((item) => item.code === code)?.emoji ?? "◌";
 
@@ -115,13 +118,13 @@ export function DayView({ config }: { config: ApiConfig }) {
        <label className="toolbar-date-field" htmlFor="day-filter-to"><span>Hasta</span><input id="day-filter-to" type="date" value={to} onChange={(event) => { setTo(event.target.value); setPage(0); }} /></label>
        {from !== defaultRange.from || to !== defaultRange.to ? <Button className="filter-clear" variant="quiet" onClick={() => { setFrom(defaultRange.from); setTo(defaultRange.to); setPage(0); }}>Mes actual</Button> : <span className="history-state">MES ACTUAL</span>}
       <Button className="day-filter-trigger" variant="quiet" onClick={openFilters} ariaHasPopup="dialog" ariaExpanded={filtersOpen}><span>Filtros</span>{activeFilterCount ? <span className="day-filter-count">{activeFilterCount}</span> : null}<span className="day-filter-chevron" aria-hidden="true">⌄</span></Button>
-      <SelectField label="Ordenar" compact value="recent" onChange={() => undefined} options={[{ value: "recent", label: "Más recientes" }]} />
+       <SelectField label="Ordenar" compact value={sort} onChange={(value) => { setSort(value); setPage(0); }} options={[{ value: "recent", label: "Más recientes" }, { value: "old", label: "Más antiguas" }]} />
     </ModuleToolbar>
     {analysisNotice ? <div className="analysis-notice" role="status" aria-live="polite">{analysisNotice}</div> : null}
     {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : data.data?.content.length ? <div className="content-grid day-grid">{data.data.content.map((entry) => {
       const pending = entry.analysisStatus !== "COMPLETED";
       const analyzing = analyzingIds.includes(entry.id);
-      return <article className={`content-card day-card ${pending ? "day-card-pending" : ""}`} key={entry.id}>
+       return <article id={`record-${entry.id}`} className={`content-card day-card ${pending ? "day-card-pending" : ""}`} key={entry.id}>
         <div className="content-card-top"><span className="mono-date">{dateLabel(entry.date, true)}</span><CardActions onEdit={() => startEdit(entry)} onDelete={() => setPendingDelete(entry.id)} /></div>
         {pending ? <div className="day-analysis-pending"><span className="day-analysis-mark" aria-hidden="true">◌</span><div><strong>Análisis pendiente</strong><span>La descripción está guardada, pero todavía no tiene color ni sensaciones.</span></div></div> : <><div className="day-card-heading"><StatusDot status={statusTone(entry.statusCode)} /><span className="status-copy">{entry.status?.label ?? statusLabel(entry.statusCode)}</span><span className="day-mood">{entry.status?.emoji ?? statusEmoji(entry.statusCode)}</span></div><div className="day-feeling-tags" aria-label="Sensaciones del día">{parseFeelings(entry.feeling).map((feeling) => <span className="day-feeling-tag" key={feeling}>{feelingOptions.find((option) => option.code === feeling)?.label ?? feeling}</span>)}</div></>}
         <p>{entry.description}</p><div className="card-footer">{pending ? <button type="button" className="card-link-button" onClick={() => void runAnalysis(entry.id)} disabled={analyzing}>{analyzing ? "ANALIZANDO..." : "ANALIZAR DE NUEVO"}</button> : <span className="eyebrow">REGISTRO ANALIZADO</span>}<span className="card-arrow" aria-hidden="true">↗</span></div>

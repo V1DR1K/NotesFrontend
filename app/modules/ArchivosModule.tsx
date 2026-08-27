@@ -2,6 +2,6 @@
 
 import { FilesView } from "../features/files/FilesView";
 
-export function ArchivosModule() {
-  return <FilesView />;
+export function ArchivosModule({ focusId }: { focusId?: string | null }) {
+  return <FilesView focusId={focusId} />;
 }

@@ -22,6 +22,7 @@ export function PersonalNotesApp() {
     const section = new URLSearchParams(window.location.search).get("section") ?? window.history.state?.notesSection;
     return isSectionKey(section) ? section : "overview";
   });
+  const [focusId, setFocusId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("focus"));
   const [user, setUser] = useState<AuthUser | null>(null);
   const [config, setConfig] = useState<ApiConfig | null>(null);
   const [gate, setGate] = useState<"loading" | "login" | "password" | "ready" | "error">("loading");
@@ -30,12 +31,14 @@ export function PersonalNotesApp() {
   const [searchOpen, setSearchOpen] = useState(false);
   const sessionUserId = useRef<string | null>(null);
 
-  const navigate = (section: SectionKey) => {
-    if (section === activeSection) return;
+  const navigate = (section: SectionKey, targetId?: string) => {
+    if (section === activeSection && !targetId) return;
     const url = new URL(window.location.href);
     url.searchParams.set("section", section);
+    if (targetId) url.searchParams.set("focus", targetId); else url.searchParams.delete("focus");
     window.history.pushState({ ...window.history.state, notesSection: section }, "", url);
     setActiveSection(section);
+    setFocusId(targetId ?? null);
   };
 
   useEffect(() => {
@@ -49,6 +52,7 @@ export function PersonalNotesApp() {
     const handlePopState = (event: PopStateEvent) => {
       const section = new URLSearchParams(window.location.search).get("section") ?? event.state?.notesSection;
       if (isSectionKey(section)) setActiveSection(section);
+      setFocusId(new URLSearchParams(window.location.search).get("focus"));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -103,10 +107,10 @@ export function PersonalNotesApp() {
   const renderSection = () => {
     if (!config) return null;
     switch (activeSection) {
-      case "day": return <MiDiaModule config={config} />;
-      case "finances": return <FinanzasModule config={config} />;
-      case "files": return <ArchivosModule />;
-      case "notes": return <NotasModule config={config} />;
+      case "day": return <MiDiaModule config={config} focusId={focusId} />;
+      case "finances": return <FinanzasModule config={config} focusId={focusId} />;
+      case "files": return <ArchivosModule focusId={focusId} />;
+      case "notes": return <NotasModule config={config} focusId={focusId} />;
       case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
       default: return <HomeView onNavigate={navigate} />;
     }
