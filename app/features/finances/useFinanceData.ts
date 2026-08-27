@@ -8,5 +8,18 @@ export function useFinanceData(page: number, bucket: string, from: string, to: s
   if (to) query.set("to", to);
   if (itemCode !== "all") query.set("itemCode", itemCode);
   const rangeQuery = new URLSearchParams({ from, to });
-  return useApiQuery(`finance:${page}:${bucket}:${from}:${to}:${itemCode}`, (signal) => Promise.all([api.movements(query, signal), api.financeSummary(rangeQuery, signal), api.financeAnalytics(rangeQuery, signal), api.exchangeRate(signal), api.financeAccounts(signal)]));
+  const movements = useApiQuery(`finance:movements:${page}:${bucket}:${from}:${to}:${itemCode}`, (signal) => api.movements(query, signal));
+  const summary = useApiQuery(`finance:summary:${from}:${to}`, (signal) => api.financeSummary(rangeQuery, signal));
+  const analytics = useApiQuery(`finance:analytics:${from}:${to}`, (signal) => api.financeAnalytics(rangeQuery, signal));
+  const exchangeRate = useApiQuery("finance:exchange-rate", (signal) => api.exchangeRate(signal));
+  const accounts = useApiQuery("finance:accounts", (signal) => api.financeAccounts(signal));
+  return {
+    data: [movements.data, summary.data, analytics.data, exchangeRate.data, accounts.data] as const,
+    loading: movements.loading,
+    auxiliaryLoading: summary.loading || analytics.loading || exchangeRate.loading || accounts.loading,
+    refreshing: movements.refreshing || summary.refreshing || analytics.refreshing || exchangeRate.refreshing || accounts.refreshing,
+    error: movements.error,
+    auxiliaryError: summary.error ?? analytics.error ?? exchangeRate.error ?? accounts.error,
+    reload: () => { movements.reload(); summary.reload(); analytics.reload(); exchangeRate.reload(); accounts.reload(); },
+  };
 }
