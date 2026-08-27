@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { ApiError, api, unwrapUser } from "../lib/api/client";
+import { ApiError, api } from "../lib/api/client";
 import { Button } from "../ui/Primitives";
 
 export function LoginScreen({ onAuthenticated, initialError, onRetry }: { onAuthenticated: (username: string) => void; initialError?: string; onRetry?: () => void }) {
@@ -19,8 +19,7 @@ export function LoginScreen({ onAuthenticated, initialError, onRetry }: { onAuth
     setLoading(true);
     setError("");
     try {
-      const payload = await api.login({ username: username.trim(), password });
-      const user = unwrapUser(payload);
+      const user = await api.login({ username: username.trim(), password });
       onAuthenticated(user.username ?? username.trim());
     } catch (reason) {
       setError(reason instanceof ApiError ? reason.message : "No se pudo iniciar sesión.");

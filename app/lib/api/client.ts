@@ -1,7 +1,6 @@
 import type {
   ApiConfig,
   ApiOption,
-  AuthSession,
   AuthUser,
   Dashboard,
   DayEntry,
@@ -21,10 +20,7 @@ import type {
 } from "./types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
-const TOKEN_KEY = "notes.token";
-const REFRESH_KEY = "notes.refreshToken";
-const USER_KEY = "notes.user";
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 const REFRESH_LOCK_KEY = "notes.auth.refresh.lock";
 const REFRESH_MARKER_KEY = "notes.auth.refresh.marker";
 const SESSION_EXPIRED_KEY = "notes.auth.expired";
@@ -42,16 +38,10 @@ function clearSessionState() {
     localStorage.removeItem(REFRESH_LOCK_KEY);
     localStorage.removeItem(REFRESH_MARKER_KEY);
     localStorage.removeItem(SESSION_EXPIRED_KEY);
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_KEY);
-    localStorage.removeItem(USER_KEY);
   } catch { /* storage can be unavailable in private contexts */ }
 }
 
-export function hasSessionHint() {
-  if (typeof window === "undefined") return false;
-  try { return Boolean(localStorage.getItem(TOKEN_KEY)); } catch { return false; }
-}
+export function hasSessionHint() { return typeof window !== "undefined"; }
 
 function dispatchSessionExpired() {
   if (typeof window !== "undefined") window.dispatchEvent(new Event("notes:session-expired"));
@@ -88,14 +78,6 @@ function normalizeAuthUser(value: unknown): AuthUser {
   const record = asRecord(value);
   if (!record.id || !record.username) throw new ApiError("La sesión recibida no es válida.", 502);
   return { id: String(record.id), username: String(record.username), role: String(record.role ?? "USER"), mustChangePassword: Boolean(record.mustChangePassword) };
-}
-
-function normalizeSession(value: unknown): AuthSession {
-  const record = asRecord(value);
-  const accessToken = String(record.accessToken ?? "");
-  const refreshToken = String(record.refreshToken ?? "");
-  if (!accessToken || !refreshToken) throw new ApiError("El servicio de sesión devolvió una respuesta inválida.", 502);
-  return { accessToken, refreshToken, tokenType: String(record.tokenType ?? "Bearer"), expiresIn: Number(record.expiresIn ?? 0), user: normalizeAuthUser(record.user) };
 }
 
 function apiUrl(path: string) {
@@ -265,12 +247,12 @@ function sleep(milliseconds: number) { return new Promise((resolve) => window.se
 
 function refreshedAfter(startedAt: number) { return Number(localStorage.getItem(REFRESH_MARKER_KEY) ?? 0) > startedAt; }
 
-async function refreshWithLocalLock(startedAt: number, action: () => Promise<string | null>) {
+async function refreshWithLocalLock(startedAt: number, action: () => Promise<boolean>) {
   const lockValue = `${TAB_ID}:${Date.now()}`;
   const deadline = Date.now() + 12000;
   let acquired = false;
   while (Date.now() < deadline) {
-    if (refreshedAfter(startedAt)) return localStorage.getItem(TOKEN_KEY);
+    if (refreshedAfter(startedAt)) return true;
     const current = localStorage.getItem(REFRESH_LOCK_KEY);
     if (!current || Number(current.split(":")[1] ?? 0) < Date.now() - 12000) {
       localStorage.setItem(REFRESH_LOCK_KEY, lockValue);
@@ -279,50 +261,40 @@ async function refreshWithLocalLock(startedAt: number, action: () => Promise<str
     }
     await sleep(50);
   }
-  if (!acquired) return null;
+  if (!acquired) return false;
   try { return await action(); }
   finally { if (localStorage.getItem(REFRESH_LOCK_KEY) === lockValue) localStorage.removeItem(REFRESH_LOCK_KEY); }
 }
 
 async function refreshTokens() {
-  const refreshToken = localStorage.getItem(REFRESH_KEY);
-  if (!refreshToken) return null;
   const response = await fetch(apiUrl("/auth/refresh"), {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
+    credentials: "include",
   });
-  const payload = await readJson(response);
-  if (!response.ok) return null;
-  let session: AuthSession;
-  try { session = normalizeSession(payload); } catch { return null; }
-  localStorage.setItem(TOKEN_KEY, session.accessToken);
-  localStorage.setItem(REFRESH_KEY, session.refreshToken);
-  if (session.user) localStorage.setItem(USER_KEY, JSON.stringify(session.user));
+  if (!response.ok) return false;
   localStorage.setItem(REFRESH_MARKER_KEY, String(Date.now()));
-  return session.accessToken;
+  return true;
 }
 
 function refreshSession(startedAt: number) {
   if (!refreshPromise) {
     const action = async () => {
-      if (refreshedAfter(startedAt)) return localStorage.getItem(TOKEN_KEY);
+      if (refreshedAfter(startedAt)) return true;
       return refreshTokens();
     };
     const coordinated = typeof navigator !== "undefined" && navigator.locks
-      ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, () => action()) as unknown as Promise<string | null>
+      ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, () => action()) as unknown as Promise<boolean>
       : refreshWithLocalLock(startedAt, action);
     refreshPromise = coordinated.finally(() => { refreshPromise = null; });
   }
-  return refreshPromise ?? Promise.resolve(null);
+  return refreshPromise ?? Promise.resolve(false);
 }
 
 async function request<T>(path: string, init: ApiRequestInit = {}, retried = false): Promise<T> {
   const method = (init.method ?? "GET").toUpperCase();
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
-  const accessToken = localStorage.getItem(TOKEN_KEY);
-  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
   const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
   let body = init.body;
   if (body && !isFormData && typeof body !== "string") {
@@ -330,7 +302,7 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
     body = JSON.stringify(body);
   }
 
-  const response = await fetch(apiUrl(path), { ...init, method, headers, body: body as BodyInit | null | undefined });
+  const response = await fetch(apiUrl(path), { ...init, method, headers, credentials: "include", body: body as BodyInit | null | undefined });
   const payload = await readJson(response);
   if (response.status === 401 && path === "/auth/refresh") broadcastSessionExpired();
   if (response.status === 401 && !retried && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) {
@@ -358,9 +330,7 @@ export async function download(path: string) {
 
 async function downloadWithToken(path: string, retried: boolean): Promise<Blob> {
   const headers = new Headers({ Accept: "*/*" });
-  const accessToken = localStorage.getItem(TOKEN_KEY);
-  if (accessToken) headers.set("Authorization", `Bearer ${accessToken}`);
-  const response = await fetch(apiUrl(path), { headers });
+  const response = await fetch(apiUrl(path), { headers, credentials: "include" });
   if (response.status === 401 && !retried) {
     const refreshed = await refreshSession(Date.now()).catch(() => null);
     if (refreshed) return downloadWithToken(path, true);
@@ -372,16 +342,12 @@ async function downloadWithToken(path: string, retried: boolean): Promise<Blob> 
 
 export const api = {
   login: async (credentials: LoginRequest) => {
-    const payload = normalizeSession(await request<unknown>("/auth/login", { method: "POST", body: credentials }));
-    localStorage.setItem(TOKEN_KEY, payload.accessToken);
-    localStorage.setItem(REFRESH_KEY, payload.refreshToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(payload.user));
-    return payload;
+    const user = unwrapUser(await request<unknown>("/auth/login", { method: "POST", body: credentials }));
+    return user;
   },
   logout: async () => {
-    const refreshToken = localStorage.getItem(REFRESH_KEY);
     try {
-      await request<void>("/auth/logout", { method: "POST", body: refreshToken ? { refreshToken } : undefined });
+      await request<void>("/auth/logout", { method: "POST" });
     }
     finally { broadcastSessionExpired(); }
   },
@@ -428,6 +394,7 @@ export const api = {
   downloadFile: (file: FileItem) => download(file.downloadUrl || `/files/${encodeURIComponent(file.id)}/download`),
 };
 
-export function unwrapUser(payload: AuthUser | { user: AuthUser }): AuthUser {
-  return normalizeAuthUser("user" in payload && payload.user ? payload.user : payload);
+export function unwrapUser(payload: unknown): AuthUser {
+  const record = asRecord(payload);
+  return normalizeAuthUser(record.user ?? record);
 }
