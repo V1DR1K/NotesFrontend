@@ -6,8 +6,8 @@ export function useFilesData(page: number, kind: string, folderId: string, searc
   if (kind !== "all") query.set("kind", kind);
   if (folderId !== "all") query.set("folderId", folderId);
   if (search.trim()) query.set("search", search.trim());
-  const files = useApiQuery(`files:${page}:${kind}:${folderId}:${search}`, () => api.files(query));
-  const folders = useApiQuery("file-folders", () => api.folders());
+  const files = useApiQuery(`files:${page}:${kind}:${folderId}:${search}`, (signal) => api.files(query, signal));
+  const folders = useApiQuery("file-folders", (signal) => api.folders(signal));
   return {
     data: files.data && folders.data ? [files.data, folders.data] as const : null,
     loading: files.loading || folders.loading,

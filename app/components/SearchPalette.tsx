@@ -22,8 +22,9 @@ export function SearchPalette({ onClose, onNavigate }: { onClose: () => void; on
   useEffect(() => {
     if (cleanQuery.length < 2) return;
     let cancelled = false;
-    const timer = window.setTimeout(() => { void api.search(cleanQuery).then((next) => { if (!cancelled) { setResults(next); setError(""); setResolvedQuery(cleanQuery); } }).catch((reason) => { if (!cancelled) { setError(reason instanceof Error ? reason.message : "No se pudo buscar."); setResolvedQuery(cleanQuery); } }); }, 250);
-    return () => { cancelled = true; window.clearTimeout(timer); };
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => { void api.search(cleanQuery, controller.signal).then((next) => { if (!cancelled) { setResults(next); setError(""); setResolvedQuery(cleanQuery); } }).catch((reason) => { if (!cancelled && !(reason instanceof DOMException && reason.name === "AbortError")) { setError(reason instanceof Error ? reason.message : "No se pudo buscar."); setResolvedQuery(cleanQuery); } }); }, 250);
+    return () => { cancelled = true; window.clearTimeout(timer); controller.abort(); };
   }, [cleanQuery]);
 
   const select = (result: SearchResult) => {

@@ -4,7 +4,7 @@ import { ApiError } from "./client";
 export type AsyncState<T> = { data: T | null; loading: boolean; refreshing: boolean; error: ApiError | null };
 
 const cache = new Map<string, { data: unknown; updatedAt: number }>();
-const inFlight = new Map<string, Promise<unknown>>();
+const inFlight = new Map<string, { promise: Promise<unknown>; controller: AbortController; consumers: number }>();
 const MAX_CACHE_ENTRIES = 100;
 let cacheGeneration = 0;
 
@@ -19,7 +19,7 @@ function storeCache<T>(key: string, data: T) {
   while (cache.size > MAX_CACHE_ENTRIES) cache.delete(cache.keys().next().value as string);
 }
 
-export function useApiQuery<T>(key: string, loader: () => Promise<T>): AsyncState<T> & { reload: () => void } {
+export function useApiQuery<T>(key: string, loader: (signal: AbortSignal) => Promise<T>): AsyncState<T> & { reload: () => void } {
   const cacheKey = `${cacheGeneration}:${key}`;
   const cached = cache.get(cacheKey);
   const [state, setState] = useState<AsyncState<T> & { key: string }>({ key: cacheKey, data: cached ? cached.data as T : null, loading: !cached, refreshing: false, error: null });
@@ -32,18 +32,32 @@ export function useApiQuery<T>(key: string, loader: () => Promise<T>): AsyncStat
 
   useEffect(() => {
     let active = true;
-    const existing = inFlight.get(cacheKey);
-    const request: Promise<T> = existing ? existing as Promise<T> : load();
-    if (!existing) inFlight.set(cacheKey, request);
+    let entry = inFlight.get(cacheKey);
+    if (!entry) {
+      const controller = new AbortController();
+      entry = { promise: load(controller.signal), controller, consumers: 0 };
+      inFlight.set(cacheKey, entry);
+    }
+    entry.consumers += 1;
+    const request: Promise<T> = entry.promise as Promise<T>;
     request.then((data) => {
       if (cacheKey.startsWith(`${cacheGeneration}:`)) storeCache(cacheKey, data);
       if (active) setState({ key: cacheKey, data, loading: false, refreshing: false, error: null });
     }).catch((error: unknown) => {
       if (active) setState({ key: cacheKey, data: null, loading: false, refreshing: false, error: error instanceof ApiError ? error : new ApiError("No se pudo cargar la información.", 0) });
     }).finally(() => {
-      if (inFlight.get(cacheKey) === request) inFlight.delete(cacheKey);
+      if (inFlight.get(cacheKey)?.promise === request) inFlight.delete(cacheKey);
     });
-    return () => { active = false; };
+    return () => {
+      active = false;
+      if (entry) {
+        entry.consumers -= 1;
+        if (entry.consumers === 0 && inFlight.get(cacheKey)?.promise === request) {
+          entry.controller.abort();
+          inFlight.delete(cacheKey);
+        }
+      }
+    };
   }, [cacheKey, revision]);
 
   const visibleState = state.key === cacheKey ? state : { key: cacheKey, data: null, loading: true, refreshing: false, error: null };

@@ -7,5 +7,5 @@ export function useDayData(page: number, statusCode: string, feelings: string[],
   if (from) query.set("from", from);
   if (to) query.set("to", to);
   feelings.forEach((feeling) => query.append("feeling", feeling));
-  return useApiQuery(`days:${page}:${statusCode}:${feelings.join(",")}:${from}:${to}`, () => api.days(query));
+  return useApiQuery(`days:${page}:${statusCode}:${feelings.join(",")}:${from}:${to}`, (signal) => api.days(query, signal));
 }

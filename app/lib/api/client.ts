@@ -26,6 +26,7 @@ const REFRESH_MARKER_KEY = "notes.auth.refresh.marker";
 const SESSION_EXPIRED_KEY = "notes.auth.expired";
 const TAB_ID = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : Math.random().toString(36).slice(2);
 type ApiRequestInit = Omit<RequestInit, "body"> & { body?: BodyInit | object | null };
+const REQUEST_TIMEOUT_MS = 30_000;
 
 function resetSessionState() {
   refreshPromise = null;
@@ -246,6 +247,15 @@ export function normalizePage<T>(payload: unknown): PageResponse<T> {
 
 function sleep(milliseconds: number) { return new Promise((resolve) => window.setTimeout(resolve, milliseconds)); }
 
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}) {
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const onAbort = () => controller.abort(init.signal?.reason);
+  init.signal?.addEventListener("abort", onAbort, { once: true });
+  try { return await fetch(input, { ...init, signal: controller.signal }); }
+  finally { globalThis.clearTimeout(timer); init.signal?.removeEventListener("abort", onAbort); }
+}
+
 function refreshedAfter(startedAt: number) { return Number(localStorage.getItem(REFRESH_MARKER_KEY) ?? 0) > startedAt; }
 
 async function refreshWithLocalLock(startedAt: number, action: () => Promise<boolean>) {
@@ -268,7 +278,7 @@ async function refreshWithLocalLock(startedAt: number, action: () => Promise<boo
 }
 
 async function refreshTokens() {
-  const response = await fetch(apiUrl("/auth/refresh"), {
+  const response = await fetchWithTimeout(apiUrl("/auth/refresh"), {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json" },
     credentials: "include",
@@ -303,7 +313,7 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
     body = JSON.stringify(body);
   }
 
-  const response = await fetch(apiUrl(path), { ...init, method, headers, credentials: "include", body: body as BodyInit | null | undefined });
+  const response = await fetchWithTimeout(apiUrl(path), { ...init, method, headers, credentials: "include", body: body as BodyInit | null | undefined });
   const payload = await readJson(response);
   if (response.status === 401 && path === "/auth/refresh") broadcastSessionExpired();
   if (response.status === 401 && !retried && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) {
@@ -325,16 +335,16 @@ export function post<T>(path: string, body?: object | FormData) { return request
 export function patch<T>(path: string, body: object) { return request<T>(path, { method: "PATCH", body }); }
 export function del<T = void>(path: string) { return request<T>(path, { method: "DELETE" }); }
 export function upload<T>(path: string, body: FormData) { return request<T>(path, { method: "POST", body }); }
-export async function download(path: string) {
-  return downloadWithToken(path, false);
+export async function download(path: string, signal?: AbortSignal) {
+  return downloadWithToken(path, false, signal);
 }
 
-async function downloadWithToken(path: string, retried: boolean): Promise<Blob> {
+async function downloadWithToken(path: string, retried: boolean, signal?: AbortSignal): Promise<Blob> {
   const headers = new Headers({ Accept: "*/*" });
-  const response = await fetch(apiUrl(path), { headers, credentials: "include" });
+  const response = await fetchWithTimeout(apiUrl(path), { headers, credentials: "include", signal });
   if (response.status === 401 && !retried) {
     const refreshed = await refreshSession(Date.now()).catch(() => null);
-    if (refreshed) return downloadWithToken(path, true);
+    if (refreshed) return downloadWithToken(path, true, signal);
     broadcastSessionExpired();
   }
   if (!response.ok) throw problemError(await readJson(response), response.status);
@@ -354,9 +364,9 @@ export const api = {
   },
   me: () => request<AuthUser | { user: AuthUser }>("/auth/me"),
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "PUT", body }),
-  config: async (): Promise<ApiConfig> => {
+  config: async (signal?: AbortSignal): Promise<ApiConfig> => {
     const [dayStatuses, dayFeelings, financeItems, noteCategories] = await Promise.all([
-      request<unknown>("/config/day-statuses"), request<unknown>("/config/day-feelings"), request<unknown>("/config/finance-items"), request<unknown>("/config/note-categories"),
+      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }),
     ]);
     return { dayStatuses: optionList(dayStatuses), dayFeelings: optionList(dayFeelings), financeItems: optionList(financeItems), noteCategories: optionList(noteCategories) };
   },
@@ -366,33 +376,33 @@ export const api = {
   },
   updateConfigOption: (kind: ConfigKind, code: string, body: { label?: string; emoji?: string; sortOrder?: number; active?: boolean; financeType?: string }) => patch<unknown>(`/config/${kind}/${encodeURIComponent(code)}`, body),
   deleteConfigOption: (kind: ConfigKind, code: string) => del(`/config/${kind}/${encodeURIComponent(code)}`),
-  search: (query: string) => get<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`),
-  dashboard: () => request<unknown>("/dashboard").then(normalizeDashboard),
-  days: (query: URLSearchParams) => request<unknown>(`/day-entries?${query}`).then((payload) => normalizePageItems(payload, normalizeDay)),
+  search: (query: string, signal?: AbortSignal) => get<SearchResult[]>(`/search?q=${encodeURIComponent(query)}`, { signal }),
+  dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
+  days: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/day-entries?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeDay)),
   createDay: (body: { date: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),
   updateDay: (id: string, body: { date: string; description: string }) => request<unknown>(`/day-entries/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeDay),
   analyzeDay: (id: string) => request<unknown>(`/day-entries/${encodeURIComponent(id)}/analyze`, { method: "POST" }).then(normalizeDay),
   deleteDay: (id: string) => request<void>(`/day-entries/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  notes: (query: URLSearchParams) => request<unknown>(`/notes?${query}`).then((payload) => normalizePageItems(payload, normalizeNote)),
+  notes: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/notes?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeNote)),
   createNote: (body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>("/notes", { method: "POST", body }).then(normalizeNote),
   updateNote: (id: string, body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>(`/notes/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeNote),
   deleteNote: (id: string) => request<void>(`/notes/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  movements: (query: URLSearchParams) => request<unknown>(`/finance/movements?${query}`).then((payload) => normalizePageItems(payload, normalizeMovement)),
+  movements: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/movements?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeMovement)),
   createMovement: (body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
   updateMovement: (id: string, body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
   deleteMovement: (id: string) => request<void>(`/finance/movements/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  financeSummary: (query: URLSearchParams) => request<FinanceSummary>(`/finance/summary?${query}`),
-  financeAnalytics: (query: URLSearchParams) => request<unknown>(`/finance/analytics?${query}`).then(normalizeAnalytics),
-  financeAccounts: () => request<unknown>("/finance/accounts").then((payload) => Array.isArray(payload) ? payload.map(normalizeAccount).filter((account) => account.code) : []),
+  financeSummary: (query: URLSearchParams, signal?: AbortSignal) => request<FinanceSummary>(`/finance/summary?${query}`, { signal }),
+  financeAnalytics: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/analytics?${query}`, { signal }).then(normalizeAnalytics),
+  financeAccounts: (signal?: AbortSignal) => request<unknown>("/finance/accounts", { signal }).then((payload) => Array.isArray(payload) ? payload.map(normalizeAccount).filter((account) => account.code) : []),
   syncFinanceAccount: (code: string, body: { balanceArs: number }) => request<unknown>(`/finance/accounts/${encodeURIComponent(code)}/balance`, { method: "PUT", body }).then(normalizeAccount),
-  exchangeRate: () => request<ExchangeRate>("/finance/exchange-rate/usd"),
-  folders: () => request<unknown>("/file-folders").then((payload) => normalizePage<FileFolder>(payload)),
+  exchangeRate: (signal?: AbortSignal) => request<ExchangeRate>("/finance/exchange-rate/usd", { signal }),
+  folders: (signal?: AbortSignal) => request<unknown>("/file-folders", { signal }).then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
-  files: (query: URLSearchParams) => request<unknown>(`/files?${query}`).then((payload) => normalizePageItems(payload, normalizeFile)),
+  files: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/files?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeFile)),
   uploadFile: (file: File, folderId?: string, name?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); if (name) body.append("name", name); return request<unknown>("/files", { method: "POST", body }).then(normalizeFile); },
   updateFile: (id: string, body: { name: string; folderId?: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
   deleteFile: (id: string) => request<void>(`/files/${encodeURIComponent(id)}`, { method: "DELETE" }),
-  downloadFile: (file: FileItem) => download(file.downloadUrl || `/files/${encodeURIComponent(file.id)}/download`),
+  downloadFile: (file: FileItem, signal?: AbortSignal) => download(file.downloadUrl || `/files/${encodeURIComponent(file.id)}/download`, signal),
 };
 
 export function unwrapUser(payload: unknown): AuthUser {
