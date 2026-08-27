@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ApiConfig } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
-import { useMutationError } from "../../lib/api/hooks";
+import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { currentMonth, dateLabel, fieldError, monthBounds, todayIso } from "../../lib/presentation";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, MultiSelectChips, Pagination, SectionHero, SelectField, SkeletonGrid, StatusDot } from "../../ui/Primitives";
 import { DayCalendar } from "./DayCalendar";
@@ -61,7 +61,7 @@ export function DayView({ config }: { config: ApiConfig }) {
     try {
       const result = await api.analyzeDay(id);
       setAnalysisNotice(result.analysisStatus === "COMPLETED" ? "El análisis se completó." : "La descripción sigue pendiente de análisis. Podés volver a intentarlo.");
-      data.reload();
+      invalidateApiQueryCache(); data.reload();
     } catch {
       setAnalysisNotice("No se pudo completar el análisis. El registro sigue guardado; intentá nuevamente.");
     } finally {
@@ -83,12 +83,12 @@ export function DayView({ config }: { config: ApiConfig }) {
         setAnalysisNotice("El registro quedó guardado, pero el análisis no pudo completarse. Podés reintentarlo desde la tarjeta.");
       }
       setComposerOpen(false);
-      data.reload();
+       invalidateApiQueryCache(); data.reload();
     } catch { /* the mutation error is shown in the form */ }
     finally { setSaving(false); }
   };
 
-  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteDay(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
+  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteDay(pendingDelete)); setPendingDelete(null); invalidateApiQueryCache(); data.reload(); } catch { /* keep confirmation open */ } };
   const pageCount = data.data?.totalPages ?? 0;
   const activeFilterCount = (filter === "all" ? 0 : 1) + feelings.length;
   const exactDate = from === to ? from : "";

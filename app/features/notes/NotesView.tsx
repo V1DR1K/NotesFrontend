@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ApiConfig, Note } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
-import { useMutationError } from "../../lib/api/hooks";
+import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { dateLabel, todayIso, fieldError } from "../../lib/presentation";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, Pagination, SectionHero, SelectField, SkeletonGrid, VisualTile } from "../../ui/Primitives";
 import { NoteBody } from "./NoteBody";
@@ -29,10 +29,10 @@ export function NotesView({ config }: { config: ApiConfig }) {
     try {
       const body = { title: draft.title.trim(), body: draft.body.trim(), categoryCode: draft.categoryCode, date: draft.date };
       await mutation.run(() => editingId ? api.updateNote(editingId, body) : api.createNote(body));
-      setComposerOpen(false); data.reload();
+       setComposerOpen(false); invalidateApiQueryCache(); data.reload();
     } catch { /* the mutation error is shown in the form */ }
   };
-  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteNote(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
+  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteNote(pendingDelete)); setPendingDelete(null); invalidateApiQueryCache(); data.reload(); } catch { /* keep confirmation open */ } };
   const pageCount = data.data?.totalPages ?? 0;
 
   return <div className="view module-view">

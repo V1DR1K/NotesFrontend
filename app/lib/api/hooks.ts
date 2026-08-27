@@ -6,13 +6,17 @@ export type AsyncState<T> = { data: T | null; loading: boolean; refreshing: bool
 const cache = new Map<string, { data: unknown; updatedAt: number }>();
 const inFlight = new Map<string, { promise: Promise<unknown>; controller: AbortController; consumers: number }>();
 const MAX_CACHE_ENTRIES = 100;
+const CACHE_TTL_MS = 30_000;
 let cacheGeneration = 0;
 
-export function clearApiQueryCache() {
+export function invalidateApiQueryCache() {
+  for (const entry of inFlight.values()) entry.controller.abort();
   cache.clear();
   inFlight.clear();
   cacheGeneration += 1;
 }
+
+export const clearApiQueryCache = invalidateApiQueryCache;
 
 function storeCache<T>(key: string, data: T) {
   cache.set(key, { data, updatedAt: Date.now() });
@@ -32,6 +36,10 @@ export function useApiQuery<T>(key: string, loader: (signal: AbortSignal) => Pro
 
   useEffect(() => {
     let active = true;
+    const cachedEntry = cache.get(cacheKey);
+    if (cachedEntry && Date.now() - cachedEntry.updatedAt >= CACHE_TTL_MS) {
+      cache.delete(cacheKey);
+    }
     let entry = inFlight.get(cacheKey);
     if (!entry) {
       const controller = new AbortController();

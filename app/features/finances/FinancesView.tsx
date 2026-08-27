@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ApiConfig, FinanceAccount, FinanceBucket, FinanceMovement, FinanceSummary } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
-import { useMutationError } from "../../lib/api/hooks";
+import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { asNumber, currentMonth, dateLabel, fieldError, formatARS, formatUSD, monthBounds, todayIso } from "../../lib/presentation";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, MetricCard, ModuleToolbar, Pagination, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { FinanceAnalytics } from "./FinanceAnalytics";
@@ -58,15 +58,15 @@ export function FinancesView({ config }: { config: ApiConfig }) {
     if (mutation.pending) return;
     const amount = Number(draft.amount);
     if (!draft.date || !draft.bucket || !draft.itemCode || !Number.isFinite(amount) || amount <= 0) return;
-    try { const body = { date: draft.date, bucket: draft.bucket, accountCode: draft.accountCode, itemCode: draft.itemCode, amountArs: amount, note: draft.note.trim() || undefined }; await mutation.run(() => editingId ? api.updateMovement(editingId, body) : api.createMovement(body)); setComposerOpen(false); data.reload(); } catch { /* the mutation error is shown in the form */ }
+    try { const body = { date: draft.date, bucket: draft.bucket, accountCode: draft.accountCode, itemCode: draft.itemCode, amountArs: amount, note: draft.note.trim() || undefined }; await mutation.run(() => editingId ? api.updateMovement(editingId, body) : api.createMovement(body)); setComposerOpen(false); invalidateApiQueryCache(); data.reload(); } catch { /* the mutation error is shown in the form */ }
   };
-  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteMovement(pendingDelete)); setPendingDelete(null); data.reload(); } catch { /* keep confirmation open */ } };
+  const remove = async () => { if (!pendingDelete || mutation.pending) return; try { await mutation.run(() => api.deleteMovement(pendingDelete)); setPendingDelete(null); invalidateApiQueryCache(); data.reload(); } catch { /* keep confirmation open */ } };
   const openSync = (account: FinanceAccount) => { setSyncingAccount(account); setSyncBalance(String(account.balanceArs)); mutation.clearError(); };
   const syncAccount = async () => {
     const amount = Number(syncBalance);
     if (!syncingAccount || !Number.isFinite(amount) || amount < 0 || syncing) return;
     setSyncing(true);
-    try { await mutation.run(() => api.syncFinanceAccount(syncingAccount.code, { balanceArs: amount })); setSyncingAccount(null); data.reload(); }
+    try { await mutation.run(() => api.syncFinanceAccount(syncingAccount.code, { balanceArs: amount })); setSyncingAccount(null); invalidateApiQueryCache(); data.reload(); }
     catch { /* the mutation error is shown in the form */ }
     finally { setSyncing(false); }
   };

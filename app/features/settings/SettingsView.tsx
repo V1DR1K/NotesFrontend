@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { ApiConfig, ApiOption, ConfigKind, FinanceItemType } from "../../lib/api/types";
+import { invalidateApiQueryCache } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 import { Button, ConfirmDialog, Dialog, FormField, FormPanel, IconButton, SectionHero, SelectField } from "../../ui/Primitives";
 
@@ -37,7 +38,7 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
       const financeType = editing.group.kind === "finance-items" ? draft.financeType : undefined;
       if (editing.option) await api.updateConfigOption(editing.group.kind, editing.option.code, { label: draft.label.trim(), emoji: editing.group.emoji ? draft.emoji.trim() : undefined, sortOrder: Number(draft.sortOrder) || 0, active: draft.active, financeType });
       else await api.createConfigOption(editing.group.kind, { code: draft.code.trim().toLowerCase().replace(/\s+/g, "_"), label: draft.label.trim(), emoji: editing.group.emoji ? draft.emoji.trim() : undefined, sortOrder: Number(draft.sortOrder) || 0, active: draft.active, financeType });
-      onConfigChanged(await api.config());
+       invalidateApiQueryCache(); onConfigChanged(await api.config());
       setEditing(null);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "No se pudo guardar la configuración.");
@@ -46,7 +47,7 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
   const remove = async () => {
     if (!pendingDelete || saving || deleting) return;
     setDeleting(true);
-    try { await api.deleteConfigOption(pendingDelete.group.kind, pendingDelete.option.code); onConfigChanged(await api.config()); setPendingDelete(null); }
+    try { await api.deleteConfigOption(pendingDelete.group.kind, pendingDelete.option.code); invalidateApiQueryCache(); onConfigChanged(await api.config()); setPendingDelete(null); }
     catch (reason) { setError(reason instanceof Error ? reason.message : "No se pudo eliminar la opción."); }
     finally { setDeleting(false); }
   };
