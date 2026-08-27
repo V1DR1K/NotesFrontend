@@ -25,7 +25,7 @@ export function useApiQuery<T>(key: string, loader: () => Promise<T>): AsyncStat
   useEffect(() => {
     let active = true;
     const existing = inFlight.get(key);
-    const request = existing ?? load();
+    const request: Promise<T> = existing ? existing as Promise<T> : load();
     if (!existing) inFlight.set(key, request);
     request.then((data) => {
       storeCache(key, data);

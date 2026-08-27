@@ -11,10 +11,10 @@ export function DashboardView({ onNavigate }: { onNavigate: (section: SectionKey
   const counter = (...names: string[]) => { for (const name of names) if (counters[name] !== undefined) return counters[name]; return "—"; };
   const recentNote = data?.recentNotes?.[0];
   const activities = [
-    recentNote ? { section: "notes" as const, title: "Nota actualizada", detail: `${recentNote.title} · ${dateLabel(recentNote.date, true)}` } : null,
-    data?.recentMovements?.[0] ? { section: "finances" as const, title: "Movimiento registrado", detail: `${data.recentMovements[0].item?.label ?? data.recentMovements[0].itemCode} · ${dateLabel(data.recentMovements[0].date, true)}` } : null,
-    data?.recentFiles?.[0] ? { section: "files" as const, title: "Archivo agregado", detail: `${data.recentFiles[0].name} · ${dateLabel(data.recentFiles[0].uploadedAt, true)}` } : null,
-  ].filter(Boolean) as Array<{ section: Exclude<SectionKey, "overview" | "day">; title: string; detail: string }>;
+    recentNote ? { section: "notes" as const, icon: SECTION_META.notes.icon, title: "Nota actualizada", detail: `${recentNote.title} · ${dateLabel(recentNote.date, true)}` } : null,
+    data?.recentMovements?.[0] ? { section: "finances" as const, icon: SECTION_META.finances.icon, title: "Movimiento registrado", detail: `${data.recentMovements[0].item?.label ?? data.recentMovements[0].itemCode} · ${dateLabel(data.recentMovements[0].date, true)}` } : null,
+    data?.recentFiles?.[0] ? { section: "files" as const, icon: SECTION_META.files.icon, title: "Archivo agregado", detail: `${data.recentFiles[0].name} · ${dateLabel(data.recentFiles[0].uploadedAt, true)}` } : null,
+  ].filter(Boolean) as Array<{ section: Exclude<SectionKey, "overview" | "day">; icon: string; title: string; detail: string }>;
   const summary = data?.financeSummary;
   const cash = typeof summary?.cash === "object" && summary.cash !== null ? summary.cash.ars : summary?.cash;
   return <div className="view view-overview">

@@ -10,6 +10,7 @@ import type {
   FinanceAccount,
   FinanceSummary,
   ExchangeRate,
+  FinanceItemType,
   FileFolder,
   FileItem,
   LoginRequest,
@@ -148,6 +149,10 @@ function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" ? value as Record<string, unknown> : {};
 }
 
+function financeType(value: unknown): FinanceItemType | undefined {
+  return value === "INCOME" || value === "EXPENSE" || value === "TRANSFER" ? value : undefined;
+}
+
 function optionList(value: unknown): ApiOption[] {
   const candidate = Array.isArray(value) ? value : asRecord(value).content;
   const list: unknown[] = Array.isArray(candidate) ? candidate : [];
@@ -162,7 +167,7 @@ function optionList(value: unknown): ApiOption[] {
       icon: record.icon ? String(record.icon) : undefined,
       sortOrder: Number(record.sortOrder ?? 0),
       active: record.active !== false,
-      financeType: record.financeType === "INCOME" || record.financeType === "EXPENSE" || record.financeType === "TRANSFER" ? record.financeType : undefined,
+      financeType: financeType(record.financeType),
     };
   }).filter((item) => item.code);
 }
@@ -170,7 +175,7 @@ function optionList(value: unknown): ApiOption[] {
 function option(value: unknown): ApiOption | undefined {
   const record = asRecord(value);
   const code = String(record.code ?? record.value ?? "");
-  return code ? { code, label: String(record.label ?? code), shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined, sortOrder: Number(record.sortOrder ?? 0), active: record.active !== false, financeType: record.financeType === "INCOME" || record.financeType === "EXPENSE" || record.financeType === "TRANSFER" ? record.financeType : undefined } : undefined;
+  return code ? { code, label: String(record.label ?? code), shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined, sortOrder: Number(record.sortOrder ?? 0), active: record.active !== false, financeType: financeType(record.financeType) } : undefined;
 }
 
 function normalizeDay(value: unknown): DayEntry {
@@ -305,11 +310,11 @@ function refreshSession(startedAt: number) {
       return refreshTokens();
     };
     const coordinated = typeof navigator !== "undefined" && navigator.locks
-      ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, action)
+      ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, () => action()) as unknown as Promise<string | null>
       : refreshWithLocalLock(startedAt, action);
     refreshPromise = coordinated.finally(() => { refreshPromise = null; });
   }
-  return refreshPromise;
+  return refreshPromise ?? Promise.resolve(null);
 }
 
 async function request<T>(path: string, init: ApiRequestInit = {}, retried = false): Promise<T> {
@@ -418,7 +423,7 @@ export const api = {
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
   files: (query: URLSearchParams) => request<unknown>(`/files?${query}`).then((payload) => normalizePageItems(payload, normalizeFile)),
   uploadFile: (file: File, folderId?: string, name?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); if (name) body.append("name", name); return request<unknown>("/files", { method: "POST", body }).then(normalizeFile); },
-  updateFile: (id: string, body: { name: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
+  updateFile: (id: string, body: { name: string; folderId?: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
   deleteFile: (id: string) => request<void>(`/files/${encodeURIComponent(id)}`, { method: "DELETE" }),
   downloadFile: (file: FileItem) => download(file.downloadUrl || `/files/${encodeURIComponent(file.id)}/download`),
 };
