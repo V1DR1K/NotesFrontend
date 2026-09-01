@@ -33,8 +33,34 @@ export function asNumber(value: unknown) {
   return Number.isFinite(number) ? number : 0;
 }
 
+export function formatARSInput(value: string) {
+  const sanitized = value.replace(/\s/g, "").replace(/[^\d,]/g, "");
+  if (!sanitized) return "";
+
+  const commaIndex = sanitized.indexOf(",");
+  const integerPart = (commaIndex >= 0 ? sanitized.slice(0, commaIndex) : sanitized).replace(/\D/g, "");
+  const fractionPart = commaIndex >= 0 ? sanitized.slice(commaIndex + 1).replace(/\D/g, "").slice(0, 2) : "";
+  const normalizedInteger = integerPart.replace(/^0+(?=\d)/, "") || (commaIndex >= 0 ? "0" : "");
+  const groupedInteger = normalizedInteger.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  return commaIndex >= 0 ? `${groupedInteger},${fractionPart}` : groupedInteger;
+}
+
+export function formatARSInputNumber(value: unknown) {
+  const number = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(number) ? new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(number) : "";
+}
+
+export function parseARSInput(value: string) {
+  const normalized = value.trim();
+  if (!normalized || normalized.endsWith(",") || !/^\d+(?:\.\d{3})*(?:,\d{1,2})?$/.test(normalized)) return null;
+
+  const number = Number(normalized.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(number) ? number : null;
+}
+
 export function formatARS(value: unknown) {
-  return `$ ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 0 }).format(asNumber(value))}`;
+  return `$ ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(asNumber(value))}`;
 }
 
 export function formatUSD(value: unknown) {
