@@ -8,6 +8,8 @@ import type {
   FinanceAnalytics,
   FinanceAccount,
   FinanceSummary,
+  CryptoInvestment,
+  CryptoSummary,
   ExchangeRate,
   FinanceItemType,
   FileFolder,
@@ -225,6 +227,23 @@ function normalizeAccount(value: unknown): FinanceAccount {
   return { code: textField(record, "code", "cuentas financieras"), label: textField(record, "label", "cuentas financieras"), type: String(record.type ?? ""), balanceArs: record.balanceArs as number | string, annualRatePercent: record.annualRatePercent as number | string, growthMode: String(record.growthMode ?? "MANUAL"), balanceAsOf: String(record.balanceAsOf ?? "") };
 }
 
+function normalizeCryptoInvestment(value: unknown): CryptoInvestment {
+  const record = validatedRecord(value, "inversiones cripto");
+  const amount = validatedRecord(record.amount, "importe de inversión cripto");
+  return { id: textField(record, "id", "inversiones cripto"), date: textField(record, "date", "inversiones cripto"), assetCode: textField(record, "assetCode", "inversiones cripto"), assetLabel: textField(record, "assetLabel", "inversiones cripto"), amount: amount as CryptoInvestment["amount"], note: record.note ? String(record.note) : undefined, createdAt: record.createdAt ? String(record.createdAt) : undefined };
+}
+
+function normalizeCryptoSummary(value: unknown): CryptoSummary {
+  const record = validatedRecord(value, "resumen cripto");
+  const invested = validatedRecord(record.invested, "total cripto");
+  const available = validatedRecord(record.available, "saldo cripto disponible");
+  const positions = Array.isArray(record.positions) ? record.positions.map((value) => {
+    const position = validatedRecord(value, "posiciones cripto");
+    return { assetCode: textField(position, "assetCode", "posiciones cripto"), assetLabel: textField(position, "assetLabel", "posiciones cripto"), investedUsd: position.investedUsd as number | string, investedArs: position.investedArs as number | string, purchases: Number(position.purchases ?? 0) };
+  }) : [];
+  return { invested: invested as CryptoSummary["invested"], available: available as CryptoSummary["available"], positions, investments: Array.isArray(record.investments) ? record.investments.map(normalizeCryptoInvestment) : [], exchangeRate: record.exchangeRate as CryptoSummary["exchangeRate"] };
+}
+
 function normalizeFile(value: unknown): FileItem {
   const record = validatedRecord(value, "archivos");
   return { ...record as unknown as FileItem, id: textField(record, "id", "archivos"), name: textField(record, "name", "archivos"), description: String(record.description ?? record.name ?? ""), extension: record.extension ? String(record.extension) : undefined, mimeType: record.mimeType ? String(record.mimeType) : undefined, sizeBytes: record.sizeBytes as number | string | undefined, kind: textField(record, "kind", "archivos"), folder: record.folder as FileItem["folder"], downloadUrl: record.downloadUrl ? String(record.downloadUrl) : undefined, uploadedAt: record.uploadedAt ? String(record.uploadedAt) : undefined };
@@ -437,6 +456,10 @@ export const api = {
   financeAccounts: (signal?: AbortSignal) => request<unknown>("/finance/accounts", { signal }).then((payload) => Array.isArray(payload) ? payload.map(normalizeAccount).filter((account) => account.code) : []),
   syncFinanceAccount: (code: string, body: { balanceArs: number }) => request<unknown>(`/finance/accounts/${encodeURIComponent(code)}/balance`, { method: "PUT", body }).then(normalizeAccount),
   exchangeRate: (signal?: AbortSignal) => request<unknown>("/finance/exchange-rate/usd", { signal }).then(normalizeExchangeRate),
+  cryptoSummary: (signal?: AbortSignal) => request<unknown>("/finance/crypto/summary", { signal }).then(normalizeCryptoSummary),
+  cryptoInvest: (body: { date: string; assetCode: string; amountUsd: number; note?: string }) => request<unknown>("/finance/crypto/investments", { method: "POST", body }).then(normalizeCryptoInvestment),
+  cryptoTransfer: (body: { date: string; amountArs: number; note?: string }) => request<unknown>("/finance/crypto/transfers", { method: "POST", body }).then(normalizeMovement),
+  deleteCryptoInvestment: (id: string) => del(`/finance/crypto/investments/${encodeURIComponent(id)}`),
   folders: (signal?: AbortSignal) => request<unknown>("/file-folders", { signal }).then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
   files: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/files?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeFile)),

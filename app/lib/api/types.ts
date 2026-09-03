@@ -109,6 +109,24 @@ export type FinanceAccount = {
   growthMode: "DAILY_TNA" | "MANUAL" | string;
   balanceAsOf: string;
 };
+export type CryptoAssetCode = "BTCUSDT" | "SOLUSDT" | "ETHUSDT" | "PEPEUSDT";
+export type CryptoInvestment = {
+  id: string;
+  date: string;
+  assetCode: CryptoAssetCode | string;
+  assetLabel: string;
+  amount: FinanceAmount;
+  note?: string;
+  createdAt?: string;
+};
+export type CryptoPosition = { assetCode: CryptoAssetCode | string; assetLabel: string; investedUsd: number | string; investedArs: number | string; purchases: number };
+export type CryptoSummary = {
+  invested: FinanceAmount;
+  available: FinanceAmount;
+  positions: CryptoPosition[];
+  investments: CryptoInvestment[];
+  exchangeRate: ExchangeRate;
+};
 
 export type ExchangeRate = { currency: string; buy: number | string; sell: number | string; average: number | string; fetchedAt?: string; source?: string };
 

@@ -13,13 +13,14 @@ export function useFinanceData(page: number, bucket: string, from: string, to: s
   const analytics = useApiQuery(`finance:analytics:${from}:${to}`, (signal) => api.financeAnalytics(rangeQuery, signal));
   const exchangeRate = useApiQuery("finance:exchange-rate", (signal) => api.exchangeRate(signal));
   const accounts = useApiQuery("finance:accounts", (signal) => api.financeAccounts(signal));
+  const crypto = useApiQuery("finance:crypto-summary", (signal) => api.cryptoSummary(signal));
   return {
-    data: [movements.data, summary.data, analytics.data, exchangeRate.data, accounts.data] as const,
+    data: [movements.data, summary.data, analytics.data, exchangeRate.data, accounts.data, crypto.data] as const,
     loading: movements.loading,
-    auxiliaryLoading: summary.loading || analytics.loading || exchangeRate.loading || accounts.loading,
-    refreshing: movements.refreshing || summary.refreshing || analytics.refreshing || exchangeRate.refreshing || accounts.refreshing,
+    auxiliaryLoading: summary.loading || analytics.loading || exchangeRate.loading || accounts.loading || crypto.loading,
+    refreshing: movements.refreshing || summary.refreshing || analytics.refreshing || exchangeRate.refreshing || accounts.refreshing || crypto.refreshing,
     error: movements.error,
-    auxiliaryError: summary.error ?? analytics.error ?? exchangeRate.error ?? accounts.error,
-    reload: () => { movements.reload(); summary.reload(); analytics.reload(); exchangeRate.reload(); accounts.reload(); },
+    auxiliaryError: summary.error ?? analytics.error ?? exchangeRate.error ?? accounts.error ?? crypto.error,
+    reload: () => { movements.reload(); summary.reload(); analytics.reload(); exchangeRate.reload(); accounts.reload(); crypto.reload(); },
   };
 }

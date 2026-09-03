@@ -182,6 +182,33 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .finance-account-usd { display: block; margin-top: 4px; color: var(--muted); font: 9px var(--font-mono); }
 .finance-account-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 21px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
 .finance-account-meta .button { min-height: 30px; padding: 0 9px; font-size: 8px; }
+.finance-account-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+
+.crypto-investment-panel { margin-top: 28px; padding: 24px; border: 1px solid var(--line); background: linear-gradient(145deg, rgba(168, 185, 255, .08), var(--panel) 48%); }
+.crypto-panel-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.crypto-panel-heading h2 { margin: 8px 0 7px; color: var(--ink); font-family: var(--font-display); font-size: 30px; font-weight: 600; letter-spacing: -.05em; line-height: 1; }
+.crypto-panel-heading p { max-width: 62ch; margin: 0; color: var(--muted-strong); font-size: 10px; line-height: 1.6; }
+.crypto-summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 24px; }
+.crypto-summary-grid > div { min-width: 0; padding: 16px; border: 1px solid var(--line); background: rgba(12, 14, 17, .42); }
+.crypto-summary-grid span, .crypto-summary-grid small { display: block; color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.crypto-summary-grid strong { display: block; margin: 12px 0 5px; color: var(--ink); font-family: var(--font-display); font-size: 25px; font-weight: 500; letter-spacing: -.05em; }
+.crypto-summary-grid small { letter-spacing: 0; text-transform: none; }
+.crypto-position-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.crypto-position { padding: 15px; border: 1px solid var(--line); background: var(--panel-soft); }
+.crypto-symbol { color: var(--section-accent); font: 11px var(--font-mono); letter-spacing: .08em; }
+.crypto-pair { color: var(--muted); font: 9px var(--font-mono); }
+.crypto-position strong { display: block; margin-top: 18px; color: var(--ink); font-family: var(--font-display); font-size: 21px; font-weight: 500; }
+.crypto-position small { display: block; margin-top: 4px; color: var(--muted); font: 9px var(--font-mono); }
+.crypto-history { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.crypto-history-row { display: grid; grid-template-columns: 90px 1fr 110px 150px; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); color: var(--muted); font: 10px var(--font-mono); }
+.crypto-history-row strong { color: var(--ink); font-family: var(--font-display); font-size: 15px; font-weight: 500; }
+.crypto-history-row > span:nth-of-type(2) { color: var(--ink); text-align: right; }
+.crypto-history-row small { text-align: right; }
+.crypto-history-row .button { min-height: 24px; margin-left: 8px; padding: 0 7px; font-size: 14px; }
+.crypto-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.crypto-conversion-preview { display: flex; align-items: baseline; gap: 10px; margin: 18px 0; padding: 14px; border: 1px solid var(--line); background: var(--section-surface); }
+.crypto-conversion-preview span, .crypto-conversion-preview small { color: var(--muted); font: 9px var(--font-mono); }
+.crypto-conversion-preview strong { color: var(--ink); font-family: var(--font-display); font-size: 22px; font-weight: 500; }
 .account-sync-field { max-width: 100%; }
 
 .finance-analytics { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); gap: 12px; margin-top: 28px; }
@@ -592,6 +619,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .discard-backdrop .confirm-dialog { width: 100%; }
   .finance-filter-row { grid-template-columns: 1fr 1fr; }
   .finance-filter-row .toolbar-date-field { grid-column: 1 / -1; }
+  .crypto-panel-heading { align-items: stretch; flex-direction: column; }
+  .crypto-panel-heading .button { width: 100%; }
+  .crypto-summary-grid, .crypto-position-grid { grid-template-columns: 1fr; }
+  .crypto-history-row { grid-template-columns: 1fr 1fr; }
+  .crypto-history-row > span:nth-of-type(2), .crypto-history-row small { text-align: left; }
+  .finance-account-actions { justify-content: stretch; width: 100%; }
+  .finance-account-actions .button { flex: 1; }
   .finance-filter-row .filter-clear { width: 100%; }
   .login-card { padding: 26px 20px; }
   .content-grid { gap: 10px; padding-top: 16px; }
