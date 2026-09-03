@@ -28,6 +28,14 @@ export function dateLabel(value?: string, includeTime = false) {
   return includeTime && value.length > 10 ? `${label} · ${date.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}` : label;
 }
 
+export function weekdayLabel(value?: string) {
+  if (!value) return "Sin día";
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  const label = date.toLocaleDateString("es-AR", { weekday: "long" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
 export function asNumber(value: unknown) {
   const number = typeof value === "number" ? value : Number(value);
   return Number.isFinite(number) ? number : 0;

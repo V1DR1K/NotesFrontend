@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ApiConfig } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
-import { currentMonth, dateLabel, fieldError, monthBounds, todayIso } from "../../lib/presentation";
+import { currentMonth, dateLabel, fieldError, monthBounds, todayIso, weekdayLabel } from "../../lib/presentation";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, MultiSelectChips, Pagination, SectionHero, SelectField, SkeletonGrid, StatusDot } from "../../ui/Primitives";
 import { DayCalendar } from "./DayCalendar";
 import { useDayCalendarData } from "./useDayCalendarData";
@@ -125,7 +125,7 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
       const pending = entry.analysisStatus !== "COMPLETED";
       const analyzing = analyzingIds.includes(entry.id);
        return <article id={`record-${entry.id}`} className={`content-card day-card ${pending ? "day-card-pending" : ""}`} key={entry.id}>
-        <div className="content-card-top"><span className="mono-date">{dateLabel(entry.date, true)}</span><CardActions onEdit={() => startEdit(entry)} onDelete={() => setPendingDelete(entry.id)} /></div>
+         <div className="content-card-top"><span className="mono-date">{dateLabel(entry.date, true)} <span className="card-weekday">· {weekdayLabel(entry.date)}</span></span><CardActions onEdit={() => startEdit(entry)} onDelete={() => setPendingDelete(entry.id)} /></div>
         {pending ? <div className="day-analysis-pending"><span className="day-analysis-mark" aria-hidden="true">◌</span><div><strong>Análisis pendiente</strong><span>La descripción está guardada, pero todavía no tiene color ni sensaciones.</span></div></div> : <><div className="day-card-heading"><StatusDot status={statusTone(entry.statusCode)} /><span className="status-copy">{entry.status?.label ?? statusLabel(entry.statusCode)}</span><span className="day-mood">{entry.status?.emoji ?? statusEmoji(entry.statusCode)}</span></div><div className="day-feeling-tags" aria-label="Sensaciones del día">{parseFeelings(entry.feeling).map((feeling) => <span className="day-feeling-tag" key={feeling}>{feelingOptions.find((option) => option.code === feeling)?.label ?? feeling}</span>)}</div></>}
         <p>{entry.description}</p><div className="card-footer">{pending ? <button type="button" className="card-link-button" onClick={() => void runAnalysis(entry.id)} disabled={analyzing}>{analyzing ? "ANALIZANDO..." : "ANALIZAR DE NUEVO"}</button> : <span className="eyebrow">REGISTRO ANALIZADO</span>}<span className="card-arrow" aria-hidden="true">↗</span></div>
       </article>;

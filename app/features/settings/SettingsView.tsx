@@ -6,7 +6,7 @@ import { invalidateApiQueryCache } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 import { Button, ConfirmDialog, Dialog, FormField, FormPanel, IconButton, SectionHero, SelectField } from "../../ui/Primitives";
 
-type ConfigKey = "dayStatuses" | "dayFeelings" | "financeItems" | "noteCategories";
+type ConfigKey = "dayStatuses" | "dayFeelings" | "financeItems" | "noteCategories" | "eventCategories";
 type ConfigGroup = { kind: ConfigKind; key: ConfigKey; label: string; description: string; emoji: boolean; fixed?: boolean };
 type Draft = { code: string; label: string; emoji: string; sortOrder: string; active: boolean; financeType: FinanceItemType };
 
@@ -15,6 +15,7 @@ const GROUPS: ConfigGroup[] = [
   { kind: "day-feelings", key: "dayFeelings", label: "Sensaciones", description: "Las opciones que aparecen al registrar cómo te sentiste.", emoji: false },
   { kind: "finance-items", key: "financeItems", label: "Clasificaciones financieras", description: "Las opciones disponibles para registrar cada movimiento.", emoji: false },
   { kind: "note-categories", key: "noteCategories", label: "Categorías de notas", description: "Las etiquetas disponibles para tus ideas.", emoji: false },
+  { kind: "event-categories", key: "eventCategories", label: "Categorías de eventos", description: "Las opciones disponibles para organizar tu calendario.", emoji: false },
 ];
 
 const emptyDraft = (): Draft => ({ code: "", label: "", emoji: "", sortOrder: "0", active: true, financeType: "EXPENSE" });

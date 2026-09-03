@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-export type SectionKey = "overview" | "day" | "finances" | "files" | "notes" | "settings";
+export type SectionKey = "overview" | "day" | "calendar" | "finances" | "files" | "notes" | "settings";
 
 export type SectionTokens = {
   accent: string;
@@ -25,6 +25,13 @@ export const SECTION_TOKENS: Record<SectionKey, SectionTokens> = {
     shadow: "rgba(155, 215, 179, 0.22)",
     surface: "rgba(155, 215, 179, 0.12)",
     soft: "#d8f0e0",
+  },
+  calendar: {
+    accent: "#f0b58a",
+    contrast: "#321b10",
+    shadow: "rgba(240, 181, 138, 0.22)",
+    surface: "rgba(240, 181, 138, 0.12)",
+    soft: "#f6dfcf",
   },
   finances: {
     accent: "#e5b86f",
@@ -80,6 +87,14 @@ export const SECTION_META: Record<SectionKey, {
     icon: "☀",
     action: "Anotar el día",
   },
+  calendar: {
+    label: "Calendario",
+    eyebrow: "FECHAS Y PENDIENTES / 03",
+    title: "Que nada importante se te escape.",
+    description: "Una agenda simple para guardar tus eventos, encontrarlos por fecha y mantener cada pendiente en su lugar.",
+    icon: "▦",
+    action: "Agregar evento",
+  },
   finances: {
     label: "Finanzas",
     eyebrow: "MOVIMIENTO DE DINERO / 03",
@@ -117,6 +132,7 @@ export const SECTION_META: Record<SectionKey, {
 export const NAV_ITEMS: Array<{ key: SectionKey; short: string }> = [
   { key: "overview", short: "Inicio" },
   { key: "day", short: "Mi día" },
+  { key: "calendar", short: "Agenda" },
   { key: "finances", short: "Finanzas" },
   { key: "files", short: "Archivos" },
   { key: "notes", short: "Notas" },

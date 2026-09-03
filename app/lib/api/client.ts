@@ -4,6 +4,7 @@ import type {
   AuthUser,
   Dashboard,
   DayEntry,
+  CalendarEvent,
   FinanceMovement,
   FinanceAnalytics,
   FinanceAccount,
@@ -182,6 +183,13 @@ function normalizeDay(value: unknown): DayEntry {
   return { ...record as unknown as DayEntry, id: textField(record, "id", "días"), date: textField(record, "date", "días"), analysisStatus: record.analysisStatus === "COMPLETED" ? "COMPLETED" : "PENDING", statusCode: status?.code ?? String(record.statusCode ?? ""), status, feeling: String(record.feeling ?? ""), description: textField(record, "description", "días") };
 }
 
+function normalizeCalendarEvent(value: unknown): CalendarEvent {
+  const record = validatedRecord(value, "eventos");
+  const category = option(record.category);
+  if (!category) throw new ApiError("La respuesta de eventos no contiene una categoría válida.", 502);
+  return { id: textField(record, "id", "eventos"), date: textField(record, "date", "eventos"), description: textField(record, "description", "eventos"), category };
+}
+
 function normalizeNote(value: unknown): Note {
   const record = validatedRecord(value, "notas");
   const category = option(record.category);
@@ -251,9 +259,17 @@ function normalizeFile(value: unknown): FileItem {
 
 function normalizeDashboard(value: unknown): Dashboard {
   const record = asRecord(value);
+  const dayStats = asRecord(record.dayStats);
+  const financeSnapshot = asRecord(record.financeSnapshot);
+  const storageUsage = asRecord(record.storageUsage);
   return {
     counters: { days: Number(record.dayEntriesCount ?? 0), notes: Number(record.notesCount ?? 0), files: Number(record.filesCount ?? 0), movements: Number(record.financeMovementsCount ?? 0) },
     financeSummary: normalizeSummary(record.financeSummary),
+    dayStats: { monthEntries: Number(dayStats.monthEntries ?? 0), pendingAnalysis: Number(dayStats.pendingAnalysis ?? 0), today: dayStats.today ? normalizeDay(dayStats.today) : null },
+    financeSnapshot: financeSnapshot.currentCash ? { currentCash: financeSnapshot.currentCash as NonNullable<Dashboard["financeSnapshot"]>["currentCash"], currentInvested: financeSnapshot.currentInvested as NonNullable<Dashboard["financeSnapshot"]>["currentInvested"], monthIncome: financeSnapshot.monthIncome as NonNullable<Dashboard["financeSnapshot"]>["monthIncome"], monthExpense: financeSnapshot.monthExpense as NonNullable<Dashboard["financeSnapshot"]>["monthExpense"], exchangeRate: financeSnapshot.exchangeRate as ExchangeRate | undefined } : undefined,
+    storageUsage: storageUsage.usedBytes !== undefined ? { usedBytes: Number(storageUsage.usedBytes ?? 0), quotaBytes: Number(storageUsage.quotaBytes ?? 0) } : undefined,
+    upcomingEvents: Array.isArray(record.upcomingEvents) ? record.upcomingEvents.map(normalizeCalendarEvent) : [],
+    recentActivity: Array.isArray(record.recentActivity) ? record.recentActivity.map((item) => { const activity = validatedRecord(item, "actividad reciente"); return { section: String(activity.section) as NonNullable<Dashboard["recentActivity"]>[number]["section"], id: textField(activity, "id", "actividad reciente"), title: textField(activity, "title", "actividad reciente"), detail: textField(activity, "detail", "actividad reciente"), date: textField(activity, "date", "actividad reciente"), updatedAt: activity.updatedAt ? String(activity.updatedAt) : undefined }; }) : [],
     recentNotes: Array.isArray(record.recentNotes) ? record.recentNotes.map(normalizeNote) : [],
     recentFiles: Array.isArray(record.recentFiles) ? record.recentFiles.map(normalizeFile) : [],
     recentDays: Array.isArray(record.recentDays) ? record.recentDays.map(normalizeDay) : [],
@@ -422,13 +438,13 @@ export const api = {
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "PUT", body }),
   config: async (signal?: AbortSignal): Promise<ApiConfig> => {
     const results = await Promise.allSettled([
-      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }),
+      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }), request<unknown>("/config/event-categories", { signal }),
     ]);
     const options = (result: PromiseSettledResult<unknown>) => {
       if (result.status !== "fulfilled") return [];
       try { return optionList(result.value); } catch { return []; }
     };
-    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]) };
+    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]), eventCategories: options(results[4]) };
   },
   createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
@@ -443,6 +459,10 @@ export const api = {
   updateDay: (id: string, body: { date: string; description: string }) => request<unknown>(`/day-entries/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeDay),
   analyzeDay: (id: string) => request<unknown>(`/day-entries/${encodeURIComponent(id)}/analyze`, { method: "POST" }).then(normalizeDay),
   deleteDay: (id: string) => request<void>(`/day-entries/${encodeURIComponent(id)}`, { method: "DELETE" }),
+  events: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/events?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeCalendarEvent)),
+  createEvent: (body: { date: string; description: string; categoryCode: string }) => request<unknown>("/events", { method: "POST", body }).then(normalizeCalendarEvent),
+  updateEvent: (id: string, body: { date: string; description: string; categoryCode: string }) => request<unknown>(`/events/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeCalendarEvent),
+  deleteEvent: (id: string) => request<void>(`/events/${encodeURIComponent(id)}`, { method: "DELETE" }),
   notes: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/notes?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeNote)),
   createNote: (body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>("/notes", { method: "POST", body }).then(normalizeNote),
   updateNote: (id: string, body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>(`/notes/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeNote),

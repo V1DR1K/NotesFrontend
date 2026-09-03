@@ -26,9 +26,10 @@ export type ApiConfig = {
   dayFeelings: ApiOption[];
   financeItems: ApiOption[];
   noteCategories: ApiOption[];
+  eventCategories: ApiOption[];
 };
 
-export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories";
+export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories" | "event-categories";
 export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
 
 export type AuthUser = {
@@ -58,6 +59,12 @@ export type DayEntry = {
   description: string;
 };
 export type DaySuggestion = { analyzed: boolean; statusCode: string; feelingCodes: string[] };
+export type CalendarEvent = {
+  id: string;
+  date: string;
+  description: string;
+  category: ApiOption;
+};
 
 export type NoteCategory = { code: string; label?: string };
 export type Note = {
@@ -109,6 +116,7 @@ export type FinanceAccount = {
   growthMode: "DAILY_TNA" | "MANUAL" | string;
   balanceAsOf: string;
 };
+
 export type CryptoAssetCode = "BTCUSDT" | "SOLUSDT" | "ETHUSDT" | "PEPEUSDT";
 export type CryptoInvestment = {
   id: string;
@@ -147,6 +155,11 @@ export type FileItem = {
 export type Dashboard = {
   counters?: Record<string, number | string>;
   financeSummary?: FinanceSummary;
+  dayStats?: { monthEntries: number; pendingAnalysis: number; today?: DayEntry | null };
+  financeSnapshot?: { currentCash: FinanceAmount; currentInvested: FinanceAmount; monthIncome: FinanceAmount; monthExpense: FinanceAmount; exchangeRate?: ExchangeRate };
+  storageUsage?: { usedBytes: number; quotaBytes: number };
+  upcomingEvents?: CalendarEvent[];
+  recentActivity?: Array<{ section: "day" | "calendar" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date: string; updatedAt?: string }>;
   recentNotes?: Note[];
   recentFiles?: FileItem[];
   recentDays?: DayEntry[];
