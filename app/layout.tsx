@@ -5,8 +5,8 @@ export const metadata: Metadata = {
   title: "Cuaderno · Tu espacio personal",
   description: "Un espacio oscuro y ordenado para registrar tus días, finanzas, archivos y notas.",
   icons: {
-    icon: "/favicon.svg",
-    shortcut: "/favicon.svg",
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+    shortcut: [{ url: "/favicon.svg", type: "image/svg+xml" }],
   },
 };
 
