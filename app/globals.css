@@ -498,6 +498,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .form-field input, .form-field textarea, .form-grid > .field-label .select-wrap, .form-grid > .field-label select { width: 100%; max-width: 100%; }
 .form-field input, .form-field textarea, .form-grid > .field-label .select-wrap select { min-height: 40px; padding: 10px 12px; color: var(--ink); background: rgba(12, 14, 17, .5); border: 1px solid var(--line); border-radius: 0; resize: vertical; }
 .form-field input[type="date"], .toolbar-date-field input[type="date"] { display: block; min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+.form-field input[type="date"]::-webkit-date-and-time-value, .toolbar-date-field input[type="date"]::-webkit-date-and-time-value { display: block; min-width: 0; width: 100%; text-align: left; }
 .form-field input::placeholder, .form-field textarea::placeholder { color: var(--muted); }
 .form-field-error { color: var(--danger); font-size: 10px; line-height: 1.4; }
 .form-field-full { grid-column: 1 / -1; }
@@ -653,6 +654,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .form-field input, .form-field textarea, .form-grid > .field-label .select-wrap select, .toolbar-date-field input, .toolbar-search-field input, .finance-filter-row select { min-height: 48px; font-size: 16px; }
   .form-field textarea { min-height: 120px; }
   .day-filter-statuses .filter-pill { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
+}
+
+@media (max-width: 560px) {
+  @supports (-webkit-touch-callout: none) {
+    .form-field input[type="date"], .toolbar-date-field input[type="date"] { -webkit-appearance: none; appearance: none; overflow: hidden; }
+    .form-field input[type="date"]::-webkit-datetime-edit, .toolbar-date-field input[type="date"]::-webkit-datetime-edit { min-width: 0; padding: 0; }
+    .form-field input[type="date"]::-webkit-calendar-picker-indicator, .toolbar-date-field input[type="date"]::-webkit-calendar-picker-indicator { margin-left: auto; }
+  }
 }
 
 /* File image preview */
