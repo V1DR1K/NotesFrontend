@@ -40,7 +40,7 @@ export function NoteBody({ body }: { body: string }) {
   const lines = body.split(/\r?\n/);
 
   return (
-    <p className="note-body">
+    <p className="note-body multiline-copy">
       {lines.map((line, index) => (
         <Fragment key={index}>
           {linkifyLine(line, index)}

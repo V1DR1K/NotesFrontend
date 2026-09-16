@@ -356,6 +356,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .card-actions { display: flex; gap: 2px; margin-top: -7px; margin-right: -7px; }
 .content-card h2 { margin: 19px 0 9px; color: var(--ink); font-family: var(--font-display); font-size: 25px; font-weight: 600; letter-spacing: -.05em; line-height: 1.08; }
 .content-card p { margin: 0; color: var(--muted-strong); font-size: 11px; line-height: 1.75; }
+.multiline-copy { white-space: pre-wrap; overflow-wrap: anywhere; }
 .day-card-heading { justify-content: flex-start; gap: 8px; margin-top: 27px; }
 .status-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
 .status-green { color: #9bd7b3; background: #9bd7b3; }
@@ -381,7 +382,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .event-detail-card { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 15px 0; border-top: 1px solid var(--line); }
 .event-detail-copy { min-width: 0; }
 .event-category-label { display: inline-block; padding: 4px 7px; color: var(--section-accent); background: var(--section-surface); font: 9px var(--font-mono); letter-spacing: .05em; text-transform: uppercase; }
-.event-detail-card p { margin: 9px 0 0; color: var(--muted-strong); font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }
+.event-detail-card p { margin: 9px 0 0; color: var(--muted-strong); font-size: 12px; line-height: 1.55; }
 .events-calendar-day { padding: 7px; }
 .events-calendar-day-has-events { background: linear-gradient(145deg, var(--section-surface), transparent 70%); }
 .event-day-list { display: grid; gap: 3px; width: 100%; margin-top: 7px; overflow: hidden; }
@@ -496,7 +497,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .form-grid > *, .form-field, .field-label, .select-wrap { min-width: 0; max-width: 100%; }
 .form-field { display: flex; flex-direction: column; gap: 8px; color: var(--muted); font-size: 10px; }
 .form-field input, .form-field textarea, .form-grid > .field-label .select-wrap, .form-grid > .field-label select { width: 100%; max-width: 100%; }
-.form-field input, .form-field textarea, .form-grid > .field-label .select-wrap select { min-height: 40px; padding: 10px 12px; color: var(--ink); background: rgba(12, 14, 17, .5); border: 1px solid var(--line); border-radius: 0; resize: vertical; }
+.form-field input, .form-field textarea, .form-grid > .field-label .select-wrap select { min-height: 40px; padding: 10px 12px; color: var(--ink); background: rgba(12, 14, 17, .5); border: 1px solid var(--line); border-radius: 0; }
+.form-field textarea.auto-grow-textarea { max-height: min(45dvh, 360px); overflow-y: hidden; resize: none; }
 .form-field input[type="date"], .toolbar-date-field input[type="date"] { display: block; min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
 .form-field input[type="date"]::-webkit-date-and-time-value, .toolbar-date-field input[type="date"]::-webkit-date-and-time-value { display: block; min-width: 0; width: 100%; text-align: left; }
 .form-field input::placeholder, .form-field textarea::placeholder { color: var(--muted); }

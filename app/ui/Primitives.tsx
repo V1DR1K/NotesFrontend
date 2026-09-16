@@ -1,7 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, FormEvent, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { createContext, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { SECTION_META, type SectionKey } from "../config/sections";
 
 const DialogCloseContext = createContext<(() => void) | null>(null);
@@ -341,10 +341,33 @@ export function SkeletonGrid({ count = 3 }: { count?: number }) {
 export function FormField({ label, value, onChange, placeholder, multiline = false, id, ...fieldProps }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string; multiline?: boolean; id?: string } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "id" | "placeholder" | "className"> & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "value" | "onChange" | "id" | "placeholder" | "className">) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const resizeTextarea = useCallback(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    const maxHeight = Number.parseFloat(window.getComputedStyle(textarea).maxHeight);
+    const height = Number.isFinite(maxHeight) ? Math.min(textarea.scrollHeight, maxHeight) : textarea.scrollHeight;
+    textarea.style.height = `${height}px`;
+    textarea.style.overflowY = textarea.scrollHeight > height ? "auto" : "hidden";
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!multiline) return;
+    resizeTextarea();
+  }, [multiline, resizeTextarea, value]);
+
+  useEffect(() => {
+    if (!multiline) return;
+    window.addEventListener("resize", resizeTextarea);
+    return () => window.removeEventListener("resize", resizeTextarea);
+  }, [multiline, resizeTextarea]);
+
   return (
     <label className="form-field" htmlFor={fieldId}>
       <span>{label}</span>
-      {multiline ? <textarea id={fieldId} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} rows={4} {...fieldProps as TextareaHTMLAttributes<HTMLTextAreaElement>} /> : <input id={fieldId} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} {...fieldProps as InputHTMLAttributes<HTMLInputElement>} />}
+      {multiline ? <textarea ref={textareaRef} className="auto-grow-textarea" id={fieldId} value={value} onChange={(event) => onChange(event.target.value)} onInput={resizeTextarea} placeholder={placeholder} rows={4} {...fieldProps as TextareaHTMLAttributes<HTMLTextAreaElement>} /> : <input id={fieldId} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} {...fieldProps as InputHTMLAttributes<HTMLInputElement>} />}
     </label>
   );
 }
