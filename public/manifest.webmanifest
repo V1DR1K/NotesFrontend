@@ -1,0 +1,25 @@
+{
+  "name": "Notas | Tu espacio personal",
+  "short_name": "Notas",
+  "description": "Un espacio personal para registrar tus días, finanzas, archivos y notas.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#1b1231",
+  "theme_color": "#1b1231",
+  "lang": "es",
+  "icons": [
+    {
+      "src": "/icons/notas-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/notas-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
