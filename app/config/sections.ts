@@ -34,11 +34,11 @@ export const SECTION_TOKENS: Record<SectionKey, SectionTokens> = {
     soft: "#f6dfcf",
   },
   tasks: {
-    accent: "#c5b2f2",
-    contrast: "#211735",
-    shadow: "rgba(197, 178, 242, 0.22)",
-    surface: "rgba(197, 178, 242, 0.12)",
-    soft: "#e9e0fb",
+    accent: "#72d6d2",
+    contrast: "#102b2a",
+    shadow: "rgba(114, 214, 210, 0.22)",
+    surface: "rgba(114, 214, 210, 0.12)",
+    soft: "#d4f1ef",
   },
   finances: {
     accent: "#e5b86f",
