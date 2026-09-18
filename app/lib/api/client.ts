@@ -17,6 +17,8 @@ import type {
   FileItem,
   LoginRequest,
   Note,
+  Task,
+  TaskStatus,
   PageResponse,
   ConfigKind,
   SearchResult,
@@ -257,6 +259,23 @@ function normalizeFile(value: unknown): FileItem {
   return { ...record as unknown as FileItem, id: textField(record, "id", "archivos"), name: textField(record, "name", "archivos"), description: String(record.description ?? record.name ?? ""), extension: record.extension ? String(record.extension) : undefined, mimeType: record.mimeType ? String(record.mimeType) : undefined, sizeBytes: record.sizeBytes as number | string | undefined, kind: textField(record, "kind", "archivos"), folder: record.folder as FileItem["folder"], downloadUrl: record.downloadUrl ? String(record.downloadUrl) : undefined, uploadedAt: record.uploadedAt ? String(record.uploadedAt) : undefined };
 }
 
+function normalizeTask(value: unknown): Task {
+  const record = validatedRecord(value, "tareas");
+  const category = validatedRecord(record.category, "categoría de tarea");
+  const status = String(record.status ?? "PENDING") as TaskStatus;
+  if (!["PENDING", "IN_PROGRESS", "COMPLETED"].includes(status)) throw new ApiError("La respuesta de tareas contiene un estado inválido.", 502);
+  return {
+    id: textField(record, "id", "tareas"),
+    title: textField(record, "title", "tareas"),
+    detail: record.detail == null ? null : String(record.detail),
+    status,
+    category: category as Task["category"],
+    dueDate: record.dueDate == null ? null : String(record.dueDate),
+    createdAt: record.createdAt ? String(record.createdAt) : undefined,
+    updatedAt: record.updatedAt ? String(record.updatedAt) : undefined,
+  };
+}
+
 function normalizeDashboard(value: unknown): Dashboard {
   const record = asRecord(value);
   const dayStats = asRecord(record.dayStats);
@@ -269,6 +288,8 @@ function normalizeDashboard(value: unknown): Dashboard {
     financeSnapshot: financeSnapshot.currentCash ? { currentCash: financeSnapshot.currentCash as NonNullable<Dashboard["financeSnapshot"]>["currentCash"], currentInvested: financeSnapshot.currentInvested as NonNullable<Dashboard["financeSnapshot"]>["currentInvested"], monthIncome: financeSnapshot.monthIncome as NonNullable<Dashboard["financeSnapshot"]>["monthIncome"], monthExpense: financeSnapshot.monthExpense as NonNullable<Dashboard["financeSnapshot"]>["monthExpense"], exchangeRate: financeSnapshot.exchangeRate as ExchangeRate | undefined } : undefined,
     storageUsage: storageUsage.usedBytes !== undefined ? { usedBytes: Number(storageUsage.usedBytes ?? 0), quotaBytes: Number(storageUsage.quotaBytes ?? 0) } : undefined,
     upcomingEvents: Array.isArray(record.upcomingEvents) ? record.upcomingEvents.map(normalizeCalendarEvent) : [],
+    taskStats: record.taskStats ? { pending: Number(asRecord(record.taskStats).pending ?? 0), inProgress: Number(asRecord(record.taskStats).inProgress ?? 0), completed: Number(asRecord(record.taskStats).completed ?? 0), overdue: Number(asRecord(record.taskStats).overdue ?? 0) } : undefined,
+    upcomingTasks: Array.isArray(record.upcomingTasks) ? record.upcomingTasks.map(normalizeTask) : [],
     recentActivity: Array.isArray(record.recentActivity) ? record.recentActivity.map((item) => { const activity = validatedRecord(item, "actividad reciente"); return { section: String(activity.section) as NonNullable<Dashboard["recentActivity"]>[number]["section"], id: textField(activity, "id", "actividad reciente"), title: textField(activity, "title", "actividad reciente"), detail: textField(activity, "detail", "actividad reciente"), date: textField(activity, "date", "actividad reciente"), updatedAt: activity.updatedAt ? String(activity.updatedAt) : undefined }; }) : [],
     recentNotes: Array.isArray(record.recentNotes) ? record.recentNotes.map(normalizeNote) : [],
     recentFiles: Array.isArray(record.recentFiles) ? record.recentFiles.map(normalizeFile) : [],
@@ -438,13 +459,13 @@ export const api = {
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "PUT", body }),
   config: async (signal?: AbortSignal): Promise<ApiConfig> => {
     const results = await Promise.allSettled([
-      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }), request<unknown>("/config/event-categories", { signal }),
+      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }), request<unknown>("/config/event-categories", { signal }), request<unknown>("/config/task-categories", { signal }),
     ]);
     const options = (result: PromiseSettledResult<unknown>) => {
       if (result.status !== "fulfilled") return [];
       try { return optionList(result.value); } catch { return []; }
     };
-    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]), eventCategories: options(results[4]) };
+    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]), eventCategories: options(results[4]), taskCategories: options(results[5]) };
   },
   createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
@@ -454,6 +475,11 @@ export const api = {
   deleteConfigOption: (kind: ConfigKind, code: string) => del(`/config/${kind}/${encodeURIComponent(code)}`),
   search: (query: string, signal?: AbortSignal) => get<unknown>(`/search?q=${encodeURIComponent(query)}`, { signal }).then(normalizeSearchResults),
   dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
+  tasks: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/tasks?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeTask)),
+  getTask: (id: string) => request<unknown>(`/tasks/${encodeURIComponent(id)}`).then(normalizeTask),
+  createTask: (body: { title: string; detail?: string; categoryCode: string; status?: TaskStatus; dueDate?: string | null }) => request<unknown>("/tasks", { method: "POST", body }).then(normalizeTask),
+  updateTask: (id: string, body: { title?: string; detail?: string; categoryCode?: string; status?: TaskStatus; dueDate?: string | null }) => request<unknown>(`/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeTask),
+  deleteTask: (id: string) => request<void>(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }),
   days: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/day-entries?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeDay)),
   createDay: (body: { date: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),
   updateDay: (id: string, body: { date: string; description: string }) => request<unknown>(`/day-entries/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeDay),

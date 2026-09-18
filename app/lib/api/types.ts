@@ -27,9 +27,10 @@ export type ApiConfig = {
   financeItems: ApiOption[];
   noteCategories: ApiOption[];
   eventCategories: ApiOption[];
+  taskCategories: ApiOption[];
 };
 
-export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories" | "event-categories";
+export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories" | "event-categories" | "task-categories";
 export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
 
 export type AuthUser = {
@@ -74,6 +75,18 @@ export type Note = {
   categoryCode: string;
   category?: NoteCategory;
   date: string;
+};
+
+export type TaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
+export type Task = {
+  id: string;
+  title: string;
+  detail?: string | null;
+  status: TaskStatus;
+  category: ApiOption;
+  dueDate?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type FinanceBucket = "INCOME" | "EXPENSE" | "INVESTED";
@@ -159,7 +172,9 @@ export type Dashboard = {
   financeSnapshot?: { currentCash: FinanceAmount; currentInvested: FinanceAmount; monthIncome: FinanceAmount; monthExpense: FinanceAmount; exchangeRate?: ExchangeRate };
   storageUsage?: { usedBytes: number; quotaBytes: number };
   upcomingEvents?: CalendarEvent[];
-  recentActivity?: Array<{ section: "day" | "calendar" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date: string; updatedAt?: string }>;
+  taskStats?: { pending: number; inProgress: number; completed: number; overdue: number };
+  upcomingTasks?: Task[];
+  recentActivity?: Array<{ section: "day" | "calendar" | "finances" | "files" | "notes" | "tasks"; id: string; title: string; detail: string; date?: string; updatedAt?: string }>;
   recentNotes?: Note[];
   recentFiles?: FileItem[];
   recentDays?: DayEntry[];

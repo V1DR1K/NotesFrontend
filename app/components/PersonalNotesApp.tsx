@@ -14,6 +14,7 @@ const FinanzasModule = lazy(() => import("../modules/FinanzasModule").then((modu
 const HomeView = lazy(() => import("../modules/HomeView").then((module) => ({ default: module.HomeView })));
 const MiDiaModule = lazy(() => import("../modules/MiDiaModule").then((module) => ({ default: module.MiDiaModule })));
 const CalendarModule = lazy(() => import("../modules/CalendarModule").then((module) => ({ default: module.CalendarModule })));
+const TasksModule = lazy(() => import("../modules/TasksModule").then((module) => ({ default: module.TasksModule })));
 const NotasModule = lazy(() => import("../modules/NotasModule").then((module) => ({ default: module.NotasModule })));
 const SettingsModule = lazy(() => import("../modules/SettingsModule").then((module) => ({ default: module.SettingsModule })));
 const SearchPalette = lazy(() => import("./SearchPalette").then((module) => ({ default: module.SearchPalette })));
@@ -112,6 +113,7 @@ export function PersonalNotesApp() {
       switch (activeSection) {
         case "day": return <MiDiaModule config={config} focusId={focusId} />;
         case "calendar": return <CalendarModule config={config} focusId={focusId} />;
+        case "tasks": return <TasksModule config={config} focusId={focusId} />;
         case "finances": return <FinanzasModule config={config} focusId={focusId} />;
         case "files": return <ArchivosModule focusId={focusId} />;
         case "notes": return <NotasModule config={config} focusId={focusId} />;

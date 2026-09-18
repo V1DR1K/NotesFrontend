@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-export type SectionKey = "overview" | "day" | "calendar" | "finances" | "files" | "notes" | "settings";
+export type SectionKey = "overview" | "day" | "calendar" | "tasks" | "finances" | "files" | "notes" | "settings";
 
 export type SectionTokens = {
   accent: string;
@@ -32,6 +32,13 @@ export const SECTION_TOKENS: Record<SectionKey, SectionTokens> = {
     shadow: "rgba(240, 181, 138, 0.22)",
     surface: "rgba(240, 181, 138, 0.12)",
     soft: "#f6dfcf",
+  },
+  tasks: {
+    accent: "#c5b2f2",
+    contrast: "#211735",
+    shadow: "rgba(197, 178, 242, 0.22)",
+    surface: "rgba(197, 178, 242, 0.12)",
+    soft: "#e9e0fb",
   },
   finances: {
     accent: "#e5b86f",
@@ -95,9 +102,17 @@ export const SECTION_META: Record<SectionKey, {
     icon: "▦",
     action: "Agregar evento",
   },
+  tasks: {
+    label: "Tareas",
+    eyebrow: "TODO LO QUE SIGUE / 04",
+    title: "Una cosa a la vez.",
+    description: "Bajá tus pendientes a tierra, elegí el próximo paso y mové cada tarea cuando avance.",
+    icon: "✓",
+    action: "Crear tarea",
+  },
   finances: {
     label: "Finanzas",
-    eyebrow: "MOVIMIENTO DE DINERO / 03",
+    eyebrow: "MOVIMIENTO DE DINERO / 05",
     title: "Que cada peso tenga un lugar.",
     description: "Ingresos, egresos, caja e inversiones en una sola vista, con el dólar siempre a mano.",
     icon: "$",
@@ -105,7 +120,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   files: {
     label: "Archivos",
-    eyebrow: "REPOSITORIO PERSONAL / 04",
+    eyebrow: "REPOSITORIO PERSONAL / 06",
     title: "Todo lo importante, cerca.",
     description: "Guardá archivos, armá carpetas y encontrá cada cosa sin perder tiempo buscándola.",
     icon: "↗",
@@ -113,7 +128,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   notes: {
     label: "Notas",
-    eyebrow: "IDEAS Y APUNTES / 05",
+    eyebrow: "IDEAS Y APUNTES / 07",
     title: "Pensamientos que merecen quedarse.",
     description: "Notas simples, rápidas y ordenadas para cuando una idea aparece y no querés dejarla escapar.",
     icon: "✎",
@@ -121,7 +136,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   settings: {
     label: "Configuración",
-    eyebrow: "ORDEN Y PREFERENCIAS / 06",
+    eyebrow: "ORDEN Y PREFERENCIAS / 08",
     title: "Hacé tuyo el sistema.",
     description: "Administrá las opciones que aparecen en tus registros y filtros cotidianos.",
     icon: "⚙",
@@ -133,6 +148,7 @@ export const NAV_ITEMS: Array<{ key: SectionKey; short: string }> = [
   { key: "overview", short: "Inicio" },
   { key: "day", short: "Mi día" },
   { key: "calendar", short: "Agenda" },
+  { key: "tasks", short: "Tareas" },
   { key: "finances", short: "Finanzas" },
   { key: "files", short: "Archivos" },
   { key: "notes", short: "Notas" },
