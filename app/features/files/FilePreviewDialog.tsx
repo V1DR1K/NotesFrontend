@@ -71,7 +71,7 @@ export function FilePreviewDialog({ file, kind, onClose, onDownload }: FilePrevi
         <div className="file-preview-content">
           {loading ? <div className="file-preview-state" role="status" aria-live="polite"><span className="file-preview-spinner" aria-hidden="true" />Cargando archivo...</div> : null}
           {!loading && failed ? <div className="file-preview-state" role="alert"><strong>No se pudo cargar la previsualización.</strong><span>Podés descargar el archivo para abrirlo con otra aplicación.</span><Button variant="ghost" onClick={onDownload}>Descargar archivo <span aria-hidden="true">↗</span></Button></div> : null}
-          {!loading && !failed && kind === "pdf" && url ? <iframe className="file-preview-frame" src={url} title={`Vista previa de ${file.name}`} /> : null}
+          {!loading && !failed && kind === "pdf" && url ? <object className="file-preview-frame" data={url} type="application/pdf" aria-label={`Vista previa de ${file.name}`} onError={() => setFailed(true)}><span>Tu navegador no pudo mostrar este PDF. Usá el botón de descarga para abrirlo.</span></object> : null}
           {!loading && !failed && kind === "audio" && url ? <audio className="file-preview-audio" src={url} controls preload="metadata">Tu navegador no puede reproducir este audio.</audio> : null}
           {!loading && !failed && kind === "video" && url ? <video className="file-preview-video" src={url} controls preload="metadata">Tu navegador no puede reproducir este video.</video> : null}
           {!loading && !failed && kind === "text" && text !== null ? <pre className="file-preview-text">{text}</pre> : null}
