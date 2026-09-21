@@ -28,11 +28,6 @@ export function FilePreviewDialog({ file, kind, onClose, onDownload }: FilePrevi
     const controller = new AbortController();
     let objectUrl: string | null = null;
 
-    setUrl(null);
-    setText(null);
-    setLoading(true);
-    setFailed(false);
-
     void api.downloadFile(file, controller.signal).then(async (blob) => {
       if (controller.signal.aborted) return;
       if (kind === "text") {

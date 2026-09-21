@@ -106,11 +106,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .nav-item-active { color: var(--section-accent); background: var(--section-surface); border-color: var(--section-accent); }
 .nav-icon { display: inline-grid; place-items: center; width: 21px; color: currentColor; font-size: 16px; }
 .nav-active-dot { width: 5px; height: 5px; margin-left: auto; background: var(--section-accent); border-radius: 50%; box-shadow: 0 0 12px var(--section-accent); }
-.sidebar-note { margin-top: auto; padding: 19px 16px 17px; border: 1px solid var(--line); background: linear-gradient(145deg, var(--section-surface), rgba(20, 23, 27, 0.4)); }
-.sidebar-note-mark { color: var(--section-accent); font-size: 22px; }
-.sidebar-note p { max-width: 150px; margin: 12px 0 22px; color: var(--muted-strong); font-family: var(--font-display); font-size: 17px; line-height: 1.18; }
 .mono-caption { color: var(--muted); font-size: 8px; }
-.sidebar-footer { display: flex; align-items: center; gap: 10px; padding: 14px 8px 0; border-top: 1px solid var(--line); }
+.sidebar-footer { display: flex; align-items: center; gap: 10px; margin-top: auto; padding: 14px 8px 0; border-top: 1px solid var(--line); }
 .avatar { display: grid; place-items: center; width: 30px; height: 30px; color: var(--section-contrast); background: var(--section-accent); font: 10px var(--font-mono); }
 .sidebar-footer strong, .sidebar-footer span { display: block; }
 .sidebar-footer strong { font-family: var(--font-display); font-size: 15px; line-height: 1; }

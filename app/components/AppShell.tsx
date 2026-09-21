@@ -29,12 +29,6 @@ export function AppShell({ activeSection, onNavigate, onOpenSearch, onOpenSettin
           })}
         </nav>
 
-        <div className="sidebar-note">
-          <span className="sidebar-note-mark">↘</span>
-          <p>Lo que se escribe, se vuelve más liviano.</p>
-          <span className="mono-caption">MODO OFFLINE / FRONTEND</span>
-        </div>
-
         <div className="sidebar-footer">
            <div className="avatar">{initials}</div>
            <div><strong>{displayName}</strong><span>Mi espacio</span></div>
