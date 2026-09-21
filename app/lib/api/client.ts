@@ -25,7 +25,9 @@ import type {
 } from "./types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
-let refreshPromise: Promise<boolean> | null = null;
+type RefreshOutcome = { ok: boolean; definitive: boolean };
+const refreshFailed = (definitive = false): RefreshOutcome => ({ ok: false, definitive });
+let refreshPromise: Promise<RefreshOutcome> | null = null;
 const REFRESH_LOCK_KEY = "notes.auth.refresh.lock";
 const REFRESH_MARKER_KEY = "notes.auth.refresh.marker";
 const SESSION_EXPIRED_KEY = "notes.auth.expired";
@@ -351,12 +353,12 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit = {}
 
 function refreshedAfter(startedAt: number) { return Number(localStorage.getItem(REFRESH_MARKER_KEY) ?? 0) > startedAt; }
 
-async function refreshWithLocalLock(startedAt: number, action: () => Promise<boolean>) {
+async function refreshWithLocalLock(startedAt: number, action: () => Promise<RefreshOutcome>) {
   const lockValue = `${TAB_ID}:${Date.now()}`;
   const deadline = Date.now() + 12000;
   let acquired = false;
   while (Date.now() < deadline) {
-    if (refreshedAfter(startedAt)) return true;
+    if (refreshedAfter(startedAt)) return { ok: true, definitive: false };
     const current = localStorage.getItem(REFRESH_LOCK_KEY);
     if (!current || Number(current.split(":")[1] ?? 0) < Date.now() - 12000) {
       localStorage.setItem(REFRESH_LOCK_KEY, lockValue);
@@ -365,30 +367,34 @@ async function refreshWithLocalLock(startedAt: number, action: () => Promise<boo
     }
     await sleep(50);
   }
-  if (!acquired) return false;
+  if (!acquired) return refreshFailed();
   try { return await action(); }
   finally { if (localStorage.getItem(REFRESH_LOCK_KEY) === lockValue) localStorage.removeItem(REFRESH_LOCK_KEY); }
 }
 
 async function refreshTokens() {
-  const response = await fetchWithTimeout(apiUrl("/auth/refresh"), {
-    method: "POST",
-    headers: { Accept: "application/json", "Content-Type": "application/json" },
-    credentials: "include",
-  });
-  if (!response.ok) return false;
-  localStorage.setItem(REFRESH_MARKER_KEY, String(Date.now()));
-  return true;
+  try {
+    const response = await fetchWithTimeout(apiUrl("/auth/refresh"), {
+      method: "POST",
+      headers: { Accept: "application/json" },
+      credentials: "include",
+    });
+    if (!response.ok) return refreshFailed([400, 401, 403].includes(response.status));
+    localStorage.setItem(REFRESH_MARKER_KEY, String(Date.now()));
+    return { ok: true, definitive: false };
+  } catch {
+    return refreshFailed();
+  }
 }
 
 function refreshSession(startedAt: number) {
   if (!refreshPromise) {
     const action = async () => {
-      if (refreshedAfter(startedAt)) return true;
+      if (refreshedAfter(startedAt)) return { ok: true, definitive: false };
       return refreshTokens();
     };
     const coordinated = typeof navigator !== "undefined" && navigator.locks
-      ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, () => action()) as unknown as Promise<boolean>
+      ? navigator.locks.request("notes-auth-refresh", { mode: "exclusive" }, () => action()) as unknown as Promise<RefreshOutcome>
       : refreshWithLocalLock(startedAt, action);
     refreshPromise = coordinated.finally(() => { refreshPromise = null; });
   }
@@ -408,16 +414,13 @@ async function request<T>(path: string, init: ApiRequestInit = {}, retried = fal
 
   const response = await fetchWithTimeout(apiUrl(path), { ...init, method, headers, credentials: "include", body: body as BodyInit | null | undefined });
   const payload = await readJson(response);
-  if (response.status === 401 && path === "/auth/refresh") broadcastSessionExpired();
   if (response.status === 401 && !retried && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) {
-    try {
-      const refreshed = await refreshSession(Date.now());
-      if (refreshed) return request<T>(path, init, true);
-    } catch { /* The session-expired event below handles a rejected refresh. */ }
-    broadcastSessionExpired();
+    const refreshed = await refreshSession(Date.now());
+    if (refreshed.ok) return request<T>(path, init, true);
+    if (refreshed.definitive) broadcastSessionExpired();
+    else throw new ApiError("No se pudo renovar la sesión por un problema de conexión. Tus credenciales siguen vigentes; revisá tu conexión e intentá nuevamente.", 0);
   }
   if (!response.ok) {
-    if (response.status === 401 && !["/auth/login", "/auth/refresh", "/auth/logout"].includes(path)) window.dispatchEvent(new Event("notes:session-expired"));
     throw problemError(payload, response.status, path);
   }
   return payload as T;
@@ -436,9 +439,10 @@ async function downloadWithToken(path: string, retried: boolean, signal?: AbortS
   const headers = new Headers({ Accept: "*/*" });
   const response = await fetchWithTimeout(apiUrl(path), { headers, credentials: "include", signal });
   if (response.status === 401 && !retried) {
-    const refreshed = await refreshSession(Date.now()).catch(() => null);
-    if (refreshed) return downloadWithToken(path, true, signal);
-    broadcastSessionExpired();
+    const refreshed = await refreshSession(Date.now());
+    if (refreshed.ok) return downloadWithToken(path, true, signal);
+    if (refreshed.definitive) broadcastSessionExpired();
+    else throw new ApiError("No se pudo renovar la sesión por un problema de conexión. Tus credenciales siguen vigentes; revisá tu conexión e intentá nuevamente.", 0);
   }
   if (!response.ok) throw problemError(await readJson(response), response.status);
   return response.blob();
