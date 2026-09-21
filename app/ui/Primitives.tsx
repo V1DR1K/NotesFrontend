@@ -177,13 +177,15 @@ export function FilterPills({
   active,
   options,
   onChange,
+  ariaLabel = "Filtros",
 }: {
   active: string;
   options: Array<{ value: string; label: string; count?: number }>;
   onChange: (value: string) => void;
+  ariaLabel?: string;
 }) {
   return (
-    <div className="filter-pills" role="group" aria-label="Filtros">
+    <div className="filter-pills" role="group" aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           className={`filter-pill ${active === option.value ? "filter-pill-active" : ""}`}

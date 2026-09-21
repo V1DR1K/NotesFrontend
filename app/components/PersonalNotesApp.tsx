@@ -26,6 +26,7 @@ export function PersonalNotesApp() {
     return isSectionKey(section) ? section : "overview";
   });
   const [focusId, setFocusId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("focus"));
+  const [editId, setEditId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("edit"));
   const [user, setUser] = useState<AuthUser | null>(null);
   const [config, setConfig] = useState<ApiConfig | null>(null);
   const [gate, setGate] = useState<"loading" | "login" | "password" | "ready" | "error">("loading");
@@ -34,14 +35,16 @@ export function PersonalNotesApp() {
   const [searchOpen, setSearchOpen] = useState(false);
   const sessionUserId = useRef<string | null>(null);
 
-  const navigate = (section: SectionKey, targetId?: string) => {
+  const navigate = (section: SectionKey, targetId?: string, mode: "focus" | "edit" = "focus") => {
     if (section === activeSection && !targetId) return;
     const url = new URL(window.location.href);
     url.searchParams.set("section", section);
     if (targetId) url.searchParams.set("focus", targetId); else url.searchParams.delete("focus");
+    if (targetId && mode === "edit") url.searchParams.set("edit", targetId); else url.searchParams.delete("edit");
     window.history.pushState({ ...window.history.state, notesSection: section }, "", url);
     setActiveSection(section);
     setFocusId(targetId ?? null);
+    setEditId(targetId && mode === "edit" ? targetId : null);
   };
 
   useEffect(() => {
@@ -56,6 +59,7 @@ export function PersonalNotesApp() {
       const section = new URLSearchParams(window.location.search).get("section") ?? event.state?.notesSection;
       if (isSectionKey(section)) setActiveSection(section);
       setFocusId(new URLSearchParams(window.location.search).get("focus"));
+      setEditId(new URLSearchParams(window.location.search).get("edit"));
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -112,8 +116,8 @@ export function PersonalNotesApp() {
     const section = (() => {
       switch (activeSection) {
         case "day": return <MiDiaModule config={config} focusId={focusId} />;
-        case "calendar": return <CalendarModule config={config} focusId={focusId} />;
-        case "tasks": return <TasksModule config={config} focusId={focusId} />;
+        case "calendar": return <CalendarModule config={config} onOpenTask={(taskId) => navigate("tasks", taskId, "edit")} />;
+        case "tasks": return <TasksModule config={config} focusId={focusId} editId={editId} />;
         case "finances": return <FinanzasModule config={config} focusId={focusId} />;
         case "files": return <ArchivosModule focusId={focusId} />;
         case "notes": return <NotasModule config={config} focusId={focusId} />;

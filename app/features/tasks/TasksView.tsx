@@ -55,10 +55,11 @@ function TaskCard({ task, onEdit, onDelete, onStatusChange, onPointerDown, dragg
   </article>;
 }
 
-export function TasksView({ config, focusId }: { config: ApiConfig; focusId?: string | null }) {
+export function TasksView({ config, focusId, editId }: { config: ApiConfig; focusId?: string | null; editId?: string | null }) {
   const [categoryCode, setCategoryCode] = useState("all");
   const data = useTasksData(categoryCode);
   const mutation = useMutationError();
+  const { clearError } = mutation;
   const [createdTasks, setCreatedTasks] = useState<Task[]>([]);
   const [overrides, setOverrides] = useState<Record<string, Task>>({});
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
@@ -72,6 +73,7 @@ export function TasksView({ config, focusId }: { config: ApiConfig; focusId?: st
   const [shakingIds, setShakingIds] = useState<string[]>([]);
   const [pulsingStatus, setPulsingStatus] = useState<TaskStatus | null>(null);
   const dragRef = useRef<{ task: Task; x: number; y: number; moved: boolean } | null>(null);
+  const lastEditId = useRef<string | null>(null);
 
   const tasks = useMemo(() => {
     const serverTasks = data.data?.content ?? [];
@@ -95,7 +97,15 @@ export function TasksView({ config, focusId }: { config: ApiConfig; focusId?: st
   }, [tasks]);
 
   const openCreate = () => { mutation.clearError(); setEditing(null); setDraft(emptyDraft(config.taskCategories.find((option) => option.active !== false)?.code ?? "")); setComposerOpen(true); };
-  const openEdit = (task: Task) => { mutation.clearError(); setEditing(task); setDraft({ title: task.title, detail: task.detail ?? "", categoryCode: task.category.code, status: task.status, dueDate: task.dueDate ?? "" }); setComposerOpen(true); };
+  const openEdit = useCallback((task: Task) => { clearError(); setEditing(task); setDraft({ title: task.title, detail: task.detail ?? "", categoryCode: task.category.code, status: task.status, dueDate: task.dueDate ?? "" }); setComposerOpen(true); }, [clearError]);
+  useEffect(() => {
+    if (!editId || !data.data || lastEditId.current === editId) return;
+    const task = tasks.find((item) => item.id === editId);
+    if (!task) return;
+    lastEditId.current = editId;
+    const timer = window.setTimeout(() => openEdit(task), 0);
+    return () => window.clearTimeout(timer);
+  }, [data.data, editId, openEdit, tasks]);
   const closeComposer = () => { if (!mutation.pending) setComposerOpen(false); };
 
   const saveTask = async () => {
