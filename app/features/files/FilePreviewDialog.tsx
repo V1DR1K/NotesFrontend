@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FileItem } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { Button, Dialog } from "../../ui/Primitives";
+import { PdfCanvasPreview } from "./PdfCanvasPreview";
 import type { FilePreviewKind } from "./filePreview";
 
 type FilePreviewDialogProps = {
@@ -20,6 +21,7 @@ const kindLabel: Record<Exclude<FilePreviewKind, "image" | null>, string> = {
 
 export function FilePreviewDialog({ file, kind, onClose, onDownload }: FilePreviewDialogProps) {
   const [url, setUrl] = useState<string | null>(null);
+  const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
   const [text, setText] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -30,7 +32,9 @@ export function FilePreviewDialog({ file, kind, onClose, onDownload }: FilePrevi
 
     void api.downloadFile(file, controller.signal).then(async (blob) => {
       if (controller.signal.aborted) return;
-      if (kind === "text") {
+      if (kind === "pdf") {
+        setPdfBlob(blob);
+      } else if (kind === "text") {
         const contents = await blob.text();
         if (controller.signal.aborted) return;
         setText(contents);
@@ -66,7 +70,7 @@ export function FilePreviewDialog({ file, kind, onClose, onDownload }: FilePrevi
         <div className="file-preview-content">
           {loading ? <div className="file-preview-state" role="status" aria-live="polite"><span className="file-preview-spinner" aria-hidden="true" />Cargando archivo...</div> : null}
           {!loading && failed ? <div className="file-preview-state" role="alert"><strong>No se pudo cargar la previsualización.</strong><span>Podés descargar el archivo para abrirlo con otra aplicación.</span><Button variant="ghost" onClick={onDownload}>Descargar archivo <span aria-hidden="true">↗</span></Button></div> : null}
-          {!loading && !failed && kind === "pdf" && url ? <object className="file-preview-frame" data={url} type="application/pdf" aria-label={`Vista previa de ${file.name}`} onError={() => setFailed(true)}><span>Tu navegador no pudo mostrar este PDF. Usá el botón de descarga para abrirlo.</span></object> : null}
+          {!loading && !failed && kind === "pdf" && pdfBlob ? <PdfCanvasPreview blob={pdfBlob} fileName={file.name} onDownload={onDownload} /> : null}
           {!loading && !failed && kind === "audio" && url ? <audio className="file-preview-audio" src={url} controls preload="metadata">Tu navegador no puede reproducir este audio.</audio> : null}
           {!loading && !failed && kind === "video" && url ? <video className="file-preview-video" src={url} controls preload="metadata">Tu navegador no puede reproducir este video.</video> : null}
           {!loading && !failed && kind === "text" && text !== null ? <pre className="file-preview-text">{text}</pre> : null}
