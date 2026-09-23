@@ -74,6 +74,20 @@ export function parseUSDInput(value: string) {
   return Number.isFinite(number) ? number : null;
 }
 
+export function parseCryptoDecimal(value: string) {
+  const normalized = value.trim().replace(",", ".");
+  if (!normalized || !/^\d+(?:\.\d{1,18})?$/.test(normalized)) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
+export function parseCryptoPrice(value: string) {
+  const normalized = value.trim().replace(",", ".");
+  if (!normalized || !/^\d+(?:\.\d{1,12})?$/.test(normalized)) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : null;
+}
+
 export function formatARS(value: unknown) {
   return `$ ${new Intl.NumberFormat("es-AR", { maximumFractionDigits: 2 }).format(asNumber(value))}`;
 }

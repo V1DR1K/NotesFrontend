@@ -428,7 +428,7 @@ export function Dialog({ children, onClose, ariaLabel, trackChanges = true }: { 
   );
 }
 
-export function ConfirmDialog({ title, description, onCancel, onConfirm }: { title: string; description: string; onCancel: () => void; onConfirm: () => void }) {
+export function ConfirmDialog({ title, description, onCancel, onConfirm, confirmLabel = "Eliminar", confirmDisabled = false, error }: { title: string; description: string; onCancel: () => void; onConfirm: () => void; confirmLabel?: string; confirmDisabled?: boolean; error?: string | null }) {
   const dialog = useDialogHistory(onCancel);
   const dialogRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -445,7 +445,8 @@ export function ConfirmDialog({ title, description, onCancel, onConfirm }: { tit
         <span className="eyebrow">ACCIÓN DELICADA</span>
         <h2 id="confirm-title">{title}</h2>
         <p>{description}</p>
-        <div className="dialog-actions"><Button variant="quiet" onClick={dialog.requestClose}>Cancelar</Button><Button variant="danger" onClick={onConfirm}>Eliminar</Button></div>
+        {error ? <div className="inline-error" role="alert">{error}</div> : null}
+        <div className="dialog-actions"><Button variant="quiet" onClick={dialog.requestClose} disabled={confirmDisabled}>Cancelar</Button><Button variant="danger" onClick={onConfirm} disabled={confirmDisabled}>{confirmLabel}</Button></div>
       </div>
     </div>
   );

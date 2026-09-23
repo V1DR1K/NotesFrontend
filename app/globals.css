@@ -322,6 +322,25 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .crypto-history-row > span:nth-of-type(2) { color: var(--ink); text-align: right; }
 .crypto-history-row small { text-align: right; }
 .crypto-history-row .button { min-height: 24px; margin-left: 8px; padding: 0 7px; font-size: 14px; }
+.crypto-lot-list { display: grid; gap: 12px; margin-top: 14px; }
+.crypto-lot { min-width: 0; padding: 16px 0; border-top: 1px solid var(--line); }
+.crypto-lot-voided, .crypto-sale-voided { opacity: .62; }
+.crypto-lot-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.crypto-lot-heading > div:first-child { display: grid; gap: 5px; }
+.crypto-operation-kind, .crypto-voided-label { color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; }
+.crypto-lot-heading strong { color: var(--ink); font: 500 17px var(--font-display); }
+.crypto-lot-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
+.crypto-lot-actions .button, .crypto-sale-row .button { min-height: 28px; padding: 0 9px; font-size: 9px; }
+.crypto-lot-details { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.crypto-lot-details span, .crypto-sale-row > div > span { display: grid; gap: 5px; color: var(--muted); font: 8px var(--font-mono); text-transform: uppercase; }
+.crypto-lot-details strong, .crypto-sale-row > div > strong { color: var(--ink); font: 11px var(--font-mono); text-transform: none; }
+.crypto-lot-note { margin: 12px 0 0; color: var(--muted-strong); font-size: 10px; }
+.crypto-sale-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr auto; align-items: center; gap: 12px; margin-top: 12px; padding: 12px; background: var(--panel-soft); }
+.crypto-sale-row > div { display: grid; gap: 5px; min-width: 0; }
+.crypto-sale-row > div:first-child > strong { overflow-wrap: anywhere; }
+.crypto-sale-note { grid-column: 1 / -1; color: var(--muted); }
+.crypto-profit { color: #a5d9bf !important; }
+.crypto-loss { color: #f0a9a9 !important; }
 .crypto-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .crypto-conversion-preview { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; min-width: 0; margin: 18px 0; padding: 14px; border: 1px solid var(--line); background: var(--section-surface); }
 .crypto-conversion-preview span, .crypto-conversion-preview small { color: var(--muted); font: 9px var(--font-mono); }
@@ -830,6 +849,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .crypto-summary-grid, .crypto-position-grid { grid-template-columns: 1fr; }
   .crypto-history-row { grid-template-columns: 1fr 1fr; }
   .crypto-history-row > span:nth-of-type(2), .crypto-history-row small { text-align: left; }
+  .crypto-lot-heading { align-items: flex-start; flex-direction: column; }
+  .crypto-lot-actions { justify-content: flex-start; }
+  .crypto-lot-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crypto-sale-row { grid-template-columns: 1fr 1fr; }
+  .crypto-sale-row .button { justify-self: start; }
   .finance-account-actions { justify-content: stretch; width: 100%; }
   .finance-account-actions .button { flex: 1; }
   .login-card { padding: 26px 20px; }

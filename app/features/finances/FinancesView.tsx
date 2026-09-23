@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { ApiConfig, CryptoAssetCode, FinanceAccount, FinanceBucket, FinanceMovement, FinanceSummary } from "../../lib/api/types";
+import type { ApiConfig, CryptoAssetCode, CryptoInvestment, FinanceAccount, FinanceBucket, FinanceMovement, FinanceSummary } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
-import { asNumber, currentMonth, dateLabel, fieldError, formatARS, formatARSInputNumber, formatUSD, monthBounds, parseARSInput, parseUSDInput, todayIso } from "../../lib/presentation";
+import { asNumber, currentMonth, dateLabel, fieldError, formatARS, formatARSInputNumber, formatUSD, monthBounds, parseARSInput, parseCryptoDecimal, parseCryptoPrice, parseUSDInput, todayIso } from "../../lib/presentation";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, MetricCard, ModuleToolbar, Pagination, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { FinanceAnalytics } from "./FinanceAnalytics";
 import { FinanceAccountsPanel } from "./FinanceAccountsPanel";
@@ -12,6 +12,7 @@ import { ARSInput } from "./ARSInput";
 import { useFinanceData } from "./useFinanceData";
 import { useFocusTarget } from "../../lib/ui/useFocusTarget";
 import { CryptoInvestmentPanel } from "./CryptoInvestmentPanel";
+import { CryptoInvestmentDialogs } from "./CryptoInvestmentDialogs";
 
 const bucketOptions: Array<{ code: FinanceBucket; label: string }> = [
   { code: "INCOME", label: "Ingreso" },
@@ -59,8 +60,11 @@ export function FinancesView({ config, focusId }: { config: ApiConfig; focusId?:
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferAmount, setTransferAmount] = useState("");
   const [investmentOpen, setInvestmentOpen] = useState(false);
-  const [investmentDraft, setInvestmentDraft] = useState({ date: todayIso(), assetCode: "BTCUSDT" as CryptoAssetCode, amountUsd: "", note: "" });
-  const [pendingCryptoDelete, setPendingCryptoDelete] = useState<string | null>(null);
+  const [investmentDraft, setInvestmentDraft] = useState({ date: todayIso(), assetCode: "BTCUSDT" as CryptoAssetCode, amountUsd: "", unitPriceUsd: "", note: "" });
+  const [saleDraft, setSaleDraft] = useState<{ investment: CryptoInvestment; date: string; quantity: string; proceedsUsd: string } | null>(null);
+  const [legacyPriceTarget, setLegacyPriceTarget] = useState<CryptoInvestment | null>(null);
+  const [legacyUnitPrice, setLegacyUnitPrice] = useState("");
+  const [pendingCryptoVoid, setPendingCryptoVoid] = useState<{ kind: "purchase"; investmentId: string; label: string } | { kind: "sale"; investmentId: string; saleId: string; label: string } | null>(null);
   const [amountError, setAmountError] = useState("");
   const [syncBalanceError, setSyncBalanceError] = useState("");
   const [draft, setDraft] = useState({ date: todayIso(), bucket: "EXPENSE", accountCode: "mercadopago", amount: "", itemCode: firstFinanceItem("mercadopago", "EXPENSE", [], config.financeItems), note: "" });
@@ -102,9 +106,20 @@ export function FinancesView({ config, focusId }: { config: ApiConfig; focusId?:
   };
 
   const startInvestment = () => {
-    setInvestmentDraft({ date: todayIso(), assetCode: "BTCUSDT", amountUsd: "", note: "" });
+    setInvestmentDraft({ date: todayIso(), assetCode: "BTCUSDT", amountUsd: "", unitPriceUsd: "", note: "" });
     mutation.clearError();
     setInvestmentOpen(true);
+  };
+
+  const startSale = (investment: CryptoInvestment) => {
+    setSaleDraft({ investment, date: todayIso(), quantity: "", proceedsUsd: "" });
+    mutation.clearError();
+  };
+
+  const startLegacyPrice = (investment: CryptoInvestment) => {
+    setLegacyPriceTarget(investment);
+    setLegacyUnitPrice("");
+    mutation.clearError();
   };
 
   const saveTransfer = async () => {
@@ -120,23 +135,50 @@ export function FinancesView({ config, focusId }: { config: ApiConfig; focusId?:
 
   const saveInvestment = async () => {
     const amountUsd = parseUSDInput(investmentDraft.amountUsd);
-    if (amountUsd === null || amountUsd <= 0 || mutation.pending) return;
+    const unitPriceUsd = parseCryptoPrice(investmentDraft.unitPriceUsd);
+    if (amountUsd === null || amountUsd <= 0 || unitPriceUsd === null || unitPriceUsd <= 0 || mutation.pending) return;
     try {
-      await mutation.run(() => api.cryptoInvest({ date: investmentDraft.date, assetCode: investmentDraft.assetCode, amountUsd, note: investmentDraft.note.trim() || undefined }));
+      await mutation.run(() => api.cryptoInvest({ date: investmentDraft.date, assetCode: investmentDraft.assetCode, amountUsd, unitPriceUsd, note: investmentDraft.note.trim() || undefined }));
       setInvestmentOpen(false);
       invalidateApiQueryCache();
       data.reload();
     } catch { /* the mutation error is shown in the form */ }
   };
 
-  const removeCryptoInvestment = async () => {
-    if (!pendingCryptoDelete || mutation.pending) return;
+  const saveCryptoSale = async () => {
+    if (!saleDraft || mutation.pending) return;
+    const quantity = parseCryptoDecimal(saleDraft.quantity);
+    const proceedsUsd = parseUSDInput(saleDraft.proceedsUsd);
+    if (quantity === null || quantity <= 0 || proceedsUsd === null || proceedsUsd <= 0) return;
     try {
-      await mutation.run(() => api.deleteCryptoInvestment(pendingCryptoDelete));
-      setPendingCryptoDelete(null);
+      await mutation.run(() => api.sellCrypto(saleDraft.investment.id, { date: saleDraft.date, quantity, proceedsUsd }));
+      setSaleDraft(null);
       invalidateApiQueryCache();
       data.reload();
-    } catch { /* keep confirmation open */ }
+    } catch { /* the mutation error is shown in the form */ }
+  };
+
+  const saveLegacyPrice = async () => {
+    if (!legacyPriceTarget || mutation.pending) return;
+    const unitPriceUsd = parseCryptoPrice(legacyUnitPrice);
+    if (unitPriceUsd === null || unitPriceUsd <= 0) return;
+    try {
+      await mutation.run(() => api.completeCryptoPurchasePrice(legacyPriceTarget.id, unitPriceUsd));
+      setLegacyPriceTarget(null);
+      invalidateApiQueryCache();
+      data.reload();
+    } catch { /* the mutation error is shown in the form */ }
+  };
+
+  const voidCryptoOperation = async () => {
+    if (!pendingCryptoVoid || mutation.pending) return;
+    try {
+      if (pendingCryptoVoid.kind === "purchase") await mutation.run(() => api.voidCryptoInvestment(pendingCryptoVoid.investmentId));
+      else await mutation.run(() => api.voidCryptoSale(pendingCryptoVoid.investmentId, pendingCryptoVoid.saleId));
+      setPendingCryptoVoid(null);
+      invalidateApiQueryCache();
+      data.reload();
+    } catch { /* keep confirmation open and show the mutation error */ }
   };
 
   const startEdit = (movement: FinanceMovement) => {
@@ -209,11 +251,30 @@ export function FinancesView({ config, focusId }: { config: ApiConfig; focusId?:
 
    return <div className="view module-view">
      {transferOpen ? <Dialog ariaLabel="Pasar dinero a Inversión Cripto" onClose={() => setTransferOpen(false)}><FormPanel title="Pasar dinero a Cripto" description="Se descuenta de MercadoPago y queda disponible dentro de Inversión Cripto." onClose={() => setTransferOpen(false)} onSubmit={() => void saveTransfer()} eyebrow="TRANSFERENCIA INTERNA"><label className="form-field" htmlFor="crypto-transfer-amount"><span>Importe en pesos</span><ARSInput id="crypto-transfer-amount" value={transferAmount} onFocus={(event) => event.currentTarget.select()} onChange={setTransferAmount} placeholder="0" required /></label>{mutation.error ? <div className="inline-error" role="alert">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={() => setTransferOpen(false)}>Cancelar</Button><Button type="submit" disabled={!transferAmount || mutation.pending}>{mutation.pending ? "Transfiriendo..." : "Pasar a Cripto"} <span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
-     {investmentOpen ? <Dialog ariaLabel="Registrar inversión cripto" onClose={() => setInvestmentOpen(false)}><FormPanel title="Registrar compra" description={rate ? `El importe se convierte a pesos con ${formatARS(rate)} por USD y queda guardado como costo de entrada.` : "Consultando la cotización del dólar..."} onClose={() => setInvestmentOpen(false)} onSubmit={() => void saveInvestment()} eyebrow="NUEVA INVERSIÓN"><div className="form-grid crypto-form-grid"><label className="form-field" htmlFor="crypto-investment-date"><span>Fecha</span><input id="crypto-investment-date" type="date" value={investmentDraft.date} onChange={(event) => setInvestmentDraft({ ...investmentDraft, date: event.target.value })} required /></label><SelectField label="Moneda" id="crypto-investment-asset" value={investmentDraft.assetCode} onChange={(value) => setInvestmentDraft({ ...investmentDraft, assetCode: value as CryptoAssetCode })} options={[{ value: "BTCUSDT", label: "BTC / USDT" }, { value: "SOLUSDT", label: "SOL / USDT" }, { value: "ETHUSDT", label: "ETH / USDT" }, { value: "PEPEUSDT", label: "PEPE / USDT" }]} /><label className="form-field" htmlFor="crypto-investment-amount"><span>Invertido en dólares</span><input id="crypto-investment-amount" inputMode="decimal" value={investmentDraft.amountUsd} onChange={(event) => setInvestmentDraft({ ...investmentDraft, amountUsd: event.target.value })} placeholder="1800.00" required /></label></div>{rate && parseUSDInput(investmentDraft.amountUsd) ? <div className="crypto-conversion-preview"><span>Se registrará como</span><strong>{formatARS(parseUSDInput(investmentDraft.amountUsd)! * rate)}</strong><small>{formatUSD(parseUSDInput(investmentDraft.amountUsd)!)}</small></div> : null}<FormField label="Nota (opcional)" value={investmentDraft.note} onChange={(note) => setInvestmentDraft({ ...investmentDraft, note })} placeholder="Ej. Compra inicial" multiline />{mutation.error ? <div className="inline-error" role="alert">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={() => setInvestmentOpen(false)}>Cancelar</Button><Button type="submit" disabled={!investmentDraft.amountUsd || !rate || mutation.pending}>{mutation.pending ? "Guardando..." : "Guardar inversión"} <span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
-     {pendingCryptoDelete ? <ConfirmDialog title="¿Eliminar esta compra?" description="El importe volverá a quedar disponible dentro de Inversión Cripto." onCancel={() => setPendingCryptoDelete(null)} onConfirm={() => void removeCryptoInvestment()} /> : null}
+     <CryptoInvestmentDialogs
+       rate={rate}
+       investmentOpen={investmentOpen}
+       setInvestmentOpen={setInvestmentOpen}
+       investmentDraft={investmentDraft}
+       setInvestmentDraft={setInvestmentDraft}
+       onSaveInvestment={() => void saveInvestment()}
+       saleDraft={saleDraft}
+       setSaleDraft={setSaleDraft}
+       onSaveSale={() => void saveCryptoSale()}
+       legacyPriceTarget={legacyPriceTarget}
+       setLegacyPriceTarget={setLegacyPriceTarget}
+       legacyUnitPrice={legacyUnitPrice}
+       setLegacyUnitPrice={setLegacyUnitPrice}
+       onSaveLegacyPrice={() => void saveLegacyPrice()}
+       pendingVoid={pendingCryptoVoid}
+       setPendingVoid={setPendingCryptoVoid}
+       onVoid={() => void voidCryptoOperation()}
+       error={mutation.error?.message ?? null}
+       pending={mutation.pending}
+     />
      <SectionHero section="finances" onAction={startNew} rightSlot={<div className="rate-card"><span className="eyebrow">DÓLAR BLUE</span><strong>{rate ? formatARS(rate) : "—"}</strong><span>{rate ? `${rateSource}${rateUpdatedAt ? ` · ${rateUpdatedAt}` : ""}` : "Consultando cotización..."} <i>↗</i></span></div>} />
      <FinanceAccountsPanel accounts={accounts} rate={rate} onSync={openSync} onTransfer={startTransfer} onInvest={startInvestment} />
-     <CryptoInvestmentPanel summary={cryptoSummary} onInvest={startInvestment} onDelete={setPendingCryptoDelete} />
+     <CryptoInvestmentPanel summary={cryptoSummary} onInvest={startInvestment} onSell={startSale} onCompletePrice={startLegacyPrice} onVoidPurchase={(investment) => { mutation.clearError(); setPendingCryptoVoid({ kind: "purchase", investmentId: investment.id, label: investment.assetLabel }); }} onVoidSale={(investment, sale) => { mutation.clearError(); setPendingCryptoVoid({ kind: "sale", investmentId: investment.id, saleId: sale.id, label: investment.assetLabel }); }} />
     <section className="metric-grid finance-metrics"><MetricCard label="CAJA DISPONIBLE" value={formatARS(cash)} detail={rate ? formatUSD(cash / rate) : "Conversión pendiente"} icon="◌" /><MetricCard label="INVERTIDO" value={formatARS(invested)} detail={rate ? formatUSD(invested / rate) : "Conversión pendiente"} icon="↗" /><MetricCard label="INGRESOS DEL RANGO" value={formatARS(income)} detail="Total del período seleccionado" icon="+" /><MetricCard label="EGRESOS DEL RANGO" value={formatARS(expense)} detail="Total del período seleccionado" icon="−" /></section>
     {data.auxiliaryLoading ? <div className="analytics-loading" aria-live="polite">Preparando calendario y distribución...</div> : data.error ? null : <FinanceAnalytics month={calendarMonth} from={from} to={to} analytics={analytics} options={config.financeItems} onMonthChange={(month) => setCalendarMonth(month)} />}
     {data.auxiliaryError ? <div className="analysis-notice" role="status">Algunos datos financieros no están disponibles; el listado sigue funcionando.</div> : null}

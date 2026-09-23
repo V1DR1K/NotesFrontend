@@ -131,19 +131,41 @@ export type FinanceAccount = {
 };
 
 export type CryptoAssetCode = "BTCUSDT" | "SOLUSDT" | "ETHUSDT" | "PEPEUSDT";
+export type CryptoSale = {
+  id: string;
+  investmentId: string;
+  date: string;
+  quantity: number | string;
+  proceedsUsd: number | string;
+  unitPriceUsd: number | string;
+  costBasisUsd: number | string;
+  costBasisArs: number | string;
+  realizedProfitUsd: number | string;
+  exchangeRate: number | string;
+  voided: boolean;
+  note?: string;
+  createdAt?: string;
+};
 export type CryptoInvestment = {
   id: string;
   date: string;
   assetCode: CryptoAssetCode | string;
   assetLabel: string;
   amount: FinanceAmount;
+  unitPriceUsd?: number | string | null;
+  quantity?: number | string | null;
+  remainingQuantity?: number | string | null;
+  remainingCostBasis: FinanceAmount;
+  voided: boolean;
+  sales: CryptoSale[];
   note?: string;
   createdAt?: string;
 };
-export type CryptoPosition = { assetCode: CryptoAssetCode | string; assetLabel: string; investedUsd: number | string; investedArs: number | string; purchases: number };
+export type CryptoPosition = { assetCode: CryptoAssetCode | string; assetLabel: string; investedUsd: number | string; investedArs: number | string; quantity: number | string | null; purchases: number };
 export type CryptoSummary = {
   invested: FinanceAmount;
   available: FinanceAmount;
+  realizedProfitUsd: number | string;
   positions: CryptoPosition[];
   investments: CryptoInvestment[];
   exchangeRate: ExchangeRate;
