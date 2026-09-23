@@ -17,17 +17,17 @@
     "lint": "bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next"
   },
   "dependencies": {
-    "@cloudflare/vite-plugin": "1.53.1",
+    "@cloudflare/vite-plugin": "1.58.0",
     "@vitejs/plugin-react": "6.1.0",
     "@vitejs/plugin-rsc": "0.5.34",
-    "next": "16.3.2",
+    "next": "16.3.6",
     "pdfjs-dist": "^6.3.289",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-server-dom-webpack": "19.2.8",
     "vinext": "1.0.0-beta.8",
     "vite": "8.2.2",
-    "wrangler": "4.125.0"
+    "wrangler": "4.137.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.2.1",
