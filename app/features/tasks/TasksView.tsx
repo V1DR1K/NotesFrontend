@@ -38,6 +38,15 @@ function sortTasks(tasks: Task[]) {
   });
 }
 
+function completionTime(task: Task) {
+  const value = task.completedAt ?? task.updatedAt ?? task.createdAt;
+  return value ? Date.parse(value) : Number.NaN;
+}
+
+function sortCompletedTasks(tasks: Task[]) {
+  return [...tasks].sort((left, right) => completionTime(right) - completionTime(left) || left.title.localeCompare(right.title));
+}
+
 type Draft = { title: string; detail: string; categoryCode: string; status: TaskStatus; dueDate: string };
 
 const emptyDraft = (categoryCode: string): Draft => ({ title: "", detail: "", categoryCode, status: "PENDING", dueDate: "" });
@@ -58,6 +67,8 @@ function TaskCard({ task, onEdit, onDelete, onStatusChange, onPointerDown, dragg
 export function TasksView({ config, focusId, editId }: { config: ApiConfig; focusId?: string | null; editId?: string | null }) {
   const [categoryCode, setCategoryCode] = useState("all");
   const data = useTasksData(categoryCode);
+  const [previousVisibility, setPreviousVisibility] = useState<{ categoryCode: string; visible: boolean } | null>(null);
+  const showPreviousTasks = previousVisibility?.categoryCode === categoryCode && previousVisibility.visible;
   const mutation = useMutationError();
   const { clearError } = mutation;
   const [createdTasks, setCreatedTasks] = useState<Task[]>([]);
@@ -77,11 +88,11 @@ export function TasksView({ config, focusId, editId }: { config: ApiConfig; focu
 
   const tasks = useMemo(() => {
     const serverTasks = data.data?.content ?? [];
-    const visibleServer = serverTasks.filter((task) => !deletedIds.includes(task.id)).map((task) => overrides[task.id] ?? task);
+    const visibleServer = [...serverTasks, ...data.previousTasks].filter((task) => !deletedIds.includes(task.id)).map((task) => overrides[task.id] ?? task);
     const serverIds = new Set(serverTasks.map((task) => task.id));
     const localCreated = createdTasks.filter((task) => !serverIds.has(task.id) && (categoryCode === "all" || task.category.code === categoryCode));
     return [...visibleServer, ...localCreated];
-  }, [categoryCode, createdTasks, data.data, deletedIds, overrides]);
+  }, [categoryCode, createdTasks, data.data, data.previousTasks, deletedIds, overrides]);
 
   useEffect(() => {
     if (!focusId) return;
@@ -92,9 +103,23 @@ export function TasksView({ config, focusId, editId }: { config: ApiConfig; focu
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, Task[]> = { PENDING: [], IN_PROGRESS: [], COMPLETED: [] };
     for (const task of tasks) grouped[task.status].push(task);
-    for (const status of STATUSES) grouped[status] = sortTasks(grouped[status]);
+    for (const status of STATUSES) grouped[status] = status === "COMPLETED" ? sortCompletedTasks(grouped[status]) : sortTasks(grouped[status]);
     return grouped;
   }, [tasks]);
+
+  const completedCutoff = Date.parse(data.data?.completedAfter ?? "");
+  const recentCompleted = tasksByStatus.COMPLETED.filter((task) => {
+    const completedAt = completionTime(task);
+    return !Number.isFinite(completedAt) || completedAt >= completedCutoff;
+  });
+  const previousCompleted = tasksByStatus.COMPLETED.filter((task) => {
+    const completedAt = completionTime(task);
+    return Number.isFinite(completedAt) && completedAt < completedCutoff;
+  });
+  const previousCount = data.data?.previousCount ?? 0;
+  const completedColumnVisible = recentCompleted.length > 0 || previousCount > 0;
+  const visibleStatuses = completedColumnVisible ? STATUSES : STATUSES.slice(0, 2);
+  const totalTaskCount = tasks.length + (data.previousTasks.length ? 0 : previousCount);
 
   const openCreate = () => { mutation.clearError(); setEditing(null); setDraft(emptyDraft(config.taskCategories.find((option) => option.active !== false)?.code ?? "")); setComposerOpen(true); };
   const openEdit = useCallback((task: Task) => { clearError(); setEditing(task); setDraft({ title: task.title, detail: task.detail ?? "", categoryCode: task.category.code, status: task.status, dueDate: task.dueDate ?? "" }); setComposerOpen(true); }, [clearError]);
@@ -137,7 +162,7 @@ export function TasksView({ config, focusId, editId }: { config: ApiConfig; focu
   const moveTask = useCallback(async (task: Task, nextStatus: TaskStatus) => {
     if (task.status === nextStatus) { clearDrag(); return; }
     const previous = task;
-    setOverrides((current) => ({ ...current, [task.id]: { ...task, status: nextStatus } }));
+    setOverrides((current) => ({ ...current, [task.id]: { ...task, status: nextStatus, completedAt: nextStatus === "COMPLETED" ? new Date().toISOString() : null } }));
     setPulsingStatus(nextStatus);
     setShakingIds((current) => [...current, task.id]);
     window.setTimeout(() => setShakingIds((current) => current.filter((id) => id !== task.id)), 360);
@@ -193,16 +218,34 @@ export function TasksView({ config, focusId, editId }: { config: ApiConfig; focu
 
   const activeCategories = config.taskCategories.filter((option) => option.active !== false);
   const totalOpen = tasksByStatus.PENDING.length + tasksByStatus.IN_PROGRESS.length;
+  const togglePreviousTasks = async () => {
+    if (showPreviousTasks) {
+      setPreviousVisibility({ categoryCode, visible: false });
+      return;
+    }
+    if (await data.loadPrevious()) setPreviousVisibility({ categoryCode, visible: true });
+  };
 
   return <div className="view view-tasks">
     <SectionHero section="tasks" onAction={openCreate} rightSlot={<div className="tasks-summary-card"><span className="eyebrow">TAREAS ABIERTAS</span><strong>{totalOpen}</strong><span>{tasksByStatus.PENDING.length} pendientes · {tasksByStatus.IN_PROGRESS.length} en proceso</span></div>} />
-    <ModuleToolbar resultLabel={`${tasks.length} ${tasks.length === 1 ? "tarea" : "tareas"}`}><FilterPills active={categoryCode} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: option.code, label: option.label }))]} onChange={setCategoryCode} /></ModuleToolbar>
+    <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}><FilterPills active={categoryCode} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: option.code, label: option.label }))]} onChange={setCategoryCode} /></ModuleToolbar>
     {mutation.error ? <div className="inline-error task-global-error" role="alert">{mutation.error.message || "No se pudo actualizar la tarea. Probá de nuevo."}</div> : null}
-    {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : !tasks.length ? <EmptyState title="Todavía no hay tareas" description="Creá la primera y movela entre columnas a medida que avance." action="Crear tarea" onAction={openCreate} /> : <section className="tasks-board" aria-label="Tablero de tareas">
-      {STATUSES.map((status) => <section className={`task-column ${dropTarget === status ? "task-column-drop-target" : ""} ${pulsingStatus === status ? "task-column-pulse" : ""}`} data-task-status-column={status} aria-labelledby={`task-column-${status}`} key={status}>
-        <div className="task-column-heading"><div><span className="eyebrow">{STATUS_META[status].eyebrow}</span><h2 id={`task-column-${status}`}>{STATUS_META[status].label}</h2></div><span className="task-column-count">{tasksByStatus[status].length}</span></div>
-        <div className="task-column-list">{tasksByStatus[status].length ? tasksByStatus[status].map((task) => <TaskCard key={task.id} task={task} onEdit={() => openEdit(task)} onDelete={() => setPendingDelete(task)} onStatusChange={(nextStatus) => void moveTask(task, nextStatus)} onPointerDown={(event) => handlePointerDown(event, task)} dragging={draggingId === task.id} shaking={shakingIds.includes(task.id)} />) : <div className="task-column-empty">Soltá una tarea acá</div>}</div>
-      </section>)}
+    {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : !tasks.length && previousCount === 0 ? <EmptyState title="Todavía no hay tareas" description="Creá la primera y movela entre columnas a medida que avance." action="Crear tarea" onAction={openCreate} /> : <section className={`tasks-board ${completedColumnVisible ? "" : "tasks-board-two-columns"}`} aria-label="Tablero de tareas">
+      {visibleStatuses.map((status) => {
+        const columnTasks = status === "COMPLETED"
+          ? [...recentCompleted, ...(showPreviousTasks ? previousCompleted : [])]
+          : tasksByStatus[status];
+        return <section className={`task-column ${dropTarget === status ? "task-column-drop-target" : ""} ${pulsingStatus === status ? "task-column-pulse" : ""}`} data-task-status-column={status} aria-labelledby={`task-column-${status}`} key={status}>
+          <div className="task-column-heading"><div><span className="eyebrow">{STATUS_META[status].eyebrow}</span><h2 id={`task-column-${status}`}>{STATUS_META[status].label}</h2></div><span className="task-column-count">{columnTasks.length}</span></div>
+          <div className="task-column-list" id={status === "COMPLETED" ? "task-previous-list" : undefined}>{columnTasks.length ? columnTasks.map((task) => <TaskCard key={task.id} task={task} onEdit={() => openEdit(task)} onDelete={() => setPendingDelete(task)} onStatusChange={(nextStatus) => void moveTask(task, nextStatus)} onPointerDown={(event) => handlePointerDown(event, task)} dragging={draggingId === task.id} shaking={shakingIds.includes(task.id)} />) : <div className="task-column-empty">{status === "COMPLETED" ? "Sin finalizadas recientes" : "Soltá una tarea acá"}</div>}</div>
+          {status === "COMPLETED" && previousCount > 0 ? <>
+            <Button variant="quiet" className="task-previous-toggle" onClick={() => void togglePreviousTasks()} disabled={data.previousLoading} ariaExpanded={showPreviousTasks} aria-controls="task-previous-list">
+              {data.previousLoading ? "Cargando anteriores…" : showPreviousTasks ? "Ocultar anteriores" : `Ver anteriores (${previousCount})`}
+            </Button>
+            {data.previousError ? <div className="inline-error task-previous-error" role="alert">{data.previousError}</div> : null}
+          </> : null}
+        </section>;
+      })}
     </section>}
     {draggingId ? <div className="task-drag-ghost" style={{ left: pointer.x + 14, top: pointer.y + 14 }} aria-hidden="true">{tasks.find((task) => task.id === draggingId)?.title}</div> : null}
     {composerOpen ? <Dialog ariaLabel={editing ? "Editar tarea" : "Crear tarea"} onClose={closeComposer}><FormPanel eyebrow={editing ? "EDITAR TAREA" : "NUEVA TAREA"} title={editing ? "Editar tarea" : "Crear tarea"} description="Las tareas se guardan en tu espacio y podés moverlas cuando cambien de estado." onClose={closeComposer} onSubmit={() => void saveTask()}><div className="form-grid task-form-grid"><FormField label="Tarea" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Entregar el trabajo práctico" /><SelectField label="Categoría" value={draft.categoryCode} onChange={(value) => setDraft({ ...draft, categoryCode: value })} options={activeCategories.map((option) => ({ value: option.code, label: option.label }))} disabled={!activeCategories.length} /><FormField label="Detalle (opcional)" value={draft.detail} onChange={(detail) => setDraft({ ...draft, detail })} placeholder="Agregá contexto o el próximo paso" multiline /><SelectField label="Estado" value={draft.status} onChange={(value) => setDraft({ ...draft, status: value as TaskStatus })} options={STATUSES.map((status) => ({ value: status, label: STATUS_META[status].label }))} /><label className="form-field"><span>Fecha límite (opcional)</span><input type="date" value={draft.dueDate} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })} /></label></div>{mutation.error ? <div className="inline-error" role="alert">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeComposer} disabled={mutation.pending}>Cancelar</Button><Button type="submit" disabled={mutation.pending || !draft.title.trim() || !draft.categoryCode}>{mutation.pending ? "Guardando..." : editing ? "Guardar cambios" : "Crear tarea"}<span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}

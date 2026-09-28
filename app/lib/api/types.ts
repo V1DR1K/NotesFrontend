@@ -87,6 +87,7 @@ export type Task = {
   dueDate?: string | null;
   createdAt?: string;
   updatedAt?: string;
+  completedAt?: string | null;
 };
 
 export type FinanceBucket = "INCOME" | "EXPENSE" | "INVESTED";

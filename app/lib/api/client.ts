@@ -283,6 +283,7 @@ function normalizeTask(value: unknown): Task {
     dueDate: record.dueDate == null ? null : String(record.dueDate),
     createdAt: record.createdAt ? String(record.createdAt) : undefined,
     updatedAt: record.updatedAt ? String(record.updatedAt) : undefined,
+    completedAt: record.completedAt == null ? null : String(record.completedAt),
   };
 }
 
