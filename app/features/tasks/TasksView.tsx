@@ -67,6 +67,7 @@ function TaskCard({ task, onEdit, onDelete, onStatusChange, onPointerDown, dragg
 export function TasksView({ config, focusId, editId }: { config: ApiConfig; focusId?: string | null; editId?: string | null }) {
   const [categoryCode, setCategoryCode] = useState("all");
   const data = useTasksData(categoryCode);
+  const { reload: reloadTasks } = data;
   const [previousVisibility, setPreviousVisibility] = useState<{ categoryCode: string; visible: boolean } | null>(null);
   const showPreviousTasks = previousVisibility?.categoryCode === categoryCode && previousVisibility.visible;
   const mutation = useMutationError();
@@ -170,7 +171,7 @@ export function TasksView({ config, focusId, editId }: { config: ApiConfig; focu
     try {
       const saved = await mutation.run(() => api.updateTask(task.id, { status: nextStatus }));
       setOverrides((current) => ({ ...current, [saved.id]: saved }));
-      invalidateApiQueryCache();
+      reloadTasks();
     } catch {
       setOverrides((current) => ({ ...current, [previous.id]: previous }));
       setShakingIds((current) => current.includes(task.id) ? current : [...current, task.id]);
@@ -178,7 +179,7 @@ export function TasksView({ config, focusId, editId }: { config: ApiConfig; focu
     } finally {
       window.setTimeout(() => setPulsingStatus(null), 420);
     }
-  }, [clearDrag, mutation]);
+  }, [clearDrag, mutation, reloadTasks]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLElement>, task: Task) => {
     if (event.button !== 0 || (event.target as HTMLElement).closest("button, select, input, textarea, a")) return;
