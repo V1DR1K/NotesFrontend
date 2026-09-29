@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-export type SectionKey = "overview" | "day" | "calendar" | "tasks" | "finances" | "files" | "notes" | "settings";
+export type SectionKey = "overview" | "day" | "calendar" | "projects" | "tasks" | "finances" | "files" | "notes" | "settings";
 
 export type SectionTokens = {
   accent: string;
@@ -32,6 +32,13 @@ export const SECTION_TOKENS: Record<SectionKey, SectionTokens> = {
     shadow: "rgba(240, 181, 138, 0.22)",
     surface: "rgba(240, 181, 138, 0.12)",
     soft: "#f6dfcf",
+  },
+  projects: {
+    accent: "#a9d9df",
+    contrast: "#102a30",
+    shadow: "rgba(169, 217, 223, 0.22)",
+    surface: "rgba(169, 217, 223, 0.12)",
+    soft: "#d9f0f2",
   },
   tasks: {
     accent: "#72d6d2",
@@ -102,6 +109,14 @@ export const SECTION_META: Record<SectionKey, {
     icon: "▦",
     action: "Agregar evento",
   },
+  projects: {
+    label: "Proyecto",
+    eyebrow: "TUS PROYECTOS",
+    title: "Todo lo que pertenece, junto.",
+    description: "Tareas, notas y archivos reunidos por proyecto.",
+    icon: "▤",
+    action: "Ver proyectos",
+  },
   tasks: {
     label: "Tareas",
     eyebrow: "TODO LO QUE SIGUE / 04",
@@ -148,10 +163,8 @@ export const NAV_ITEMS: Array<{ key: SectionKey; short: string }> = [
   { key: "overview", short: "Inicio" },
   { key: "day", short: "Mi día" },
   { key: "calendar", short: "Agenda" },
-  { key: "tasks", short: "Tareas" },
+  { key: "projects", short: "Proyecto" },
   { key: "finances", short: "Finanzas" },
-  { key: "files", short: "Archivos" },
-  { key: "notes", short: "Notas" },
 ];
 
 export function tokenStyle(section: SectionKey): CSSProperties {

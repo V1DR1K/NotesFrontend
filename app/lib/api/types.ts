@@ -28,9 +28,10 @@ export type ApiConfig = {
   noteCategories: ApiOption[];
   eventCategories: ApiOption[];
   taskCategories: ApiOption[];
+  projects: ApiOption[];
 };
 
-export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories" | "event-categories" | "task-categories";
+export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories" | "event-categories" | "task-categories" | "projects";
 export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
 
 export type AuthUser = {
@@ -65,6 +66,7 @@ export type CalendarEvent = {
   date: string;
   description: string;
   category: ApiOption;
+  projectCode: string;
 };
 
 export type NoteCategory = { code: string; label?: string };
@@ -75,6 +77,7 @@ export type Note = {
   categoryCode: string;
   category?: NoteCategory;
   date: string;
+  projectCode: string;
 };
 
 export type TaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
@@ -88,6 +91,7 @@ export type Task = {
   createdAt?: string;
   updatedAt?: string;
   completedAt?: string | null;
+  projectCode: string;
 };
 
 export type FinanceBucket = "INCOME" | "EXPENSE" | "INVESTED";
@@ -174,9 +178,10 @@ export type CryptoSummary = {
 
 export type ExchangeRate = { currency: string; buy: number | string; sell: number | string; average: number | string; fetchedAt?: string; source?: string };
 
-export type FileFolder = { id: string; name: string; fileCount?: number };
+export type FileFolder = { id: string; name: string; fileCount?: number; projectCode: string };
 export type FileItem = {
   id: string;
+  projectCode: string;
   name: string;
   description: string;
   extension?: string;

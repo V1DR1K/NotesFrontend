@@ -12,38 +12,39 @@ type TaskBoardData = {
   completedAfter: string;
 };
 
-function taskQuery(categoryCode: string, status: TaskStatus, page: number, sort: string, completedAfter?: string, completedBefore?: string, size = PAGE_SIZE) {
+function taskQuery(categoryCode: string, projectCode: string, status: TaskStatus, page: number, sort: string, completedAfter?: string, completedBefore?: string, size = PAGE_SIZE) {
   const query = new URLSearchParams({ status, page: String(page), size: String(size), sort });
   if (categoryCode !== "all") query.set("categoryCode", categoryCode);
+  if (projectCode !== "all") query.set("projectCode", projectCode);
   if (completedAfter) query.set("completedAfter", completedAfter);
   if (completedBefore) query.set("completedBefore", completedBefore);
   return query;
 }
 
-async function loadAllPages(categoryCode: string, status: TaskStatus, sort: string, signal: AbortSignal, completedAfter?: string) {
+async function loadAllPages(categoryCode: string, projectCode: string, status: TaskStatus, sort: string, signal: AbortSignal, completedAfter?: string) {
   const items: Task[] = [];
   let page = 0;
   while (true) {
-    const result = await api.tasks(taskQuery(categoryCode, status, page, sort, completedAfter), signal);
+    const result = await api.tasks(taskQuery(categoryCode, projectCode, status, page, sort, completedAfter), signal);
     items.push(...result.content);
     if (result.last) return items;
     page += 1;
   }
 }
 
-export function useTasksData(categoryCode: string) {
-  const query = useApiQuery<TaskBoardData>(`tasks-board:${categoryCode}`, async (signal) => {
+export function useTasksData(categoryCode: string, projectCode = "all") {
+  const query = useApiQuery<TaskBoardData>(`tasks-board:${categoryCode}:${projectCode}`, async (signal) => {
     const completedAfter = new Date(Date.now() - COMPLETED_WINDOW_MS).toISOString();
     const [pending, inProgress, recent, previousCountPage] = await Promise.all([
-      loadAllPages(categoryCode, "PENDING", "dueDate,asc", signal),
-      loadAllPages(categoryCode, "IN_PROGRESS", "dueDate,asc", signal),
-      loadAllPages(categoryCode, "COMPLETED", "completedAt,desc", signal, completedAfter),
-      api.tasks(taskQuery(categoryCode, "COMPLETED", 0, "completedAt,desc", undefined, completedAfter, 1), signal),
+      loadAllPages(categoryCode, projectCode, "PENDING", "dueDate,asc", signal),
+      loadAllPages(categoryCode, projectCode, "IN_PROGRESS", "dueDate,asc", signal),
+      loadAllPages(categoryCode, projectCode, "COMPLETED", "completedAt,desc", signal, completedAfter),
+      api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", 0, "completedAt,desc", undefined, completedAfter, 1), signal),
     ]);
     return { content: [...pending, ...inProgress, ...recent], previousCount: previousCountPage.totalElements, completedAfter };
   });
 
-  const archiveKey = `${categoryCode}:${query.data?.completedAfter ?? ""}`;
+  const archiveKey = `${categoryCode}:${projectCode}:${query.data?.completedAfter ?? ""}`;
   const [archiveState, setArchiveState] = useState<{ key: string; tasks: Task[]; loading: boolean; loaded: boolean; error: string | null }>({ key: "", tasks: [], loading: false, loaded: false, error: null });
   const currentArchive = archiveState.key === archiveKey ? archiveState : { key: archiveKey, tasks: [], loading: false, loaded: false, error: null };
 
@@ -56,7 +57,7 @@ export function useTasksData(categoryCode: string) {
       const tasks: Task[] = [];
       let page = 0;
       while (true) {
-        const result = await api.tasks(taskQuery(categoryCode, "COMPLETED", page, "completedAt,desc", undefined, board.completedAfter));
+        const result = await api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", page, "completedAt,desc", undefined, board.completedAfter));
         tasks.push(...result.content);
         if (result.last) break;
         page += 1;
@@ -67,7 +68,7 @@ export function useTasksData(categoryCode: string) {
       setArchiveState({ key: archiveKey, tasks: [], loading: false, loaded: false, error: "No se pudieron cargar las tareas anteriores. Probá de nuevo." });
       return false;
     }
-  }, [archiveKey, currentArchive.loaded, currentArchive.loading, query.data, categoryCode]);
+  }, [archiveKey, currentArchive.loaded, currentArchive.loading, query.data, categoryCode, projectCode]);
 
   return { ...query, previousTasks: currentArchive.tasks, previousLoading: currentArchive.loading, previousError: currentArchive.error, loadPrevious };
 }

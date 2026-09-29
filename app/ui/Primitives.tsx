@@ -251,11 +251,13 @@ export function SectionHero({
   onAction,
   actionLabel,
   rightSlot,
+  headingLevel = 1,
 }: {
   section: SectionKey;
   onAction?: () => void;
   actionLabel?: string;
   rightSlot?: ReactNode;
+  headingLevel?: 1 | 2;
 }) {
   const meta = SECTION_META[section];
 
@@ -266,7 +268,7 @@ export function SectionHero({
           <span className="hero-mark" aria-hidden="true">{meta.icon}</span>
           <span className="eyebrow">{meta.eyebrow}</span>
         </div>
-        <h1>{meta.title}</h1>
+        {headingLevel === 1 ? <h1>{meta.title}</h1> : <h2>{meta.title}</h2>}
         <p>{meta.description}</p>
         {onAction ? <Button onClick={onAction}>{actionLabel ?? meta.action}<span aria-hidden="true">↗</span></Button> : null}
       </div>
