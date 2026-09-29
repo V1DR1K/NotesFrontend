@@ -192,13 +192,13 @@ function normalizeCalendarEvent(value: unknown): CalendarEvent {
   const record = validatedRecord(value, "eventos");
   const category = option(record.category);
   if (!category) throw new ApiError("La respuesta de eventos no contiene una categoría válida.", 502);
-  return { id: textField(record, "id", "eventos"), date: textField(record, "date", "eventos"), description: textField(record, "description", "eventos"), category };
+  return { id: textField(record, "id", "eventos"), date: textField(record, "date", "eventos"), description: textField(record, "description", "eventos"), category, projectCode: String(record.projectCode ?? "personal") };
 }
 
 function normalizeNote(value: unknown): Note {
   const record = validatedRecord(value, "notas");
   const category = option(record.category);
-  return { ...record as unknown as Note, id: textField(record, "id", "notas"), title: textField(record, "title", "notas"), body: textField(record, "body", "notas"), categoryCode: category?.code ?? String(record.categoryCode ?? ""), category, date: textField(record, "date", "notas") };
+  return { ...record as unknown as Note, id: textField(record, "id", "notas"), title: textField(record, "title", "notas"), body: textField(record, "body", "notas"), categoryCode: category?.code ?? String(record.categoryCode ?? ""), category, date: textField(record, "date", "notas"), projectCode: String(record.projectCode ?? "personal") };
 }
 
 function normalizeMovement(value: unknown): FinanceMovement {
@@ -266,7 +266,7 @@ function normalizeCryptoSummary(value: unknown): CryptoSummary {
 
 function normalizeFile(value: unknown): FileItem {
   const record = validatedRecord(value, "archivos");
-  return { ...record as unknown as FileItem, id: textField(record, "id", "archivos"), name: textField(record, "name", "archivos"), description: String(record.description ?? record.name ?? ""), extension: record.extension ? String(record.extension) : undefined, mimeType: record.mimeType ? String(record.mimeType) : undefined, sizeBytes: record.sizeBytes as number | string | undefined, kind: textField(record, "kind", "archivos"), folder: record.folder as FileItem["folder"], downloadUrl: record.downloadUrl ? String(record.downloadUrl) : undefined, uploadedAt: record.uploadedAt ? String(record.uploadedAt) : undefined };
+  return { ...record as unknown as FileItem, id: textField(record, "id", "archivos"), name: textField(record, "name", "archivos"), description: String(record.description ?? record.name ?? ""), extension: record.extension ? String(record.extension) : undefined, mimeType: record.mimeType ? String(record.mimeType) : undefined, sizeBytes: record.sizeBytes as number | string | undefined, kind: textField(record, "kind", "archivos"), folder: record.folder as FileItem["folder"], downloadUrl: record.downloadUrl ? String(record.downloadUrl) : undefined, uploadedAt: record.uploadedAt ? String(record.uploadedAt) : undefined, projectCode: String(record.projectCode ?? "personal") };
 }
 
 function normalizeTask(value: unknown): Task {
@@ -284,6 +284,7 @@ function normalizeTask(value: unknown): Task {
     createdAt: record.createdAt ? String(record.createdAt) : undefined,
     updatedAt: record.updatedAt ? String(record.updatedAt) : undefined,
     completedAt: record.completedAt == null ? null : String(record.completedAt),
+    projectCode: String(record.projectCode ?? "personal"),
   };
 }
 
@@ -472,13 +473,14 @@ export const api = {
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "PUT", body }),
   config: async (signal?: AbortSignal): Promise<ApiConfig> => {
     const results = await Promise.allSettled([
-      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }), request<unknown>("/config/event-categories", { signal }), request<unknown>("/config/task-categories", { signal }),
+      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }), request<unknown>("/config/event-categories", { signal }), request<unknown>("/config/task-categories", { signal }), request<unknown>("/config/projects", { signal }),
     ]);
     const options = (result: PromiseSettledResult<unknown>) => {
       if (result.status !== "fulfilled") return [];
       try { return optionList(result.value); } catch { return []; }
     };
-    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]), eventCategories: options(results[4]), taskCategories: options(results[5]) };
+    if (results[6].status === "rejected") throw results[6].reason;
+    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]), eventCategories: options(results[4]), taskCategories: options(results[5]), projects: options(results[6]) };
   },
   createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
@@ -490,8 +492,8 @@ export const api = {
   dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
   tasks: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/tasks?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeTask)),
   getTask: (id: string) => request<unknown>(`/tasks/${encodeURIComponent(id)}`).then(normalizeTask),
-  createTask: (body: { title: string; detail?: string; categoryCode: string; status?: TaskStatus; dueDate?: string | null }) => request<unknown>("/tasks", { method: "POST", body }).then(normalizeTask),
-  updateTask: (id: string, body: { title?: string; detail?: string; categoryCode?: string; status?: TaskStatus; dueDate?: string | null }) => request<unknown>(`/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeTask),
+  createTask: (body: { title: string; detail?: string; categoryCode: string; status?: TaskStatus; dueDate?: string | null; projectCode: string }) => request<unknown>("/tasks", { method: "POST", body }).then(normalizeTask),
+  updateTask: (id: string, body: { title?: string; detail?: string; categoryCode?: string; status?: TaskStatus; dueDate?: string | null; projectCode?: string }) => request<unknown>(`/tasks/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeTask),
   deleteTask: (id: string) => request<void>(`/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }),
   days: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/day-entries?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeDay)),
   createDay: (body: { date: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),
@@ -499,12 +501,12 @@ export const api = {
   analyzeDay: (id: string) => request<unknown>(`/day-entries/${encodeURIComponent(id)}/analyze`, { method: "POST" }).then(normalizeDay),
   deleteDay: (id: string) => request<void>(`/day-entries/${encodeURIComponent(id)}`, { method: "DELETE" }),
   events: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/events?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeCalendarEvent)),
-  createEvent: (body: { date: string; description: string; categoryCode: string }) => request<unknown>("/events", { method: "POST", body }).then(normalizeCalendarEvent),
-  updateEvent: (id: string, body: { date: string; description: string; categoryCode: string }) => request<unknown>(`/events/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeCalendarEvent),
+  createEvent: (body: { date: string; description: string; categoryCode: string; projectCode: string }) => request<unknown>("/events", { method: "POST", body }).then(normalizeCalendarEvent),
+  updateEvent: (id: string, body: { date: string; description: string; categoryCode: string; projectCode: string }) => request<unknown>(`/events/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeCalendarEvent),
   deleteEvent: (id: string) => request<void>(`/events/${encodeURIComponent(id)}`, { method: "DELETE" }),
   notes: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/notes?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeNote)),
-  createNote: (body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>("/notes", { method: "POST", body }).then(normalizeNote),
-  updateNote: (id: string, body: { title: string; body: string; categoryCode: string; date: string }) => request<unknown>(`/notes/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeNote),
+  createNote: (body: { title: string; body: string; categoryCode: string; date: string; projectCode: string }) => request<unknown>("/notes", { method: "POST", body }).then(normalizeNote),
+  updateNote: (id: string, body: { title: string; body: string; categoryCode: string; date: string; projectCode: string }) => request<unknown>(`/notes/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeNote),
   deleteNote: (id: string) => request<void>(`/notes/${encodeURIComponent(id)}`, { method: "DELETE" }),
   movements: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/movements?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeMovement)),
   createMovement: (body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
@@ -522,11 +524,11 @@ export const api = {
   voidCryptoSale: (investmentId: string, saleId: string) => request<void>(`/finance/crypto/investments/${encodeURIComponent(investmentId)}/sales/${encodeURIComponent(saleId)}/void`, { method: "POST" }),
   cryptoTransfer: (body: { date: string; amountArs: number; note?: string }) => request<unknown>("/finance/crypto/transfers", { method: "POST", body }).then(normalizeMovement),
   voidCryptoInvestment: (id: string) => request<void>(`/finance/crypto/investments/${encodeURIComponent(id)}/void`, { method: "POST" }),
-  folders: (signal?: AbortSignal) => request<unknown>("/file-folders", { signal }).then((payload) => normalizePage<FileFolder>(payload)),
-  createFolder: (name: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name } }),
+  folders: (projectCode = "all", signal?: AbortSignal) => request<unknown>(`/file-folders${projectCode === "all" ? "" : `?projectCode=${encodeURIComponent(projectCode)}`}`, { signal }).then((payload) => normalizePage<FileFolder>(payload)),
+  createFolder: (name: string, projectCode: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name, projectCode } }),
   files: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/files?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeFile)),
-  uploadFile: (file: File, folderId?: string, name?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); if (name) body.append("name", name); return request<unknown>("/files", { method: "POST", body }).then(normalizeFile); },
-  updateFile: (id: string, body: { name: string; folderId?: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
+  uploadFile: (file: File, folderId?: string, name?: string, projectCode?: string) => { const body = new FormData(); body.append("file", file); if (folderId) body.append("folderId", folderId); if (name) body.append("name", name); if (projectCode) body.append("projectCode", projectCode); return request<unknown>("/files", { method: "POST", body }).then(normalizeFile); },
+  updateFile: (id: string, body: { name: string; folderId?: string; projectCode?: string }) => request<unknown>(`/files/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeFile),
   deleteFile: (id: string) => request<void>(`/files/${encodeURIComponent(id)}`, { method: "DELETE" }),
   downloadFile: (file: FileItem, signal?: AbortSignal) => download(file.downloadUrl || `/files/${encodeURIComponent(file.id)}/download`, signal),
 };

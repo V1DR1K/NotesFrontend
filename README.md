@@ -28,6 +28,11 @@ se convierten en mensajes aptos para la interfaz. El cliente renueva el access
 token por `/api/auth/refresh` y muestra el cambio de contraseña requerido por Auth
 central.
 
+La navegación agrupa Tareas, Notas y Archivos en Proyecto. El selector abre en
+"Todos los proyectos" y permite filtrar por las opciones configuradas. Agenda
+usa el mismo proyecto para filtrar eventos y tareas. Cada alta permite asignar
+un proyecto y los archivos conservan la coherencia con su carpeta.
+
 La paginación interna respeta las páginas 0-based del backend y solo muestra
 controles 1-based al usuario. El nombre de los archivos es también su título,
 editable y buscable. Las clasificaciones de

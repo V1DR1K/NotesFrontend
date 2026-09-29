@@ -8,6 +8,7 @@ import { isSectionKey, SECTION_TOKENS, tokenStyle, type SectionKey } from "../co
 import { ApiError, api, hasSessionHint, unwrapUser } from "../lib/api/client";
 import { clearApiQueryCache } from "../lib/api/hooks";
 import type { ApiConfig, AuthUser } from "../lib/api/types";
+import type { ProjectTab } from "../features/projects/ProjectsView";
 
 const ArchivosModule = lazy(() => import("../modules/ArchivosModule").then((module) => ({ default: module.ArchivosModule })));
 const FinanzasModule = lazy(() => import("../modules/FinanzasModule").then((module) => ({ default: module.FinanzasModule })));
@@ -18,13 +19,18 @@ const TasksModule = lazy(() => import("../modules/TasksModule").then((module) =>
 const NotasModule = lazy(() => import("../modules/NotasModule").then((module) => ({ default: module.NotasModule })));
 const SettingsModule = lazy(() => import("../modules/SettingsModule").then((module) => ({ default: module.SettingsModule })));
 const SearchPalette = lazy(() => import("./SearchPalette").then((module) => ({ default: module.SearchPalette })));
+const ProjectsView = lazy(() => import("../features/projects/ProjectsView").then((module) => ({ default: module.ProjectsView })));
+
+const projectTabFor = (value: string | null): ProjectTab => value === "notes" || value === "files" ? value : "tasks";
+const displaySection = (value: SectionKey): SectionKey => value === "tasks" || value === "notes" || value === "files" ? "projects" : value;
 
 export function PersonalNotesApp() {
   const [activeSection, setActiveSection] = useState<SectionKey>(() => {
     if (typeof window === "undefined") return "overview";
     const section = new URLSearchParams(window.location.search).get("section") ?? window.history.state?.notesSection;
-    return isSectionKey(section) ? section : "overview";
+    return isSectionKey(section) ? displaySection(section) : "overview";
   });
+  const [projectTab, setProjectTab] = useState<ProjectTab>(() => typeof window === "undefined" ? "tasks" : projectTabFor(new URLSearchParams(window.location.search).get("tab") ?? new URLSearchParams(window.location.search).get("section")));
   const [focusId, setFocusId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("focus"));
   const [editId, setEditId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("edit"));
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -36,16 +42,21 @@ export function PersonalNotesApp() {
   const sessionUserId = useRef<string | null>(null);
 
   const navigate = (section: SectionKey, targetId?: string, mode: "focus" | "edit" = "focus") => {
-    if (section === activeSection && !targetId) return;
+    const nextSection = displaySection(section);
+    const nextTab = section === "tasks" || section === "notes" || section === "files" ? section : projectTab;
+    if (nextSection === activeSection && nextTab === projectTab && !targetId) return;
     const url = new URL(window.location.href);
-    url.searchParams.set("section", section);
+    url.searchParams.set("section", nextSection);
+    if (nextSection === "projects") url.searchParams.set("tab", nextTab); else url.searchParams.delete("tab");
     if (targetId) url.searchParams.set("focus", targetId); else url.searchParams.delete("focus");
     if (targetId && mode === "edit") url.searchParams.set("edit", targetId); else url.searchParams.delete("edit");
-    window.history.pushState({ ...window.history.state, notesSection: section }, "", url);
-    setActiveSection(section);
+    window.history.pushState({ ...window.history.state, notesSection: nextSection }, "", url);
+    setActiveSection(nextSection);
+    setProjectTab(nextTab);
     setFocusId(targetId ?? null);
     setEditId(targetId && mode === "edit" ? targetId : null);
   };
+  const changeProjectTab = (tab: ProjectTab) => { const url = new URL(window.location.href); url.searchParams.set("section", "projects"); url.searchParams.set("tab", tab); window.history.pushState({ ...window.history.state, notesSection: "projects" }, "", url); setProjectTab(tab); };
 
   useEffect(() => {
     const currentSection = new URLSearchParams(window.location.search).get("section") ?? window.history.state?.notesSection;
@@ -53,11 +64,17 @@ export function PersonalNotesApp() {
       const url = new URL(window.location.href);
       url.searchParams.set("section", "overview");
       window.history.replaceState({ ...window.history.state, notesSection: "overview" }, "", url);
+    } else if (currentSection === "tasks" || currentSection === "notes" || currentSection === "files") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("section", "projects");
+      url.searchParams.set("tab", projectTabFor(url.searchParams.get("tab") ?? currentSection));
+      window.history.replaceState({ ...window.history.state, notesSection: "projects" }, "", url);
     }
 
     const handlePopState = (event: PopStateEvent) => {
       const section = new URLSearchParams(window.location.search).get("section") ?? event.state?.notesSection;
-      if (isSectionKey(section)) setActiveSection(section);
+      if (isSectionKey(section)) setActiveSection(displaySection(section));
+      setProjectTab(projectTabFor(new URLSearchParams(window.location.search).get("tab") ?? section));
       setFocusId(new URLSearchParams(window.location.search).get("focus"));
       setEditId(new URLSearchParams(window.location.search).get("edit"));
     };
@@ -117,9 +134,10 @@ export function PersonalNotesApp() {
       switch (activeSection) {
         case "day": return <MiDiaModule config={config} focusId={focusId} />;
         case "calendar": return <CalendarModule config={config} onOpenTask={(taskId) => navigate("tasks", taskId, "edit")} />;
+        case "projects": return <ProjectsView config={config} tab={projectTab} onTabChange={changeProjectTab} focusId={focusId} editId={editId} />;
         case "tasks": return <TasksModule config={config} focusId={focusId} editId={editId} />;
         case "finances": return <FinanzasModule config={config} focusId={focusId} />;
-        case "files": return <ArchivosModule focusId={focusId} />;
+        case "files": return <ArchivosModule config={config} focusId={focusId} />;
         case "notes": return <NotasModule config={config} focusId={focusId} />;
         case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
         default: return <HomeView onNavigate={navigate} />;
