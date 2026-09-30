@@ -3,7 +3,7 @@ import { api } from "../../lib/api/client";
 
 export function useFinanceData(page: number, bucket: string, from: string, to: string, itemCode: string, sort: string) {
   const query = new URLSearchParams({ page: String(page), size: "8", sort: sort === "large" ? "amountArs,desc" : "date,desc" });
-  if (bucket !== "all") query.set("bucket", bucket);
+  if (bucket !== "all") query.set("movementType", bucket);
   if (from) query.set("from", from);
   if (to) query.set("to", to);
   if (itemCode !== "all") query.set("itemCode", itemCode);
@@ -21,6 +21,8 @@ export function useFinanceData(page: number, bucket: string, from: string, to: s
     refreshing: movements.refreshing || summary.refreshing || analytics.refreshing || exchangeRate.refreshing || accounts.refreshing || crypto.refreshing,
     error: movements.error,
     auxiliaryError: summary.error ?? analytics.error ?? exchangeRate.error ?? accounts.error ?? crypto.error,
+    accountsLoading: accounts.loading,
+    accountsError: accounts.error,
     reload: () => { movements.reload(); summary.reload(); analytics.reload(); exchangeRate.reload(); accounts.reload(); crypto.reload(); },
   };
 }

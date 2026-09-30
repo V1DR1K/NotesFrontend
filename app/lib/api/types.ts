@@ -95,12 +95,17 @@ export type Task = {
 };
 
 export type FinanceBucket = "INCOME" | "EXPENSE" | "INVESTED";
+export type FinanceMovementType = FinanceBucket | "TRANSFER";
+export type FinanceTransferRequest = { sourceAccountCode: string; destinationAccountCode: string; date: string; amountArs: number; note?: string };
 export type FinanceAmount = { ars: number | string; usd: number | string; exchangeRate: number | string };
 export type FinanceMovement = {
   id: string;
   date: string;
   bucket: FinanceBucket | string;
   accountCode: string;
+  movementType?: FinanceMovementType;
+  sourceAccountCode?: string | null;
+  destinationAccountCode?: string | null;
   itemCode: string;
   item?: ApiOption;
   amountArs?: number | string;

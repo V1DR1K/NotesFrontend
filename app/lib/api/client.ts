@@ -511,6 +511,8 @@ export const api = {
   movements: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/movements?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeMovement)),
   createMovement: (body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>("/finance/movements", { method: "POST", body }).then(normalizeMovement),
   updateMovement: (id: string, body: { date: string; bucket: string; accountCode: string; itemCode: string; amountArs: number; note?: string }) => request<unknown>(`/finance/movements/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
+  createFinanceTransfer: (body: import("./types").FinanceTransferRequest) => request<unknown>("/finance/transfers", { method: "POST", body }).then(normalizeMovement),
+  updateFinanceTransfer: (id: string, body: import("./types").FinanceTransferRequest) => request<unknown>(`/finance/transfers/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeMovement),
   deleteMovement: (id: string) => request<void>(`/finance/movements/${encodeURIComponent(id)}`, { method: "DELETE" }),
   financeSummary: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/summary?${query}`, { signal }).then(normalizeSummary),
   financeAnalytics: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/analytics?${query}`, { signal }).then(normalizeAnalytics),

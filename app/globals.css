@@ -949,3 +949,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .projects-tab { flex: 1; min-width: 0; }
   .projects-view .section-hero { padding-top: 31px; }
 }
+.finance-transfer-fields { border: 0; padding: 0; margin: 0; min-width: 0; }
+.finance-transfer-effect { color: var(--ink); line-height: 1.6; overflow-wrap: anywhere; }
+.finance-fixed-account { align-self: center; }
+.finance-main-actions { flex-wrap: wrap; margin-block: 24px; }
+.finance-card.finance-transfer h2 { overflow-wrap: anywhere; }

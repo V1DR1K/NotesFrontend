@@ -67,3 +67,5 @@ la pantalla de inicio y volvé a instalar la app desde la versión desplegada
 para que tome el nombre, modo e icono del manifest. Si el icono cambia en el
 futuro, publicá nuevos nombres de archivo y actualizá el manifest para evitar
 que el cache conserve el anterior.
+
+Finanzas separa los ingresos y gastos de Mercado Pago de las transferencias internas. El formulario de transferencia permite origen, destino, fecha, importe y nota, muestra el efecto sobre ambas cuentas y utiliza `/api/finance/transfers`. El historial tiene un filtro de transferencias y conserva la lectura de movimientos anteriores. Corregir saldo sigue siendo una acción independiente. Si falla la actualización de cuentas, los saldos se ocultan y se ofrece reintentar.
