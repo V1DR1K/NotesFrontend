@@ -640,6 +640,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .modal-dialog::-webkit-scrollbar { width: 6px; }
 .modal-dialog::-webkit-scrollbar-thumb { background: var(--section-accent); border-radius: 999px; }
 .modal-dialog .form-panel { margin-top: 0; box-shadow: none; }
+.modal-dialog .form-grid { grid-template-columns: minmax(0, 1fr); }
 .confirm-dialog { width: min(100%, 390px); min-width: 0; max-width: 100%; padding: 27px; border: 1px solid var(--section-accent); background: var(--panel-strong); box-shadow: 0 22px 70px var(--section-shadow); animation: rise-in .36s cubic-bezier(.16,1,.3,1); }
 .dialog-symbol { display: grid; place-items: center; width: 32px; height: 32px; color: var(--section-contrast); background: var(--section-accent); font-size: 19px; }
 .confirm-dialog .eyebrow { display: block; margin-top: 23px; }
