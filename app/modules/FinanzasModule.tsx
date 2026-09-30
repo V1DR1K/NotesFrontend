@@ -1,8 +1,8 @@
 "use client";
 
 import type { ApiConfig } from "../lib/api/types";
-import { FinancesView } from "../features/finances/FinancesView";
+import { FinancesView, type FinanceTab } from "../features/finances/FinancesView";
 
-export function FinanzasModule({ config, focusId }: { config: ApiConfig; focusId?: string | null }) {
-  return <FinancesView config={config} focusId={focusId} />;
+export function FinanzasModule({ config, focusId, tab, onTabChange }: { config: ApiConfig; focusId?: string | null; tab: FinanceTab; onTabChange: (tab: FinanceTab) => void }) {
+  return <FinancesView config={config} focusId={focusId} tab={tab} onTabChange={onTabChange} />;
 }
