@@ -237,7 +237,7 @@ function normalizeAnalytics(value: unknown): FinanceAnalytics {
 
 function normalizeAccount(value: unknown): FinanceAccount {
   const record = validatedRecord(value, "cuentas financieras");
-  return { code: textField(record, "code", "cuentas financieras"), label: textField(record, "label", "cuentas financieras"), type: String(record.type ?? ""), balanceArs: record.balanceArs as number | string, annualRatePercent: record.annualRatePercent as number | string, growthMode: String(record.growthMode ?? "MANUAL"), balanceAsOf: String(record.balanceAsOf ?? "") };
+  return { code: textField(record, "code", "cuentas financieras"), label: textField(record, "label", "cuentas financieras"), type: String(record.type ?? ""), balanceArs: record.balanceArs as number | string, annualRatePercent: record.annualRatePercent as number | string, growthMode: String(record.growthMode ?? "MANUAL"), balanceAsOf: String(record.balanceAsOf ?? ""), balanceUsd: record.balanceUsd as FinanceAccount["balanceUsd"], usdBalanceEstimated: Boolean(record.usdBalanceEstimated) };
 }
 
 function normalizeCryptoInvestment(value: unknown): CryptoInvestment {
@@ -261,7 +261,7 @@ function normalizeCryptoSummary(value: unknown): CryptoSummary {
     const position = validatedRecord(value, "posiciones cripto");
     return { assetCode: textField(position, "assetCode", "posiciones cripto"), assetLabel: textField(position, "assetLabel", "posiciones cripto"), investedUsd: position.investedUsd as number | string, investedArs: position.investedArs as number | string, quantity: position.quantity as number | string | null, purchases: Number(position.purchases ?? 0) };
   }) : [];
-  return { invested: invested as CryptoSummary["invested"], available: available as CryptoSummary["available"], realizedProfitUsd: record.realizedProfitUsd as number | string, positions, investments: Array.isArray(record.investments) ? record.investments.map(normalizeCryptoInvestment) : [], exchangeRate: record.exchangeRate as CryptoSummary["exchangeRate"] };
+  return { invested: invested as CryptoSummary["invested"], available: available as CryptoSummary["available"], realizedProfitUsd: record.realizedProfitUsd as number | string, positions, investments: Array.isArray(record.investments) ? record.investments.map(normalizeCryptoInvestment) : [], exchangeRate: record.exchangeRate as CryptoSummary["exchangeRate"], legacyBalanceEstimated: Boolean(record.legacyBalanceEstimated), performance: record.performance as CryptoSummary["performance"] };
 }
 
 function normalizeFile(value: unknown): FileItem {
@@ -517,14 +517,27 @@ export const api = {
   financeSummary: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/summary?${query}`, { signal }).then(normalizeSummary),
   financeAnalytics: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/finance/analytics?${query}`, { signal }).then(normalizeAnalytics),
   financeAccounts: (signal?: AbortSignal) => request<unknown>("/finance/accounts", { signal }).then((payload) => Array.isArray(payload) ? payload.map(normalizeAccount).filter((account) => account.code) : []),
-  syncFinanceAccount: (code: string, body: { balanceArs: number }) => request<unknown>(`/finance/accounts/${encodeURIComponent(code)}/balance`, { method: "PUT", body }).then(normalizeAccount),
+  syncFinanceAccount: (code: string, body: { balanceArs?: number; balanceUsd?: number }) => request<unknown>(`/finance/accounts/${encodeURIComponent(code)}/balance`, { method: "PUT", body }).then(normalizeAccount),
   exchangeRate: (signal?: AbortSignal) => request<unknown>("/finance/exchange-rate/usd", { signal }).then(normalizeExchangeRate),
   cryptoSummary: (signal?: AbortSignal) => request<unknown>("/finance/crypto/summary", { signal }).then(normalizeCryptoSummary),
   cryptoInvest: (body: { date: string; assetCode: string; amountUsd: number; unitPriceUsd: number; note?: string }) => request<unknown>("/finance/crypto/investments", { method: "POST", body }).then(normalizeCryptoInvestment),
-  completeCryptoPurchasePrice: (id: string, unitPriceUsd: number) => request<unknown>(`/finance/crypto/investments/${encodeURIComponent(id)}/unit-price`, { method: "PATCH", body: { unitPriceUsd } }).then(normalizeCryptoInvestment),
+  completeCryptoPurchasePrice: async (id: string, unitPriceUsd: number) => {
+    const path = `/finance/crypto/investments/${encodeURIComponent(id)}`;
+    try {
+      return normalizeCryptoInvestment(await request<unknown>(`${path}/unit-price`, { method: "PATCH", body: { unitPriceUsd } }));
+    } catch (error) {
+      // A lost or malformed write response does not prove that the transaction failed.
+      if (error instanceof ApiError && error.status > 0 && error.status < 500) throw error;
+      try {
+        const stored = normalizeCryptoInvestment(await request<unknown>(path));
+        if (Number(stored.unitPriceUsd) === unitPriceUsd) return stored;
+      } catch { /* Report uncertainty instead of claiming the write was rejected. */ }
+      throw new ApiError("No pudimos confirmar el precio guardado. Actualizá el historial antes de volver a editar; el cambio podría haberse guardado.", 503);
+    }
+  },
   sellCrypto: (id: string, body: { date: string; quantity: number; proceedsUsd: number; note?: string }) => request<unknown>(`/finance/crypto/investments/${encodeURIComponent(id)}/sales`, { method: "POST", body }).then(normalizeCryptoSale),
   voidCryptoSale: (investmentId: string, saleId: string) => request<void>(`/finance/crypto/investments/${encodeURIComponent(investmentId)}/sales/${encodeURIComponent(saleId)}/void`, { method: "POST" }),
-  cryptoTransfer: (body: { date: string; amountArs: number; note?: string }) => request<unknown>("/finance/crypto/transfers", { method: "POST", body }).then(normalizeMovement),
+  cryptoTransfer: (body: { date: string; amountArs: number; exchangeRate: number; note?: string }) => request<unknown>("/finance/crypto/transfers", { method: "POST", body }).then(normalizeMovement),
   voidCryptoInvestment: (id: string) => request<void>(`/finance/crypto/investments/${encodeURIComponent(id)}/void`, { method: "POST" }),
   folders: (projectCode = "all", signal?: AbortSignal) => request<unknown>(`/file-folders${projectCode === "all" ? "" : `?projectCode=${encodeURIComponent(projectCode)}`}`, { signal }).then((payload) => normalizePage<FileFolder>(payload)),
   createFolder: (name: string, projectCode: string) => request<FileFolder>("/file-folders", { method: "POST", body: { name, projectCode } }),

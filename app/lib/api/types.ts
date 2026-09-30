@@ -96,7 +96,7 @@ export type Task = {
 
 export type FinanceBucket = "INCOME" | "EXPENSE" | "INVESTED";
 export type FinanceMovementType = FinanceBucket | "TRANSFER";
-export type FinanceTransferRequest = { sourceAccountCode: string; destinationAccountCode: string; date: string; amountArs: number; note?: string };
+export type FinanceTransferRequest = { sourceAccountCode: string; destinationAccountCode: string; date: string; amountArs: number; note?: string; exchangeRate?: number };
 export type FinanceAmount = { ars: number | string; usd: number | string; exchangeRate: number | string };
 export type FinanceMovement = {
   id: string;
@@ -138,6 +138,8 @@ export type FinanceAccount = {
   annualRatePercent: number | string;
   growthMode: "DAILY_TNA" | "MANUAL" | string;
   balanceAsOf: string;
+  balanceUsd?: number | string | null;
+  usdBalanceEstimated?: boolean;
 };
 
 export type CryptoAssetCode = "BTCUSDT" | "SOLUSDT" | "ETHUSDT" | "PEPEUSDT";
@@ -172,10 +174,18 @@ export type CryptoInvestment = {
   createdAt?: string;
 };
 export type CryptoPosition = { assetCode: CryptoAssetCode | string; assetLabel: string; investedUsd: number | string; investedArs: number | string; quantity: number | string | null; purchases: number };
+export type CryptoPerformance = {
+  capitalUsd: number | string; purchaseTotalUsd: number | string; saleProceedsUsd: number | string;
+  soldCostBasisUsd: number | string; realizedReturnPercent: number | string | null; salesCount: number;
+  evolution: Array<{ date: string; proceedsUsd: number | string; costBasisUsd: number | string; realizedProfitUsd: number | string; cumulativeProfitUsd: number | string }>;
+  assets: Array<{ assetCode: string; assetLabel: string; realizedProfitUsd: number | string; proceedsUsd: number | string; costBasisUsd: number | string }>;
+};
 export type CryptoSummary = {
   invested: FinanceAmount;
   available: FinanceAmount;
   realizedProfitUsd: number | string;
+  legacyBalanceEstimated?: boolean;
+  performance?: CryptoPerformance;
   positions: CryptoPosition[];
   investments: CryptoInvestment[];
   exchangeRate: ExchangeRate;

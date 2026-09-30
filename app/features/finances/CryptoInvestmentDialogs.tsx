@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from "react";
 import type { CryptoAssetCode, CryptoInvestment } from "../../lib/api/types";
-import { asNumber, formatARS, formatUSD, parseCryptoDecimal, parseCryptoPrice, parseUSDInput } from "../../lib/presentation";
+import { asNumber, formatUSD, parseCryptoDecimal, parseCryptoPrice, parseUSDInput } from "../../lib/presentation";
 import { Button, ConfirmDialog, Dialog, FormField, FormPanel, SelectField } from "../../ui/Primitives";
 
 export type CryptoInvestmentDraft = { date: string; assetCode: CryptoAssetCode; amountUsd: string; unitPriceUsd: string; note: string };
@@ -19,7 +19,7 @@ function unitPrice(value: number | string) {
 }
 
 type Props = {
-  rate: number;
+  availableUsd: number | null;
   investmentOpen: boolean;
   setInvestmentOpen: (open: boolean) => void;
   investmentDraft: CryptoInvestmentDraft;
@@ -48,7 +48,7 @@ export function CryptoInvestmentDialogs(props: Props) {
   const saleProceeds = parseUSDInput(props.saleDraft?.proceedsUsd ?? "");
   const saleUnitPrice = saleQuantity && saleProceeds ? saleProceeds / saleQuantity : null;
   const saleCost = saleQuantity && props.saleDraft?.investment.unitPriceUsd
-    ? saleQuantity * asNumber(props.saleDraft.investment.unitPriceUsd)
+    ? saleQuantity * asNumber(props.saleDraft.investment.remainingCostBasis.usd) / asNumber(props.saleDraft.investment.remainingQuantity)
     : null;
   const saleProfit = saleProceeds !== null && saleCost !== null ? saleProceeds - saleCost : null;
   const oldCost = asNumber(props.legacyPriceTarget?.amount.usd);
@@ -57,7 +57,7 @@ export function CryptoInvestmentDialogs(props: Props) {
 
   return <>
     {props.investmentOpen ? <Dialog ariaLabel="Registrar compra de cripto" onClose={() => props.setInvestmentOpen(false)}>
-      <FormPanel title="Registrar compra" description={props.rate ? `La inversión se convierte con ${formatARS(props.rate)} por USD y conserva el costo de entrada.` : "Consultando la cotización del dólar..."} onClose={() => props.setInvestmentOpen(false)} onSubmit={props.onSaveInvestment} eyebrow="NUEVO LOTE">
+      <FormPanel title="Registrar compra" description={props.availableUsd === null ? "Actualizando el disponible de Bitget..." : `Usá los dólares que ya tenés en Bitget. Disponible: ${formatUSD(props.availableUsd)}. La compra no mueve dinero desde Mercado Pago.`} onClose={() => props.setInvestmentOpen(false)} onSubmit={props.onSaveInvestment} eyebrow="NUEVO LOTE">
         <div className="form-grid crypto-form-grid">
           <label className="form-field" htmlFor="crypto-investment-date"><span>Fecha</span><input id="crypto-investment-date" type="date" value={props.investmentDraft.date} onChange={(event) => props.setInvestmentDraft({ ...props.investmentDraft, date: event.target.value })} required /></label>
           <SelectField label="Cripto" id="crypto-investment-asset" value={props.investmentDraft.assetCode} onChange={(value) => props.setInvestmentDraft({ ...props.investmentDraft, assetCode: value as CryptoAssetCode })} options={[{ value: "BTCUSDT", label: "BTC / USDT" }, { value: "SOLUSDT", label: "SOL / USDT" }, { value: "ETHUSDT", label: "ETH / USDT" }, { value: "PEPEUSDT", label: "PEPE / USDT" }]} />
@@ -67,7 +67,7 @@ export function CryptoInvestmentDialogs(props: Props) {
         {purchaseQuantity !== null && Number.isFinite(purchaseQuantity) ? <div className="crypto-conversion-preview"><span>Unidades que comprás</span><strong>{units(purchaseQuantity)}</strong><small>{formatUSD(amountUsd ?? 0)} invertidos · {unitPrice(purchasePrice ?? 0)} por unidad</small></div> : null}
         <FormField label="Nota (opcional)" value={props.investmentDraft.note} onChange={(note) => props.setInvestmentDraft({ ...props.investmentDraft, note })} placeholder="Ej. Compra inicial" multiline />
         {props.error ? <div className="inline-error" role="alert">{props.error}</div> : null}
-        <div className="form-actions"><Button variant="quiet" onClick={() => props.setInvestmentOpen(false)}>Cancelar</Button><Button type="submit" disabled={amountUsd === null || amountUsd <= 0 || purchasePrice === null || purchasePrice <= 0 || props.pending}>{props.pending ? "Guardando..." : "Guardar compra"} <span aria-hidden="true">↗</span></Button></div>
+        <div className="form-actions"><Button variant="quiet" onClick={() => props.setInvestmentOpen(false)}>Cancelar</Button><Button type="submit" disabled={amountUsd === null || amountUsd <= 0 || purchasePrice === null || purchasePrice <= 0 || props.availableUsd === null || amountUsd > props.availableUsd || props.pending}>{props.pending ? "Guardando..." : "Guardar compra"} <span aria-hidden="true">↗</span></Button></div>
       </FormPanel>
     </Dialog> : null}
 
@@ -84,8 +84,8 @@ export function CryptoInvestmentDialogs(props: Props) {
       </FormPanel>
     </Dialog> : null}
 
-    {props.legacyPriceTarget ? <Dialog ariaLabel={`Completar precio de compra ${props.legacyPriceTarget.assetLabel}`} onClose={() => props.setLegacyPriceTarget(null)}>
-      <FormPanel title="Completar compra histórica" description={`Compra de ${formatUSD(oldCost)} del ${props.legacyPriceTarget.date}. Indicá el precio unitario al que la compraste para calcular sus unidades.`} onClose={() => props.setLegacyPriceTarget(null)} onSubmit={props.onSaveLegacyPrice} eyebrow="PRECIO HISTÓRICO">
+    {props.legacyPriceTarget ? <Dialog ariaLabel={`Editar precio de compra ${props.legacyPriceTarget.assetLabel}`} onClose={() => props.setLegacyPriceTarget(null)}>
+      <FormPanel title="Precio de compra" description={`Compra de ${formatUSD(oldCost)} del ${props.legacyPriceTarget.date}. Indicá el precio unitario real para calcular sus unidades. El importe invertido se conserva.`} onClose={() => props.setLegacyPriceTarget(null)} onSubmit={props.onSaveLegacyPrice} eyebrow="PRECIO HISTÓRICO">
         <label className="form-field" htmlFor="crypto-legacy-price"><span>Precio de compra por unidad (USD)</span><input id="crypto-legacy-price" inputMode="decimal" value={props.legacyUnitPrice} onChange={(event) => props.setLegacyUnitPrice(event.target.value)} placeholder="Precio histórico" required /></label>
         {oldPrice !== null && oldPrice > 0 ? <div className="crypto-conversion-preview"><span>Unidades que se calcularán</span><strong>{units(oldCost / oldPrice)}</strong><small>{unitPrice(oldPrice)} por unidad</small></div> : null}
         {props.error ? <div className="inline-error" role="alert">{props.error}</div> : null}
