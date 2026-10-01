@@ -33,10 +33,12 @@ export function CalendarView({ config, onOpenTask }: { config: ApiConfig; onOpen
   const [draft, setDraft] = useState({ date: todayIso(), description: "", categoryCode: "", projectCode: "personal" });
   const data = useCalendarData(month, type, categoryKey, from, to, projectCode);
   const mutation = useMutationError();
-  const calendarCategories = config.categories.filter((item) => item.active !== false || `${item.projectCode}:${item.code}` === categoryKey);
-  const draftCategories = config.categories.filter((item) => item.projectCode === draft.projectCode && (item.active !== false || item.code === draft.categoryCode));
   const events = data.data?.events ?? [];
   const tasks = data.data?.tasks ?? [];
+  const calendarCategories = config.categories.filter((item) => item.active !== false || `${item.projectCode}:${item.code}` === categoryKey);
+  const draftCategories = config.categories.filter((item) => item.projectCode === draft.projectCode && (item.active !== false || item.code === draft.categoryCode));
+  const currentEventCategory = events.find((event) => event.id === editing?.id)?.category;
+  if (currentEventCategory && editing?.projectCode === draft.projectCode && currentEventCategory.code === draft.categoryCode && !draftCategories.some((item) => item.code === currentEventCategory.code)) draftCategories.push({ ...currentEventCategory, projectCode: draft.projectCode });
   const totalElements = data.data?.totalElements ?? 0;
   const startNew = (date = selectedDate) => { const nextProject = projectCode === "all" ? config.projects.find((item) => item.active !== false)?.code ?? "personal" : projectCode; setEditing(null); setDraft({ date, description: "", categoryCode: config.categories.find((item) => item.projectCode === nextProject && item.active !== false)?.code ?? "", projectCode: nextProject }); mutation.clearError(); setComposerOpen(true); };
   const startEdit = (event: CalendarEvent) => { setEditing(event); setDraft({ date: event.date, description: event.description, categoryCode: event.category.code, projectCode: event.projectCode }); mutation.clearError(); setComposerOpen(true); };
