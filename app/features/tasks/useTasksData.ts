@@ -14,8 +14,10 @@ type TaskBoardData = {
 
 function taskQuery(categoryCode: string, projectCode: string, status: TaskStatus, page: number, sort: string, completedAfter?: string, completedBefore?: string, size = PAGE_SIZE) {
   const query = new URLSearchParams({ status, page: String(page), size: String(size), sort });
-  if (categoryCode !== "all") query.set("categoryCode", categoryCode);
-  if (projectCode !== "all") query.set("projectCode", projectCode);
+  const [categoryProject, scopedCategory] = categoryCode === "all" ? ["all", "all"] : categoryCode.split(":", 2);
+  if (scopedCategory !== "all") query.set("categoryCode", scopedCategory);
+  const effectiveProject = categoryProject !== "all" ? categoryProject : projectCode;
+  if (effectiveProject !== "all") query.set("projectCode", effectiveProject);
   if (completedAfter) query.set("completedAfter", completedAfter);
   if (completedBefore) query.set("completedBefore", completedBefore);
   return query;

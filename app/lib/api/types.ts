@@ -9,8 +9,10 @@ export type PageResponse<T> = {
 };
 
 export type ApiOption = {
+  id?: string;
   code: string;
   label: string;
+  projectCode?: string;
   shortLabel?: string;
   emoji?: string;
   icon?: string;
@@ -25,13 +27,11 @@ export type ApiConfig = {
   dayStatuses: ApiOption[];
   dayFeelings: ApiOption[];
   financeItems: ApiOption[];
-  noteCategories: ApiOption[];
-  eventCategories: ApiOption[];
-  taskCategories: ApiOption[];
+  categories: ApiOption[];
   projects: ApiOption[];
 };
 
-export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "note-categories" | "event-categories" | "task-categories" | "projects";
+export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "categories" | "projects";
 export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
 
 export type AuthUser = {
@@ -69,7 +69,7 @@ export type CalendarEvent = {
   projectCode: string;
 };
 
-export type NoteCategory = { code: string; label?: string };
+export type NoteCategory = ApiOption;
 export type Note = {
   id: string;
   title: string;

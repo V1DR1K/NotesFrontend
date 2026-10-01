@@ -543,6 +543,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .settings-group-heading .button { min-height: 36px; padding: 0 12px; font-size: 10px; }
 .settings-fixed-label { padding: 7px 8px; color: var(--section-accent); border: 1px solid var(--line); font: 8px var(--font-mono); letter-spacing: .1em; }
 .settings-list { display: grid; gap: 1px; margin-top: 22px; border-top: 1px solid var(--line); }
+.settings-category-project { margin-top: 16px; }
+.settings-category-project:first-child { margin-top: 0; }
+.settings-category-project h3 { margin: 0; padding: 0 0 7px; color: var(--section-accent); font: 9px var(--font-mono); letter-spacing: .1em; text-transform: uppercase; }
 .settings-row { display: flex; align-items: center; gap: 11px; min-width: 0; padding: 11px 0; border-bottom: 1px solid var(--line); }
 .settings-row-inactive { opacity: .5; }
 .settings-option-mark { display: grid; place-items: center; width: 30px; min-width: 30px; height: 30px; color: var(--section-contrast); background: var(--section-accent); font-size: 14px; }

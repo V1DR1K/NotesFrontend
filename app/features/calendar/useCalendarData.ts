@@ -21,23 +21,25 @@ const emptyPage = <T,>(): PageResponse<T> => ({
   last: true,
 });
 
-export function useCalendarData(month: string, type: CalendarItemType, eventCategoryCode: string, taskCategoryCode: string, from: string, to: string, projectCode = "all") {
+export function useCalendarData(month: string, type: CalendarItemType, categoryKey: string, from: string, to: string, projectCode = "all") {
   const monthRange = monthBounds(month);
   const queryFrom = from && from > monthRange.from ? from : monthRange.from;
   const queryTo = to && to < monthRange.to ? to : monthRange.to;
   const emptyRange = queryFrom > queryTo;
-  const key = `calendar:${month}:${type}:${eventCategoryCode}:${taskCategoryCode}:${from}:${to}:${projectCode}`;
+  const [categoryProject, categoryCode] = categoryKey === "all" ? ["all", "all"] : categoryKey.split(":", 2);
+  const effectiveProject = categoryProject !== "all" ? categoryProject : projectCode;
+  const key = `calendar:${month}:${type}:${categoryKey}:${from}:${to}:${projectCode}`;
 
   return useApiQuery<CalendarData>(key, async (signal) => {
     if (emptyRange) return { events: [], tasks: [], totalElements: 0 };
 
     const eventQuery = new URLSearchParams({ from: queryFrom, to: queryTo, page: "0", size: "100", sort: "date,asc" });
-    if (eventCategoryCode !== "all") eventQuery.set("categoryCode", eventCategoryCode);
-    if (projectCode !== "all") eventQuery.set("projectCode", projectCode);
+    if (categoryCode !== "all") eventQuery.set("categoryCode", categoryCode);
+    if (effectiveProject !== "all") eventQuery.set("projectCode", effectiveProject);
 
     const taskQuery = new URLSearchParams({ from: queryFrom, to: queryTo, page: "0", size: "100", sort: "dueDate,asc" });
-    if (taskCategoryCode !== "all") taskQuery.set("categoryCode", taskCategoryCode);
-    if (projectCode !== "all") taskQuery.set("projectCode", projectCode);
+    if (categoryCode !== "all") taskQuery.set("categoryCode", categoryCode);
+    if (effectiveProject !== "all") taskQuery.set("projectCode", effectiveProject);
 
     const [events, tasks] = await Promise.all([
       type === "tasks" ? Promise.resolve(emptyPage<CalendarEvent>()) : api.events(eventQuery, signal),
