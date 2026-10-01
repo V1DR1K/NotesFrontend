@@ -164,8 +164,10 @@ function optionList(value: unknown): ApiOption[] {
     const code = String(record.code ?? record.value ?? record.id ?? "");
     if (!code) throw new ApiError("La respuesta de configuración contiene una opción inválida.", 502);
     return {
+      id: record.id ? String(record.id) : undefined,
       code,
       label: String(record.label ?? record.name ?? record.displayName ?? code),
+      projectCode: record.projectCode ? String(record.projectCode) : undefined,
       shortLabel: record.shortLabel ? String(record.shortLabel) : undefined,
       emoji: record.emoji ? String(record.emoji) : undefined,
       icon: record.icon ? String(record.icon) : undefined,
@@ -179,7 +181,7 @@ function optionList(value: unknown): ApiOption[] {
 function option(value: unknown): ApiOption | undefined {
   const record = asRecord(value);
   const code = String(record.code ?? record.value ?? "");
-  return code ? { code, label: String(record.label ?? code), shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined, sortOrder: Number(record.sortOrder ?? 0), active: record.active !== false, financeType: financeType(record.financeType) } : undefined;
+  return code ? { id: record.id ? String(record.id) : undefined, code, label: String(record.label ?? code), projectCode: record.projectCode ? String(record.projectCode) : undefined, shortLabel: record.shortLabel ? String(record.shortLabel) : undefined, emoji: record.emoji ? String(record.emoji) : undefined, icon: record.icon ? String(record.icon) : undefined, sortOrder: Number(record.sortOrder ?? 0), active: record.active !== false, financeType: financeType(record.financeType) } : undefined;
 }
 
 function normalizeDay(value: unknown): DayEntry {
@@ -473,14 +475,15 @@ export const api = {
   changePassword: (body: { currentPassword: string; newPassword: string }) => request<unknown>("/auth/change-password", { method: "PUT", body }),
   config: async (signal?: AbortSignal): Promise<ApiConfig> => {
     const results = await Promise.allSettled([
-      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/note-categories", { signal }), request<unknown>("/config/event-categories", { signal }), request<unknown>("/config/task-categories", { signal }), request<unknown>("/config/projects", { signal }),
+      request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/categories", { signal }), request<unknown>("/config/projects", { signal }),
     ]);
     const options = (result: PromiseSettledResult<unknown>) => {
       if (result.status !== "fulfilled") return [];
       try { return optionList(result.value); } catch { return []; }
     };
-    if (results[6].status === "rejected") throw results[6].reason;
-    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), noteCategories: options(results[3]), eventCategories: options(results[4]), taskCategories: options(results[5]), projects: options(results[6]) };
+    if (results[3].status === "rejected") throw results[3].reason;
+    if (results[4].status === "rejected") throw results[4].reason;
+    return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), categories: options(results[3]), projects: options(results[4]) };
   },
   createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
@@ -488,6 +491,9 @@ export const api = {
   },
   updateConfigOption: (kind: ConfigKind, code: string, body: { label?: string; emoji?: string; sortOrder?: number; active?: boolean; financeType?: string }) => patch<unknown>(`/config/${kind}/${encodeURIComponent(code)}`, body),
   deleteConfigOption: (kind: ConfigKind, code: string) => del(`/config/${kind}/${encodeURIComponent(code)}`),
+  createCategory: (body: { code: string; label: string; sortOrder: number; active: boolean; projectCode: string }) => post<unknown>("/config/categories", body),
+  updateCategory: (id: string, body: { label?: string; sortOrder?: number; active?: boolean; projectCode?: string }) => patch<unknown>(`/config/categories/${encodeURIComponent(id)}`, body),
+  deleteCategory: (id: string) => del(`/config/categories/${encodeURIComponent(id)}`),
   search: (query: string, signal?: AbortSignal) => get<unknown>(`/search?q=${encodeURIComponent(query)}`, { signal }).then(normalizeSearchResults),
   dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
   tasks: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/tasks?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeTask)),

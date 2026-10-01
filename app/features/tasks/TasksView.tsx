@@ -65,7 +65,8 @@ function TaskCard({ task, projectLabel, onEdit, onDelete, onStatusChange, onPoin
 }
 
 export function TasksView({ config, focusId, editId, projectCode = "all", nested = false }: { config: ApiConfig; focusId?: string | null; editId?: string | null; projectCode?: string; nested?: boolean }) {
-  const [categoryCode, setCategoryCode] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState({ projectCode, value: "all" });
+  const categoryCode = categoryFilter.projectCode === projectCode ? categoryFilter.value : "all";
   const data = useTasksData(categoryCode, projectCode);
   const { reload: reloadTasks } = data;
   const [previousVisibility, setPreviousVisibility] = useState<{ categoryCode: string; visible: boolean } | null>(null);
@@ -77,7 +78,8 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
-  const [draft, setDraft] = useState<Draft>(emptyDraft(config.taskCategories[0]?.code ?? ""));
+  const firstProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode;
+  const [draft, setDraft] = useState<Draft>(() => emptyDraft(config.categories.find((option) => option.projectCode === firstProject && option.active !== false)?.code ?? "", firstProject));
   const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<TaskStatus | null>(null);
@@ -91,7 +93,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     const serverTasks = data.data?.content ?? [];
     const visibleServer = [...serverTasks, ...data.previousTasks].filter((task) => !deletedIds.includes(task.id)).map((task) => overrides[task.id] ?? task).filter((task) => projectCode === "all" || task.projectCode === projectCode);
     const serverIds = new Set(serverTasks.map((task) => task.id));
-    const localCreated = createdTasks.map((task) => overrides[task.id] ?? task).filter((task) => !serverIds.has(task.id) && (categoryCode === "all" || task.category.code === categoryCode) && (projectCode === "all" || task.projectCode === projectCode));
+    const localCreated = createdTasks.map((task) => overrides[task.id] ?? task).filter((task) => !serverIds.has(task.id) && (categoryCode === "all" || `${task.projectCode}:${task.category.code}` === categoryCode) && (projectCode === "all" || task.projectCode === projectCode));
     return [...visibleServer, ...localCreated];
   }, [categoryCode, projectCode, createdTasks, data.data, data.previousTasks, deletedIds, overrides]);
 
@@ -122,7 +124,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const visibleStatuses = completedColumnVisible ? STATUSES : STATUSES.slice(0, 2);
   const totalTaskCount = tasks.length + (data.previousTasks.length ? 0 : previousCount);
 
-  const openCreate = () => { mutation.clearError(); setEditing(null); setDraft(emptyDraft(config.taskCategories.find((option) => option.active !== false)?.code ?? "", projectCode === "all" ? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode)); setComposerOpen(true); };
+  const openCreate = () => { mutation.clearError(); setEditing(null); const nextProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode; setDraft(emptyDraft(config.categories.find((option) => option.projectCode === nextProject && option.active !== false)?.code ?? "", nextProject)); setComposerOpen(true); };
   const openEdit = useCallback((task: Task) => { clearError(); setEditing(task); setDraft({ title: task.title, detail: task.detail ?? "", categoryCode: task.category.code, status: task.status, dueDate: task.dueDate ?? "", projectCode: task.projectCode }); setComposerOpen(true); }, [clearError]);
   useEffect(() => {
     if (!editId || !data.data || lastEditId.current === editId) return;
@@ -218,7 +220,10 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     return () => { window.removeEventListener("pointermove", handlePointerMove); window.removeEventListener("pointerup", handlePointerUp); window.removeEventListener("pointercancel", clearDrag); };
   }, [clearDrag, dropTarget, mutation, moveTask]);
 
-  const activeCategories = config.taskCategories.filter((option) => option.active !== false);
+  const activeCategories = config.categories.filter((option) => option.active !== false && (projectCode === "all" || option.projectCode === projectCode));
+  const draftCategories = config.categories.filter((option) => option.projectCode === draft.projectCode && (option.active !== false || option.code === draft.categoryCode));
+  if (editing && editing.projectCode === draft.projectCode && editing.category.code === draft.categoryCode && !draftCategories.some((option) => option.code === editing.category.code)) draftCategories.push({ ...editing.category, projectCode: draft.projectCode });
+  const changeDraftProject = (nextProject: string) => setDraft((current) => ({ ...current, projectCode: nextProject, categoryCode: config.categories.some((option) => option.projectCode === nextProject && option.code === current.categoryCode && option.active !== false) ? current.categoryCode : "" }));
   const totalOpen = tasksByStatus.PENDING.length + tasksByStatus.IN_PROGRESS.length;
   const togglePreviousTasks = async () => {
     if (showPreviousTasks) {
@@ -230,7 +235,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
 
   return <div className="view view-tasks">
     <SectionHero section="tasks" headingLevel={nested ? 2 : 1} onAction={openCreate} rightSlot={<div className="tasks-summary-card"><span className="eyebrow">TAREAS ABIERTAS</span><strong>{totalOpen}</strong><span>{tasksByStatus.PENDING.length} pendientes · {tasksByStatus.IN_PROGRESS.length} en proceso</span></div>} />
-    <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}><FilterPills active={categoryCode} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: option.code, label: option.label }))]} onChange={setCategoryCode} /></ModuleToolbar>
+    <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}><FilterPills active={categoryCode} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: `${option.projectCode}:${option.code}`, label: projectCode === "all" ? `${option.label} · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : option.label }))]} onChange={(value) => setCategoryFilter({ projectCode, value })} /></ModuleToolbar>
     {mutation.error ? <div className="inline-error task-global-error" role="alert">{mutation.error.message || "No se pudo actualizar la tarea. Probá de nuevo."}</div> : null}
     {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : !tasks.length && previousCount === 0 ? <EmptyState title="Todavía no hay tareas" description="Creá la primera y movela entre columnas a medida que avance." action="Crear tarea" onAction={openCreate} /> : <section className={`tasks-board ${completedColumnVisible ? "" : "tasks-board-two-columns"}`} aria-label="Tablero de tareas">
       {visibleStatuses.map((status) => {
@@ -250,7 +255,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
       })}
     </section>}
     {draggingId ? <div className="task-drag-ghost" style={{ left: pointer.x + 14, top: pointer.y + 14 }} aria-hidden="true">{tasks.find((task) => task.id === draggingId)?.title}</div> : null}
-    {composerOpen ? <Dialog ariaLabel={editing ? "Editar tarea" : "Crear tarea"} onClose={closeComposer}><FormPanel eyebrow={editing ? "EDITAR TAREA" : "NUEVA TAREA"} title={editing ? "Editar tarea" : "Crear tarea"} description="Las tareas se guardan en tu espacio y podés moverlas cuando cambien de estado." onClose={closeComposer} onSubmit={() => void saveTask()}><div className="form-grid task-form-grid"><FormField label="Tarea" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Entregar el trabajo práctico" /><SelectField label="Proyecto" value={draft.projectCode} onChange={(value) => setDraft({ ...draft, projectCode: value })} options={config.projects.filter((item) => item.active !== false || item.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /><SelectField label="Categoría" value={draft.categoryCode} onChange={(value) => setDraft({ ...draft, categoryCode: value })} options={activeCategories.map((option) => ({ value: option.code, label: option.label }))} disabled={!activeCategories.length} /><FormField label="Detalle (opcional)" value={draft.detail} onChange={(detail) => setDraft({ ...draft, detail })} placeholder="Agregá contexto o el próximo paso" multiline /><SelectField label="Estado" value={draft.status} onChange={(value) => setDraft({ ...draft, status: value as TaskStatus })} options={STATUSES.map((status) => ({ value: status, label: STATUS_META[status].label }))} /><label className="form-field"><span>Fecha límite (opcional)</span><input type="date" value={draft.dueDate} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })} /></label></div>{mutation.error ? <div className="inline-error" role="alert">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeComposer} disabled={mutation.pending}>Cancelar</Button><Button type="submit" disabled={mutation.pending || !draft.title.trim() || !draft.categoryCode || !draft.projectCode}>{mutation.pending ? "Guardando..." : editing ? "Guardar cambios" : "Crear tarea"}<span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
+    {composerOpen ? <Dialog ariaLabel={editing ? "Editar tarea" : "Crear tarea"} onClose={closeComposer}><FormPanel eyebrow={editing ? "EDITAR TAREA" : "NUEVA TAREA"} title={editing ? "Editar tarea" : "Crear tarea"} description="Las tareas se guardan en tu espacio y podés moverlas cuando cambien de estado." onClose={closeComposer} onSubmit={() => void saveTask()}><div className="form-grid task-form-grid"><FormField label="Tarea" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Entregar el trabajo práctico" /><SelectField label="Proyecto" value={draft.projectCode} onChange={changeDraftProject} options={config.projects.filter((item) => item.active !== false || item.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /><SelectField label="Categoría" value={draft.categoryCode} onChange={(value) => setDraft({ ...draft, categoryCode: value })} options={draftCategories.map((option) => ({ value: option.code, label: option.label }))} disabled={!draftCategories.length} /><FormField label="Detalle (opcional)" value={draft.detail} onChange={(detail) => setDraft({ ...draft, detail })} placeholder="Agregá contexto o el próximo paso" multiline /><SelectField label="Estado" value={draft.status} onChange={(value) => setDraft({ ...draft, status: value as TaskStatus })} options={STATUSES.map((status) => ({ value: status, label: STATUS_META[status].label }))} /><label className="form-field"><span>Fecha límite (opcional)</span><input type="date" value={draft.dueDate} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })} /></label></div>{mutation.error ? <div className="inline-error" role="alert">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeComposer} disabled={mutation.pending}>Cancelar</Button><Button type="submit" disabled={mutation.pending || !draft.title.trim() || !draft.categoryCode || !draft.projectCode}>{mutation.pending ? "Guardando..." : editing ? "Guardar cambios" : "Crear tarea"}<span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
     {pendingDelete ? <ConfirmDialog title={`¿Eliminar ${pendingDelete.title}?`} description="La tarea se quitará del tablero, pero la acción no modifica tus categorías." onCancel={() => setPendingDelete(null)} onConfirm={() => void removeTask()} /> : null}
   </div>;
 }
