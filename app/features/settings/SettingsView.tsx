@@ -20,6 +20,18 @@ const GROUPS: ConfigGroup[] = [
 
 const emptyDraft = (projectCode = "personal"): Draft => ({ code: "", label: "", emoji: "", sortOrder: "0", active: true, financeType: "EXPENSE", projectCode });
 
+function categoryCodeFor(label: string, projectCode: string, categories: ApiOption[]) {
+  const base = label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80).replace(/_+$/g, "") || "categoria";
+  const existing = new Set(categories.filter((category) => category.projectCode === projectCode).map((category) => category.code.toLowerCase()));
+  let code = base;
+  let suffix = 2;
+  while (existing.has(code.toLowerCase())) {
+    const tail = `_${suffix++}`;
+    code = `${base.slice(0, 80 - tail.length).replace(/_+$/g, "")}${tail}`;
+  }
+  return code;
+}
+
 export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; onConfigChanged: (config: ApiConfig) => void }) {
   const [editing, setEditing] = useState<{ group: ConfigGroup; option?: ApiOption } | null>(null);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
@@ -32,14 +44,14 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
   const openEdit = (group: ConfigGroup, option: ApiOption) => { setError(""); setDraft({ code: option.code, label: option.label, emoji: option.emoji ?? "", sortOrder: String(option.sortOrder ?? 0), active: option.active !== false, financeType: option.financeType ?? "EXPENSE", projectCode: option.projectCode ?? "personal" }); setEditing({ group, option }); };
   const closeEditor = () => { if (!saving) setEditing(null); };
   const save = async () => {
-    if (!editing || !draft.label.trim() || (!editing.option && !draft.code.trim())) return;
+    if (!editing || !draft.label.trim() || (!editing.option && editing.group.kind !== "categories" && !draft.code.trim())) return;
     setSaving(true);
     setError("");
     try {
       const financeType = editing.group.kind === "finance-items" ? draft.financeType : undefined;
       if (editing.group.kind === "categories") {
         if (editing.option) await api.updateCategory(editing.option.id!, { label: draft.label.trim(), sortOrder: Number(draft.sortOrder) || 0, active: draft.active, projectCode: draft.projectCode });
-        else await api.createCategory({ code: draft.code.trim().toLowerCase().replace(/\s+/g, "_"), label: draft.label.trim(), sortOrder: Number(draft.sortOrder) || 0, active: draft.active, projectCode: draft.projectCode });
+        else await api.createCategory({ code: categoryCodeFor(draft.label, draft.projectCode, config.categories), label: draft.label.trim(), sortOrder: Number(draft.sortOrder) || 0, active: draft.active, projectCode: draft.projectCode });
       } else if (editing.option) await api.updateConfigOption(editing.group.kind, editing.option.code, { label: draft.label.trim(), emoji: editing.group.emoji ? draft.emoji.trim() : undefined, sortOrder: Number(draft.sortOrder) || 0, active: draft.active, financeType });
       else await api.createConfigOption(editing.group.kind, { code: draft.code.trim().toLowerCase().replace(/\s+/g, "_"), label: draft.label.trim(), emoji: editing.group.emoji ? draft.emoji.trim() : undefined, sortOrder: Number(draft.sortOrder) || 0, active: draft.active, financeType });
        invalidateApiQueryCache(); onConfigChanged(await api.config());
@@ -63,11 +75,14 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
       {GROUPS.map((group) => {
        const options = [...(config[group.key] as ApiOption[])].sort((left, right) => (left.projectCode ?? "").localeCompare(right.projectCode ?? "") || (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.label.localeCompare(right.label));
         const protectedOption = (option: ApiOption) => group.kind === "finance-items" && option.code.toLowerCase() === "transferencia";
-        const renderOption = (option: ApiOption) => <div className={`settings-row ${option.active === false ? "settings-row-inactive" : ""}`} key={option.id ?? option.code}>
+        const renderOption = (option: ApiOption) => {
+          const metadata = [group.kind === "categories" ? null : option.code, option.financeType ? option.financeType === "INCOME" ? "ingreso" : option.financeType === "EXPENSE" ? "egreso" : "transferencia" : null, option.active === false ? "inactivo" : null].filter(Boolean).join(" · ");
+          return <div className={`settings-row ${option.active === false ? "settings-row-inactive" : ""}`} key={option.id ?? option.code}>
           <div className="settings-option-mark">{group.emoji && option.emoji ? option.emoji : <span>◆</span>}</div>
-          <div className="settings-option-copy"><strong>{option.label}</strong><span>{option.code}{group.kind === "categories" ? ` · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : ""}{option.financeType ? ` · ${option.financeType === "INCOME" ? "ingreso" : option.financeType === "EXPENSE" ? "egreso" : "transferencia"}` : ""}{option.active === false ? " · inactivo" : ""}</span></div>
+          <div className="settings-option-copy"><strong>{option.label}</strong>{metadata ? <span>{metadata}</span> : null}</div>
           {!group.fixed && !protectedOption(option) ? <div className="settings-row-actions"><IconButton label={`Editar ${option.label}`} onClick={() => openEdit(group, option)}>✎</IconButton>{!(group.kind === "projects" && option.code.toLowerCase() === "personal") ? <IconButton label={`Eliminar ${option.label}`} onClick={() => { setError(""); setPendingDelete({ group, option }); }} variant="danger">×</IconButton> : null}</div> : null}
         </div>;
+        };
         const categoryGroups = group.kind === "categories" ? config.projects.map((project) => ({ project, categories: options.filter((option) => option.projectCode === project.code) })).filter((item) => item.categories.length) : [];
         return <section className="settings-group" key={group.kind}>
            <div className="settings-group-heading"><div><span className="eyebrow">CONFIGURACIÓN</span><h2>{group.label}</h2><p>{group.description}</p></div>{group.fixed ? <span className="settings-fixed-label">FIJO</span> : <Button variant="ghost" onClick={() => openCreate(group)}>+ Agregar</Button>}</div>
@@ -78,8 +93,8 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
       })}
     </div>
     {editing ? <Dialog ariaLabel={`${editing.option ? "Editar" : "Agregar"} ${editing.group.label.toLowerCase()}`} onClose={closeEditor}><FormPanel eyebrow={editing.option ? "EDITAR OPCIÓN" : "NUEVA OPCIÓN"} onSubmit={() => void save()} title={editing.option ? `Editar ${editing.group.label.toLowerCase()}` : `Agregar ${editing.group.label.toLowerCase()}`} description={editing.group.kind === "categories" && editing.option ? "Al cambiar el proyecto, las tareas, notas y eventos de esta categoría también se moverán." : "Este cambio se verá en los formularios y filtros de tu cuaderno."} onClose={closeEditor}>
-       <div className="settings-form-grid">{editing.group.kind === "categories" ? <SelectField label="Proyecto" value={draft.projectCode} onChange={(projectCode) => setDraft({ ...draft, projectCode })} options={config.projects.filter((project) => project.active !== false || project.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /> : null}<FormField label="Nombre visible" value={draft.label} onChange={(label) => setDraft({ ...draft, label })} placeholder="Ej. Reuniones" />{editing.option ? <label className="form-field" htmlFor="settings-code"><span>Código</span><input id="settings-code" value={draft.code} readOnly /></label> : <FormField label="Código interno" value={draft.code} onChange={(code) => setDraft({ ...draft, code })} placeholder="Ej. reuniones" />}{editing.group.kind === "finance-items" ? <SelectField label="Tipo de movimiento" id="settings-finance-type" value={draft.financeType} onChange={(financeType) => setDraft({ ...draft, financeType: financeType as FinanceItemType })} options={[{ value: "INCOME", label: "Ingreso" }, { value: "EXPENSE", label: "Egreso" }, { value: "TRANSFER", label: "Transferencia" }]} disabled={editing.option?.code.toLowerCase() === "transferencia"} /> : null}{editing.group.emoji ? <FormField label="Símbolo" value={draft.emoji} onChange={(emoji) => setDraft({ ...draft, emoji })} placeholder="Ej. ✦" /> : null}<label className="form-field" htmlFor="settings-order"><span>Orden</span><input id="settings-order" type="number" inputMode="numeric" min="0" step="1" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: event.target.value })} /></label><label className="settings-active"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} disabled={editing.option?.code.toLowerCase() === "transferencia" || (editing.group.kind === "projects" && editing.option?.code.toLowerCase() === "personal")} /><span>Disponible en formularios y filtros</span></label></div>
-      {error ? <div className="inline-error" role="alert">{error}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeEditor} disabled={saving}>Cancelar</Button><Button onClick={() => void save()} disabled={saving || !draft.label.trim() || (!editing.option && !draft.code.trim()) || (editing.group.kind === "categories" && !draft.projectCode)}>{saving ? "Guardando..." : "Guardar opción"}<span aria-hidden="true">↗</span></Button></div>
+       <div className="settings-form-grid">{editing.group.kind === "categories" ? <SelectField label="Proyecto" value={draft.projectCode} onChange={(projectCode) => setDraft({ ...draft, projectCode })} options={config.projects.filter((project) => project.active !== false || project.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /> : null}<FormField label="Nombre visible" value={draft.label} onChange={(label) => setDraft({ ...draft, label })} placeholder="Ej. Reuniones" />{editing.group.kind !== "categories" ? editing.option ? <label className="form-field" htmlFor="settings-code"><span>Código</span><input id="settings-code" value={draft.code} readOnly /></label> : <FormField label="Código interno" value={draft.code} onChange={(code) => setDraft({ ...draft, code })} placeholder="Ej. reuniones" /> : null}{editing.group.kind === "finance-items" ? <SelectField label="Tipo de movimiento" id="settings-finance-type" value={draft.financeType} onChange={(financeType) => setDraft({ ...draft, financeType: financeType as FinanceItemType })} options={[{ value: "INCOME", label: "Ingreso" }, { value: "EXPENSE", label: "Egreso" }, { value: "TRANSFER", label: "Transferencia" }]} disabled={editing.option?.code.toLowerCase() === "transferencia"} /> : null}{editing.group.emoji ? <FormField label="Símbolo" value={draft.emoji} onChange={(emoji) => setDraft({ ...draft, emoji })} placeholder="Ej. ✦" /> : null}<label className="form-field" htmlFor="settings-order"><span>Orden</span><input id="settings-order" type="number" inputMode="numeric" min="0" step="1" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: event.target.value })} /></label><label className="settings-active"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} disabled={editing.option?.code.toLowerCase() === "transferencia" || (editing.group.kind === "projects" && editing.option?.code.toLowerCase() === "personal")} /><span>Disponible en formularios y filtros</span></label></div>
+      {error ? <div className="inline-error" role="alert">{error}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeEditor} disabled={saving}>Cancelar</Button><Button onClick={() => void save()} disabled={saving || !draft.label.trim() || (!editing.option && editing.group.kind !== "categories" && !draft.code.trim()) || (editing.group.kind === "categories" && !draft.projectCode)}>{saving ? "Guardando..." : "Guardar opción"}<span aria-hidden="true">↗</span></Button></div>
     </FormPanel></Dialog> : null}
     {pendingDelete ? <ConfirmDialog title={`¿Eliminar ${pendingDelete.option.label}?`} description={pendingDelete.group.kind === "projects" ? "Podés eliminar este proyecto cuando ya no tenga tareas, notas, archivos ni eventos asociados." : "La opción dejará de aparecer en formularios y filtros. Los registros históricos conservarán su código."} onCancel={() => setPendingDelete(null)} onConfirm={() => void remove()} /> : null}
   </div>;
