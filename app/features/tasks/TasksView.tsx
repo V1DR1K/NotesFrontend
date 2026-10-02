@@ -5,6 +5,7 @@ import type { ApiConfig, Task, TaskStatus } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { dateLabel } from "../../lib/presentation";
+import { sortCategoryOptions } from "../../lib/categories";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { useTasksData } from "./useTasksData";
 
@@ -79,7 +80,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const [composerOpen, setComposerOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
   const firstProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode;
-  const [draft, setDraft] = useState<Draft>(() => emptyDraft(config.categories.find((option) => option.projectCode === firstProject && option.active !== false)?.code ?? "", firstProject));
+  const [draft, setDraft] = useState<Draft>(() => emptyDraft(sortCategoryOptions(config.categories).find((option) => option.projectCode === firstProject && option.active !== false)?.code ?? "", firstProject));
   const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<TaskStatus | null>(null);
@@ -124,7 +125,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const visibleStatuses = completedColumnVisible ? STATUSES : STATUSES.slice(0, 2);
   const totalTaskCount = tasks.length + (data.previousTasks.length ? 0 : previousCount);
 
-  const openCreate = () => { mutation.clearError(); setEditing(null); const nextProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode; setDraft(emptyDraft(config.categories.find((option) => option.projectCode === nextProject && option.active !== false)?.code ?? "", nextProject)); setComposerOpen(true); };
+  const openCreate = () => { mutation.clearError(); setEditing(null); const nextProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode; setDraft(emptyDraft(sortCategoryOptions(config.categories).find((option) => option.projectCode === nextProject && option.active !== false)?.code ?? "", nextProject)); setComposerOpen(true); };
   const openEdit = useCallback((task: Task) => { clearError(); setEditing(task); setDraft({ title: task.title, detail: task.detail ?? "", categoryCode: task.category.code, status: task.status, dueDate: task.dueDate ?? "", projectCode: task.projectCode }); setComposerOpen(true); }, [clearError]);
   useEffect(() => {
     if (!editId || !data.data || lastEditId.current === editId) return;
@@ -220,9 +221,9 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     return () => { window.removeEventListener("pointermove", handlePointerMove); window.removeEventListener("pointerup", handlePointerUp); window.removeEventListener("pointercancel", clearDrag); };
   }, [clearDrag, dropTarget, mutation, moveTask]);
 
-  const activeCategories = config.categories.filter((option) => option.active !== false && (projectCode === "all" || option.projectCode === projectCode));
-  const draftCategories = config.categories.filter((option) => option.projectCode === draft.projectCode && (option.active !== false || option.code === draft.categoryCode));
-  if (editing && editing.projectCode === draft.projectCode && editing.category.code === draft.categoryCode && !draftCategories.some((option) => option.code === editing.category.code)) draftCategories.push({ ...editing.category, projectCode: draft.projectCode });
+  const activeCategories = sortCategoryOptions(config.categories.filter((option) => option.active !== false && (projectCode === "all" || option.projectCode === projectCode)));
+  let draftCategories = sortCategoryOptions(config.categories.filter((option) => option.projectCode === draft.projectCode && (option.active !== false || option.code === draft.categoryCode)));
+  if (editing && editing.projectCode === draft.projectCode && editing.category.code === draft.categoryCode && !draftCategories.some((option) => option.code === editing.category.code)) draftCategories = sortCategoryOptions([...draftCategories, { ...editing.category, projectCode: draft.projectCode }]);
   const changeDraftProject = (nextProject: string) => setDraft((current) => ({ ...current, projectCode: nextProject, categoryCode: config.categories.some((option) => option.projectCode === nextProject && option.code === current.categoryCode && option.active !== false) ? current.categoryCode : "" }));
   const totalOpen = tasksByStatus.PENDING.length + tasksByStatus.IN_PROGRESS.length;
   const togglePreviousTasks = async () => {
