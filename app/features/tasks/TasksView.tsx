@@ -6,7 +6,7 @@ import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { dateLabel } from "../../lib/presentation";
 import { sortCategoryOptions } from "../../lib/categories";
-import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
+import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { useTasksData } from "./useTasksData";
 
 const STATUS_META: Record<TaskStatus, { label: string; eyebrow: string }> = {
@@ -66,12 +66,14 @@ function TaskCard({ task, projectLabel, onEdit, onDelete, onStatusChange, onPoin
 }
 
 export function TasksView({ config, focusId, editId, projectCode = "all", nested = false }: { config: ApiConfig; focusId?: string | null; editId?: string | null; projectCode?: string; nested?: boolean }) {
-  const [categoryFilter, setCategoryFilter] = useState({ projectCode, value: "all" });
-  const categoryCode = categoryFilter.projectCode === projectCode ? categoryFilter.value : "all";
-  const data = useTasksData(categoryCode, projectCode);
+  const [projectFilterSelection, setProjectFilterSelection] = useState({ contextProjectCode: projectCode, value: projectCode });
+  const filterProjectCode = projectFilterSelection.contextProjectCode === projectCode ? projectFilterSelection.value : projectCode;
+  const [categoryFilter, setCategoryFilter] = useState({ contextProjectCode: projectCode, projectCode, value: "all" });
+  const categoryCode = categoryFilter.contextProjectCode === projectCode && categoryFilter.projectCode === filterProjectCode ? categoryFilter.value : "all";
+  const data = useTasksData(categoryCode, filterProjectCode);
   const { reload: reloadTasks } = data;
   const [previousVisibility, setPreviousVisibility] = useState<{ categoryCode: string; visible: boolean } | null>(null);
-  const showPreviousTasks = previousVisibility?.categoryCode === `${categoryCode}:${projectCode}` && previousVisibility.visible;
+  const showPreviousTasks = previousVisibility?.categoryCode === `${categoryCode}:${filterProjectCode}` && previousVisibility.visible;
   const mutation = useMutationError();
   const { clearError } = mutation;
   const [createdTasks, setCreatedTasks] = useState<Task[]>([]);
@@ -92,11 +94,11 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
 
   const tasks = useMemo(() => {
     const serverTasks = data.data?.content ?? [];
-    const visibleServer = [...serverTasks, ...data.previousTasks].filter((task) => !deletedIds.includes(task.id)).map((task) => overrides[task.id] ?? task).filter((task) => projectCode === "all" || task.projectCode === projectCode);
+    const visibleServer = [...serverTasks, ...data.previousTasks].filter((task) => !deletedIds.includes(task.id)).map((task) => overrides[task.id] ?? task).filter((task) => filterProjectCode === "all" || task.projectCode === filterProjectCode);
     const serverIds = new Set(serverTasks.map((task) => task.id));
-    const localCreated = createdTasks.map((task) => overrides[task.id] ?? task).filter((task) => !serverIds.has(task.id) && (categoryCode === "all" || `${task.projectCode}:${task.category.code}` === categoryCode) && (projectCode === "all" || task.projectCode === projectCode));
+    const localCreated = createdTasks.map((task) => overrides[task.id] ?? task).filter((task) => !serverIds.has(task.id) && (categoryCode === "all" || `${task.projectCode}:${task.category.code}` === categoryCode) && (filterProjectCode === "all" || task.projectCode === filterProjectCode));
     return [...visibleServer, ...localCreated];
-  }, [categoryCode, projectCode, createdTasks, data.data, data.previousTasks, deletedIds, overrides]);
+  }, [categoryCode, filterProjectCode, createdTasks, data.data, data.previousTasks, deletedIds, overrides]);
 
   useEffect(() => {
     if (!focusId) return;
@@ -221,22 +223,22 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     return () => { window.removeEventListener("pointermove", handlePointerMove); window.removeEventListener("pointerup", handlePointerUp); window.removeEventListener("pointercancel", clearDrag); };
   }, [clearDrag, dropTarget, mutation, moveTask]);
 
-  const activeCategories = sortCategoryOptions(config.categories.filter((option) => option.active !== false && (projectCode === "all" || option.projectCode === projectCode)));
+  const activeCategories = sortCategoryOptions(config.categories.filter((option) => option.active !== false && (filterProjectCode === "all" || option.projectCode === filterProjectCode)));
   let draftCategories = sortCategoryOptions(config.categories.filter((option) => option.projectCode === draft.projectCode && (option.active !== false || option.code === draft.categoryCode)));
   if (editing && editing.projectCode === draft.projectCode && editing.category.code === draft.categoryCode && !draftCategories.some((option) => option.code === editing.category.code)) draftCategories = sortCategoryOptions([...draftCategories, { ...editing.category, projectCode: draft.projectCode }]);
   const changeDraftProject = (nextProject: string) => setDraft((current) => ({ ...current, projectCode: nextProject, categoryCode: config.categories.some((option) => option.projectCode === nextProject && option.code === current.categoryCode && option.active !== false) ? current.categoryCode : "" }));
   const totalOpen = tasksByStatus.PENDING.length + tasksByStatus.IN_PROGRESS.length;
   const togglePreviousTasks = async () => {
     if (showPreviousTasks) {
-      setPreviousVisibility({ categoryCode: `${categoryCode}:${projectCode}`, visible: false });
+      setPreviousVisibility({ categoryCode: `${categoryCode}:${filterProjectCode}`, visible: false });
       return;
     }
-    if (await data.loadPrevious()) setPreviousVisibility({ categoryCode: `${categoryCode}:${projectCode}`, visible: true });
+    if (await data.loadPrevious()) setPreviousVisibility({ categoryCode: `${categoryCode}:${filterProjectCode}`, visible: true });
   };
 
   return <div className="view view-tasks">
     <SectionHero section="tasks" headingLevel={nested ? 2 : 1} onAction={openCreate} rightSlot={<div className="tasks-summary-card"><span className="eyebrow">TAREAS ABIERTAS</span><strong>{totalOpen}</strong><span>{tasksByStatus.PENDING.length} pendientes · {tasksByStatus.IN_PROGRESS.length} en proceso</span></div>} />
-    <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}><FilterPills active={categoryCode} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: `${option.projectCode}:${option.code}`, label: projectCode === "all" ? `${option.label} · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : option.label }))]} onChange={(value) => setCategoryFilter({ projectCode, value })} /></ModuleToolbar>
+    <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}><SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} /><SelectField label="Categoría" compact value={categoryCode} onChange={(value) => setCategoryFilter({ contextProjectCode: projectCode, projectCode: filterProjectCode, value })} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: `${option.projectCode}:${option.code}`, label: filterProjectCode === "all" ? `${option.label} · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : option.label }))]} /></ModuleToolbar>
     {mutation.error ? <div className="inline-error task-global-error" role="alert">{mutation.error.message || "No se pudo actualizar la tarea. Probá de nuevo."}</div> : null}
     {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : !tasks.length && previousCount === 0 ? <EmptyState title="Todavía no hay tareas" description="Creá la primera y movela entre columnas a medida que avance." action="Crear tarea" onAction={openCreate} /> : <section className={`tasks-board ${completedColumnVisible ? "" : "tasks-board-two-columns"}`} aria-label="Tablero de tareas">
       {visibleStatuses.map((status) => {
