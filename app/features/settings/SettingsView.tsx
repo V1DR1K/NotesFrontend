@@ -40,8 +40,16 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  const [expandedGroups, setExpandedGroups] = useState<Set<ConfigKind>>(() => new Set());
 
-  const openCreate = (group: ConfigGroup) => { setError(""); setDraft(emptyDraft(config.projects.find((item) => item.active !== false)?.code ?? "personal")); setEditing({ group }); };
+  const setGroupExpanded = (kind: ConfigKind, expanded: boolean) => setExpandedGroups((current) => {
+    if (current.has(kind) === expanded) return current;
+    const next = new Set(current);
+    if (expanded) next.add(kind); else next.delete(kind);
+    return next;
+  });
+
+  const openCreate = (group: ConfigGroup) => { setGroupExpanded(group.kind, true); setError(""); setDraft(emptyDraft(config.projects.find((item) => item.active !== false)?.code ?? "personal")); setEditing({ group }); };
   const openEdit = (group: ConfigGroup, option: ApiOption) => { setError(""); setDraft({ code: option.code, label: option.label, emoji: option.emoji ?? "", sortOrder: String(option.sortOrder ?? 0), active: option.active !== false, financeType: option.financeType ?? "EXPENSE", projectCode: option.projectCode ?? "personal" }); setEditing({ group, option }); };
   const closeEditor = () => { if (!saving) setEditing(null); };
   const save = async () => {
@@ -87,9 +95,14 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
         };
         const categoryGroups = group.kind === "categories" ? config.projects.map((project) => ({ project, categories: options.filter((option) => option.projectCode === project.code) })).filter((item) => item.categories.length) : [];
         return <section className="settings-group" key={group.kind}>
-           <div className="settings-group-heading"><div><span className="eyebrow">CONFIGURACIÓN</span><h2>{group.label}</h2><p>{group.description}</p></div>{group.fixed ? <span className="settings-fixed-label">FIJO</span> : <Button variant="ghost" onClick={() => openCreate(group)}>+ Agregar</Button>}</div>
-          <div className="settings-list">
-            {options.length ? group.kind === "categories" ? categoryGroups.map(({ project, categories }) => <details className="settings-category-project" key={project.code}><summary><h3>{project.label}</h3><span>{categories.length} {categories.length === 1 ? "categoría" : "categorías"}</span></summary><div className="settings-category-project-list">{categories.map(renderOption)}</div></details>) : options.map(renderOption) : <p className="settings-empty">Todavía no hay opciones configuradas.</p>}
+          <div className="settings-group-top">
+            <details className="settings-group-disclosure" open={expandedGroups.has(group.kind)} onToggle={(event) => setGroupExpanded(group.kind, event.currentTarget.open)}>
+              <summary className="settings-group-heading"><div><span className="eyebrow">CONFIGURACIÓN</span><h2>{group.label}</h2><p>{group.description}</p></div><span className="settings-group-count">{options.length} {group.kind === "categories" ? options.length === 1 ? "categoría" : "categorías" : options.length === 1 ? "opción" : "opciones"}</span></summary>
+              <div className="settings-list">
+                {options.length ? group.kind === "categories" ? categoryGroups.map(({ project, categories }) => <details className="settings-category-project" key={project.code}><summary><h3>{project.label}</h3><span>{categories.length} {categories.length === 1 ? "categoría" : "categorías"}</span></summary><div className="settings-category-project-list">{categories.map(renderOption)}</div></details>) : options.map(renderOption) : <p className="settings-empty">Todavía no hay opciones configuradas.</p>}
+              </div>
+            </details>
+            <div className="settings-group-actions">{group.fixed ? <span className="settings-fixed-label">FIJO</span> : <Button variant="ghost" onClick={() => openCreate(group)}>+ Agregar</Button>}</div>
           </div>
         </section>;
       })}
