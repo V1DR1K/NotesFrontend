@@ -1,7 +1,7 @@
 "use client";
 
 import type { ButtonHTMLAttributes, FormEvent, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
-import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { Children, createContext, isValidElement, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { SECTION_META, type SectionKey } from "../config/sections";
 import { SectionIcon } from "./SectionIcon";
 
@@ -70,10 +70,12 @@ function DiscardChangesDialog({ onCancel, onConfirm }: { onCancel: () => void; o
   return (
     <div className="discard-backdrop" role="presentation" onMouseDown={(event) => { event.stopPropagation(); onCancel(); }}>
       <div className="confirm-dialog discard-dialog" role="alertdialog" aria-modal="true" aria-labelledby="discard-title" onMouseDown={(event) => event.stopPropagation()}>
-        <span className="dialog-symbol">!</span>
-        <span className="eyebrow">CAMBIOS SIN GUARDAR</span>
-        <h2 id="discard-title">¿Salir sin guardar?</h2>
-        <p>Lo que escribiste se va a perder. ¿Seguro que querés salir?</p>
+        <div className="confirm-dialog-content">
+          <span className="dialog-symbol">!</span>
+          <span className="eyebrow">CAMBIOS SIN GUARDAR</span>
+          <h2 id="discard-title">¿Salir sin guardar?</h2>
+          <p>Lo que escribiste se va a perder. ¿Seguro que querés salir?</p>
+        </div>
         <div className="dialog-actions"><Button variant="quiet" onClick={onCancel}>Seguir editando</Button><Button variant="danger" onClick={onConfirm}>Salir sin guardar</Button></div>
       </div>
     </div>
@@ -379,13 +381,17 @@ export function FormField({ label, value, onChange, placeholder, multiline = fal
 
 export function FormPanel({ children, title, description, onClose, onSubmit, eyebrow = "NUEVO REGISTRO" }: { children: ReactNode; title: string; description: string; onClose: () => void; onSubmit?: () => void; eyebrow?: string }) {
   const dialogClose = useContext(DialogCloseContext);
+  const childNodes = Children.toArray(children);
+  const footer = childNodes.filter((child) => isValidElement<{ className?: string }>(child) && child.props.className?.split(/\s+/).includes("form-actions"));
+  const content = childNodes.filter((child) => !footer.includes(child));
   return (
     <form className="form-panel" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); onSubmit?.(); }}>
       <div className="form-panel-heading">
         <div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>
         <IconButton label="Cerrar formulario" onClick={dialogClose ?? onClose}>×</IconButton>
       </div>
-      {children}
+      <div className="form-panel-content">{content}</div>
+      {footer}
     </form>
   );
 }
@@ -444,11 +450,13 @@ export function ConfirmDialog({ title, description, onCancel, onConfirm, confirm
   return (
     <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
       <div ref={dialogRef} className="confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onMouseDown={(event) => event.stopPropagation()}>
-        <span className="dialog-symbol">×</span>
-        <span className="eyebrow">ACCIÓN DELICADA</span>
-        <h2 id="confirm-title">{title}</h2>
-        <p>{description}</p>
-        {error ? <div className="inline-error" role="alert">{error}</div> : null}
+        <div className="confirm-dialog-content">
+          <span className="dialog-symbol">×</span>
+          <span className="eyebrow">ACCIÓN DELICADA</span>
+          <h2 id="confirm-title">{title}</h2>
+          <p>{description}</p>
+          {error ? <div className="inline-error" role="alert">{error}</div> : null}
+        </div>
         <div className="dialog-actions"><Button variant="quiet" onClick={dialog.requestClose} disabled={confirmDisabled}>Cancelar</Button><Button variant="danger" onClick={onConfirm} disabled={confirmDisabled}>{confirmLabel}</Button></div>
       </div>
     </div>
