@@ -651,19 +651,19 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .skeleton-card span:nth-child(3) { width: 92%; }
 .skeleton-card span:nth-child(4) { width: 54%; }
 
-.dialog-backdrop { position: fixed; inset: 0; display: grid; place-items: center; overflow-x: hidden; overflow-y: auto; overscroll-behavior-x: none; touch-action: pan-y; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); background: rgba(0, 0, 0, .65); backdrop-filter: blur(10px); z-index: 100; animation: fade-in .22s cubic-bezier(.16,1,.3,1); }
-.modal-dialog { width: min(780px, 100%); max-width: 100%; min-width: 0; max-height: calc(100dvh - 40px); overflow-x: hidden; overflow-y: auto; overscroll-behavior-x: none; touch-action: pan-y; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; animation: rise-in .36s cubic-bezier(.16,1,.3,1); }
+.dialog-backdrop { position: fixed; inset: 0; display: grid; place-items: center; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: rgba(0, 0, 0, .65); backdrop-filter: blur(10px); z-index: 100; animation: fade-in .22s cubic-bezier(.16,1,.3,1); }
+.modal-dialog { width: min(780px, 100%); max-width: 100%; min-width: 0; min-height: 0; max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48px)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; animation: rise-in .36s cubic-bezier(.16,1,.3,1); }
 .modal-dialog::-webkit-scrollbar { width: 6px; }
 .modal-dialog::-webkit-scrollbar-thumb { background: var(--section-accent); border-radius: 999px; }
 .modal-dialog .form-panel { margin-top: 0; box-shadow: none; }
 .modal-dialog .form-grid { grid-template-columns: minmax(0, 1fr); }
-.confirm-dialog { width: min(100%, 390px); min-width: 0; max-width: 100%; padding: 27px; border: 1px solid var(--section-accent); background: var(--panel-strong); box-shadow: 0 22px 70px var(--section-shadow); animation: rise-in .36s cubic-bezier(.16,1,.3,1); }
+.confirm-dialog { width: min(100%, 390px); min-width: 0; max-width: 100%; min-height: 0; max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 48px)); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; padding: 27px; border: 1px solid var(--section-accent); background: var(--panel-strong); box-shadow: 0 22px 70px var(--section-shadow); animation: rise-in .36s cubic-bezier(.16,1,.3,1); }
 .dialog-symbol { display: grid; place-items: center; width: 32px; height: 32px; color: var(--section-contrast); background: var(--section-accent); font-size: 19px; }
 .confirm-dialog .eyebrow { display: block; margin-top: 23px; }
 .confirm-dialog h2 { margin: 8px 0 6px; overflow-wrap: anywhere; font-family: var(--font-display); font-size: 29px; letter-spacing: -.05em; }
 .confirm-dialog p { margin: 0; overflow-wrap: anywhere; color: var(--muted-strong); font-size: 11px; line-height: 1.7; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
-.discard-backdrop { position: fixed; inset: 0; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); background: rgba(0, 0, 0, .55); z-index: 110; }
+.discard-backdrop { position: fixed; inset: 0; display: grid; place-items: center; overflow: auto; overscroll-behavior: contain; padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); background: rgba(0, 0, 0, .55); z-index: 110; }
 .choice-chips { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 .choice-chip { min-height: 40px; padding: 0 13px; color: var(--muted-strong); background: rgba(12, 14, 17, .5); border: 1px solid var(--line); font-size: 10px; transition: color .18s ease, background .18s ease, border-color .18s ease, transform .18s ease; }
 .choice-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--line-strong); transform: translateY(-1px); }
@@ -822,8 +822,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 @keyframes lightbox-fade-in { from { opacity: 0; } to { opacity: 1; } }
 .photo-lightbox-close { position: absolute; top: 16px; right: 16px; z-index: 10; display: grid; place-items: center; width: 44px; height: 44px; color: #fff; background: rgba(255,255,255,0.1); border: 0; font-size: 20px; cursor: pointer; transition: background .15s; }
 .photo-lightbox-close:hover { background: rgba(255,255,255,0.2); }
-.photo-lightbox-body { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; max-width: 90vw; max-height: 90vh; }
-.photo-lightbox-body img { max-width: 90vw; max-height: 78vh; object-fit: contain; border-radius: 4px; user-select: none; -webkit-user-drag: none; }
+.photo-lightbox-body { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; max-width: 90vw; max-height: 90dvh; }
+.photo-lightbox-body img { max-width: 90vw; max-height: 78dvh; object-fit: contain; border-radius: 4px; user-select: none; -webkit-user-drag: none; }
 .photo-lightbox-controls { display: flex; align-items: center; gap: 20px; }
 .photo-lightbox-controls button { display: grid; place-items: center; width: 44px; height: 44px; color: #fff; background: rgba(255,255,255,0.1); border: 0; font-size: 24px; cursor: pointer; transition: background .15s; }
 .photo-lightbox-controls button:hover { background: rgba(255,255,255,0.2); }
@@ -852,8 +852,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .module-bottom { align-items: flex-start; gap: 17px; flex-direction: column; }
   .form-panel { padding: 18px; }
   .form-actions { flex-wrap: wrap; }
-  .dialog-backdrop { align-items: end; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
-  .modal-dialog { width: 100%; max-height: calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); }
+  .dialog-backdrop { align-items: end; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  .modal-dialog { width: 100%; max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)); }
+  .confirm-dialog { max-height: min(88dvh, calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 32px)); padding: 22px 16px; }
   .modal-dialog .form-panel { padding: 20px 16px; }
   .modal-dialog .form-actions, .confirm-dialog .dialog-actions { display: grid; grid-template-columns: 1fr; }
   .modal-dialog .form-actions .button, .confirm-dialog .dialog-actions .button { width: 100%; }
@@ -863,7 +864,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .day-filter-chips .choice-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .day-filter-actions { display: grid; grid-template-columns: 1fr; }
   .day-filter-actions .button { width: 100%; }
-  .discard-backdrop { align-items: end; padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+  .discard-backdrop { align-items: end; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
   .discard-backdrop .confirm-dialog { width: 100%; }
   .finance-filter-row { grid-template-columns: 1fr 1fr; }
   .finance-filter-row .toolbar-date-field { grid-column: 1 / -1; }
@@ -937,7 +938,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .pie-chart::after { width: 62px; height: 62px; }
   .pie-legend-row { grid-template-columns: 8px minmax(0, 1fr) auto; }
   .pie-legend-row small { grid-column: 2; }
-  .photo-lightbox-body img { max-width: 95vw; max-height: 70vh; }
+  .photo-lightbox-body img { max-width: 95vw; max-height: 70dvh; }
   .photo-lightbox-close { top: 12px; right: 12px; width: 40px; height: 40px; }
   .photo-lightbox-controls { gap: 14px; }
   .photo-lightbox-controls button { width: 40px; height: 40px; font-size: 20px; }
@@ -994,6 +995,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .finance-transfer-effect { color: var(--ink); line-height: 1.6; overflow-wrap: anywhere; }
 .finance-fixed-account { align-self: center; }
 .finance-main-actions { flex-wrap: wrap; margin-block: 24px; }
+@media (max-width: 760px) {
+  .finance-main-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:stretch; gap:8px; width:100%; }
+  .finance-main-actions > .button { justify-content:center; min-width:0; min-height:44px; padding-inline:10px; text-align:center; white-space:normal; line-height:1.35; }
+  .finance-main-actions > .button:last-child { grid-column:1 / -1; }
+}
 .finance-card.finance-transfer h2 { overflow-wrap: anywhere; }
 
 .crypto-performance { margin-top: 20px; }
