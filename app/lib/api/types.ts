@@ -67,6 +67,18 @@ export type RepositoryStatuses = {
   projects: RepositoryProject[];
 };
 
+export type DatabaseTarget = { id: "scalegrams" | "whatplan" | "notes"; label: string };
+export type DatabaseColumn = { name: string; dataType: string; nullable: boolean; defaultValue: string | null; primaryKey: boolean; generated: boolean };
+export type DatabaseTable = { name: string; primaryKey: string[]; columns: DatabaseColumn[] };
+export type DatabaseTablePage = { table: string; columns: DatabaseColumn[]; rows: Array<Record<string, unknown>>; page: number; pageSize: number; totalElements: number; readOnly: boolean };
+export type DatabaseStatementResult = { columns: string[]; rows: Array<Record<string, unknown>>; affectedRows: number | null; truncated: boolean };
+export type DatabaseScriptResult = { results: DatabaseStatementResult[]; elapsedMilliseconds: number; committed: boolean };
+export type RepositoryBackup = {
+  id: string; label: string; running: boolean;
+  lastAttempt: { startedAt: string; status: "in_progress" | "success" | "failed" | "unknown"; files: string[]; error?: string | null } | null;
+  lastSuccess: { startedAt: string; files: string[] } | null;
+};
+export type RepositoryBackupStatus = { projects: RepositoryBackup[] };
 export type AuthUser = {
   id: string;
   username: string;

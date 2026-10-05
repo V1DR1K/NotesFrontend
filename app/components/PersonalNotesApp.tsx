@@ -155,7 +155,7 @@ export function PersonalNotesApp() {
         case "finances": return <FinanzasModule config={config} focusId={focusId} tab={financeTab} onTabChange={changeFinanceTab} />;
         case "files": return <ArchivosModule config={config} focusId={focusId} />;
         case "notes": return <NotasModule config={config} focusId={focusId} />;
-        case "repositories": return <RepositoriesView />;
+        case "repositories": return <RepositoriesView role={user?.role ?? "USER"} />;
         case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
         default: return <HomeView onNavigate={navigate} />;
       }

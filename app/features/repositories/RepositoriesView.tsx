@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api/client";
 import type { RepositoryComponent, RepositoryPipeline, RepositoryStatuses } from "../../lib/api/types";
 import { SectionHero } from "../../ui/Primitives";
+import { DatabaseManager } from "./DatabaseManager";
 
 const relativeTime = new Intl.RelativeTimeFormat("es-AR", { numeric: "auto" });
 
@@ -156,7 +157,9 @@ function RepositorySkeleton() {
   );
 }
 
-export function RepositoriesView() {
+export function RepositoriesView({ role = "USER" }: { role?: string }) {
+  const [activeTab, setActiveTab] = useState<"pipelines" | "datos">("pipelines");
+  const canManageData = role.toUpperCase() === "ADMIN";
   const [data, setData] = useState<RepositoryStatuses | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -215,7 +218,11 @@ export function RepositoriesView() {
         }
       />
 
-      {error && !data ? (
+      <nav className="repository-tabs" role="tablist" aria-label="Secciones de repositorios">
+        <button type="button" role="tab" aria-selected={activeTab === "pipelines"} className={activeTab === "pipelines" ? "active" : ""} onClick={() => setActiveTab("pipelines")}>Pipelines</button>
+        {canManageData ? <button type="button" role="tab" aria-selected={activeTab === "datos"} className={activeTab === "datos" ? "active" : ""} onClick={() => setActiveTab("datos")}>Datos</button> : null}
+      </nav>
+      {activeTab === "pipelines" && error && !data ? (
         <section className="repository-message repository-error" role="alert">
           <strong>No pudimos consultar los repositorios</strong>
           <p>{error}</p>
@@ -223,9 +230,9 @@ export function RepositoriesView() {
         </section>
       ) : null}
 
-      {loading && !data ? <RepositorySkeleton /> : null}
+      {activeTab === "pipelines" && loading && !data ? <RepositorySkeleton /> : null}
 
-      {data ? (
+      {activeTab === "pipelines" && data ? (
         <div className="repository-project-list" aria-live="polite">
           {data.projects.map((project) => (
             <section className="repository-project" key={project.id}>
@@ -240,7 +247,8 @@ export function RepositoriesView() {
           ))}
         </div>
       ) : null}
-      {error && data ? <p className="repository-inline-error" role="status">No se pudo actualizar. Se conservan los datos cargados. <button type="button" onClick={() => { setLoading(true); void load(); }}>Reintentar</button></p> : null}
+      {activeTab === "pipelines" && error && data ? <p className="repository-inline-error" role="status">No se pudo actualizar. Se conservan los datos cargados. <button type="button" onClick={() => { setLoading(true); void load(); }}>Reintentar</button></p> : null}
+      {activeTab === "datos" && canManageData ? <DatabaseManager /> : null}
     </div>
   );
 }

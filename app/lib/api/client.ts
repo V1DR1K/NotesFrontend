@@ -24,6 +24,7 @@ import type {
   ConfigKind,
   SearchResult,
   RepositoryStatuses,
+  DatabaseTarget, DatabaseTable, DatabaseTablePage, DatabaseScriptResult, RepositoryBackupStatus,
 } from "./types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
@@ -543,6 +544,13 @@ export const api = {
   search: (query: string, signal?: AbortSignal) => get<unknown>(`/search?q=${encodeURIComponent(query)}`, { signal }).then(normalizeSearchResults),
   dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
   repositories: (signal?: AbortSignal) => request<unknown>("/repositories", { signal }).then(normalizeRepositoryStatuses),
+  databaseTargets: () => get<DatabaseTarget[]>("/repositories/databases"),
+  databaseTables: (project: string, signal?: AbortSignal) => get<DatabaseTable[]>(`/repositories/databases/${encodeURIComponent(project)}/tables`, { signal }),
+  databaseRows: (project: string, table: string, body: { page: number; pageSize: number; filters: Record<string, string> }, signal?: AbortSignal) => request<DatabaseTablePage>(`/repositories/databases/${encodeURIComponent(project)}/tables/${encodeURIComponent(table)}/rows`, { method: "POST", body, signal }),
+  databaseMutate: (project: string, table: string, body: { action: string; primaryKey: Record<string, unknown>; values: Record<string, unknown>; confirmed: boolean }) => patch<unknown>(`/repositories/databases/${encodeURIComponent(project)}/tables/${encodeURIComponent(table)}/rows`, body),
+  databaseQuery: (project: string, body: { script: string; mode: "read" | "write"; confirmed: boolean }) => post<DatabaseScriptResult>(`/repositories/databases/${encodeURIComponent(project)}/query`, body),
+  backupStatus: () => get<RepositoryBackupStatus>("/repositories/databases/backups"),
+  startBackup: (project: string) => post<unknown>(`/repositories/databases/backups/${encodeURIComponent(project)}`, {}),
   tasks: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/tasks?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeTask)),
   getTask: (id: string) => request<unknown>(`/tasks/${encodeURIComponent(id)}`).then(normalizeTask),
   createTask: (body: { title: string; detail?: string; categoryCode: string; status?: TaskStatus; dueDate?: string | null; projectCode: string }) => request<unknown>("/tasks", { method: "POST", body }).then(normalizeTask),
