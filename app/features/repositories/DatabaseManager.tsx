@@ -9,6 +9,8 @@ import type { DatabaseColumn, DatabaseScriptResult, DatabaseTable, DatabaseTable
 import { Dialog } from "../../ui/Primitives";
 
 type ProjectId = "scalegrams" | "whatplan" | "notes";
+type CellEditTarget = { project: ProjectId; table: string; primaryKey: Record<string, unknown>; isJson: boolean };
+type CellDetailState = { column: string; dataType: string; context: string; value: string; editTarget?: CellEditTarget };
 const projects: Array<{ id: ProjectId; label: string }> = [
   { id: "scalegrams", label: "ScaleGrams" }, { id: "whatplan", label: "Whatplan" }, { id: "notes", label: "Notes" },
 ];
@@ -20,7 +22,14 @@ function showValue(value: unknown) {
 }
 function detailValue(value: unknown) {
   if (value === null || value === undefined) return "NULL";
-  return typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+  const raw = typeof value === "object" ? JSON.stringify(value) : String(value);
+  try { return JSON.stringify(JSON.parse(raw), null, 2); }
+  catch { return raw; }
+}
+function isJsonValue(value: unknown) {
+  if (value === null || value === undefined) return false;
+  try { JSON.parse(typeof value === "object" ? JSON.stringify(value) : String(value)); return true; }
+  catch { return false; }
 }
 function isExpandableValue(value: unknown) {
   if (value === null || value === undefined) return false;
@@ -70,7 +79,11 @@ export function DatabaseManager() {
   const [mode, setMode] = useState<"read" | "write">("read");
   const [running, setRunning] = useState(false);
   const [scriptResult, setScriptResult] = useState<DatabaseScriptResult | null>(null);
-  const [cellDetail, setCellDetail] = useState<{ column: string; dataType: string; context: string; value: string } | null>(null);
+  const [cellDetail, setCellDetail] = useState<CellDetailState | null>(null);
+  const [cellDraft, setCellDraft] = useState("");
+  const [cellEditing, setCellEditing] = useState(false);
+  const [cellSaving, setCellSaving] = useState(false);
+  const [cellError, setCellError] = useState("");
   const [scriptError, setScriptError] = useState("");
   const [backups, setBackups] = useState<RepositoryBackup[]>([]);
   const [backupError, setBackupError] = useState("");
@@ -128,6 +141,14 @@ export function DatabaseManager() {
   const firstRow = tablePage && tablePage.totalElements > 0 ? page * tablePage.pageSize + 1 : 0;
   const lastRow = tablePage ? Math.min((page + 1) * tablePage.pageSize, tablePage.totalElements) : 0;
 
+  const openCellDetail = (column: string, dataType: string, context: string, value: unknown, editTarget?: CellEditTarget) => {
+    const formatted = detailValue(value);
+    setCellDetail({ column, dataType, context, value: formatted, editTarget: editTarget ? { ...editTarget, isJson: editTarget.isJson || isJsonValue(value) } : undefined });
+    setCellDraft(formatted);
+    setCellEditing(false);
+    setCellError("");
+  };
+
   const resetGridState = () => { setPage(0); setFilters({}); setFilterColumn(""); setFilterValue(""); setEditingRow(null); setInserting(false); };
   const applyFilter = (event: React.FormEvent) => {
     event.preventDefault();
@@ -167,6 +188,25 @@ export function DatabaseManager() {
       await api.databaseMutate(project, selectedTable, { action, primaryKey, values, confirmed: true });
       setEditingRow(null); setInserting(false); await loadRows();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudieron guardar los cambios."); }
+  };
+  const saveCellDetail = async () => {
+    const target = cellDetail?.editTarget;
+    if (!cellDetail || !target || cellSaving) return;
+    if (target.isJson) {
+      try { JSON.parse(cellDraft); }
+      catch { setCellError("El contenido debe ser JSON válido. Revisá las comillas, llaves y comas antes de guardar."); return; }
+    }
+    if (!window.confirm(`¿Guardar el contenido completo de «${cellDetail.column}» en ${target.table}?`)) return;
+    setCellSaving(true); setCellError("");
+    try {
+      await api.databaseMutate(target.project, target.table, {
+        action: "update", primaryKey: target.primaryKey, values: { [cellDetail.column]: cellDraft }, confirmed: true,
+      });
+      setCellDetail(null); setCellEditing(false);
+      await loadRows();
+    } catch (cause) {
+      setCellError(cause instanceof Error ? cause.message : "No se pudo guardar el contenido de la celda.");
+    } finally { setCellSaving(false); }
   };
   const deleteRow = async (row: Record<string, unknown>) => {
     if (!activeTable || !window.confirm("¿Eliminar esta fila? Esta acción no se puede deshacer.")) return;
@@ -228,7 +268,7 @@ export function DatabaseManager() {
             <CodeMirror value={script} onChange={setScript} height="210px" theme={oneDark} extensions={extensions} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} aria-label="Editor de sentencias SQL PostgreSQL" />
             <div className="db-sql-footer"><span>PostgreSQL · hasta 500 filas por resultado</span><span>Ctrl / ⌘ + Enter para ejecutar</span></div>
           </div>
-          <SqlOutput result={scriptResult} error={scriptError} onOpenCell={(column, dataType, context, value) => setCellDetail({ column, dataType, context, value: detailValue(value) })} />
+          <SqlOutput result={scriptResult} error={scriptError} onOpenCell={openCellDetail} />
         </section>
 
         <section className="db-data-panel">
@@ -258,8 +298,14 @@ export function DatabaseManager() {
                   <tr key={index}>{tablePage.columns.map((column) => {
                     const value = row[column.name];
                     const text = showValue(value);
+                    const metadata = activeTable?.columns.find((item) => item.name === column.name);
+                    const editable = Boolean(activeTable && !tablePage.readOnly && metadata && !metadata.primaryKey && !metadata.generated);
+                    const editTarget = editable && activeTable ? {
+                      project, table: selectedTable, primaryKey: keyFor(row, activeTable.primaryKey),
+                      isJson: /^(json|jsonb)$/i.test(column.dataType),
+                    } : undefined;
                     return <td key={column.name} title={isExpandableValue(value) ? "Abrir contenido completo" : text}>
-                      {isExpandableValue(value) ? <button type="button" className="db-cell-preview" aria-haspopup="dialog" aria-label={`Ver ${column.name}, fila ${page * pageSize + index + 1}`} onClick={() => setCellDetail({ column: column.name, dataType: column.dataType, context: `${selectedTable} · fila ${page * pageSize + index + 1}`, value: detailValue(value) })}>{text}</button> : text}
+                      {isExpandableValue(value) ? <button type="button" className="db-cell-preview" aria-haspopup="dialog" aria-label={`Ver ${column.name}, fila ${page * pageSize + index + 1}`} onClick={() => openCellDetail(column.name, column.dataType, `${selectedTable} · fila ${page * pageSize + index + 1}`, value, editTarget)}>{text}</button> : text}
                     </td>;
                   })}{!tablePage.readOnly ? <td className="db-row-actions"><button type="button" onClick={() => { setEditingRow(index); setInserting(false); setEditValues({ ...row }); }}>Editar</button><button type="button" className="danger" onClick={() => void deleteRow(row)}>Eliminar</button></td> : null}</tr>)}
                 {!inserting && tablePage.rows.length === 0 ? <tr><td className="db-grid-empty" colSpan={tablePage.columns.length + (tablePage.readOnly ? 0 : 1)}>No hay filas que coincidan.</td></tr> : null}
@@ -272,13 +318,27 @@ export function DatabaseManager() {
       </div>
     </div>
     {cellDetail ? <Dialog ariaLabel={`Contenido completo de ${cellDetail.column}`} onClose={() => setCellDetail(null)} trackChanges={false}>
-      <section className="db-cell-detail">
+      <section className={`db-cell-detail${cellEditing ? " is-editing" : ""}`}>
         <header className="db-cell-detail-header">
           <div><span>Detalle de celda</span><h2>{cellDetail.column}</h2><p>{cellDetail.context} · {cellDetail.dataType}</p></div>
           <button type="button" className="db-cell-detail-close" aria-label="Cerrar detalle" onClick={() => setCellDetail(null)}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" /></svg></button>
         </header>
-        <div className="db-cell-detail-content"><pre>{cellDetail.value}</pre></div>
-        <footer className="db-cell-detail-footer"><span>{cellDetail.value.length.toLocaleString("es-AR")} caracteres</span><button type="button" className="db-button db-button-quiet" onClick={() => setCellDetail(null)}>Cerrar</button></footer>
+        <div className="db-cell-detail-content">
+          {cellEditing ? <textarea className="db-cell-detail-editor" aria-label={`Editar contenido de ${cellDetail.column}`} spellCheck={false} value={cellDraft} onChange={(event) => { setCellDraft(event.target.value); setCellError(""); }} /> : <pre>{cellDetail.value}</pre>}
+          {cellError ? <p className="db-cell-detail-error" role="alert">{cellError}</p> : null}
+        </div>
+        <footer className="db-cell-detail-footer">
+          <span>{(cellEditing ? cellDraft : cellDetail.value).length.toLocaleString("es-AR")} caracteres</span>
+          <div className="db-cell-detail-actions">
+            {cellEditing ? <>
+              <button type="button" className="db-button db-button-quiet" disabled={cellSaving} onClick={() => { setCellEditing(false); setCellDraft(cellDetail.value); setCellError(""); }}>Cancelar</button>
+              <button type="button" className="db-button db-button-run" disabled={cellSaving} onClick={() => void saveCellDetail()}>{cellSaving ? "Guardando…" : "Guardar"}</button>
+            </> : <>
+              {cellDetail.editTarget ? <button type="button" className="db-button db-button-quiet" onClick={() => { setCellEditing(true); setCellError(""); }}>Editar</button> : null}
+              <button type="button" className="db-button db-button-quiet" onClick={() => setCellDetail(null)}>Cerrar</button>
+            </>}
+          </div>
+        </footer>
       </section>
     </Dialog> : null}
   </div>;
