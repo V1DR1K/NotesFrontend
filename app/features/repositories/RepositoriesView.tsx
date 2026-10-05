@@ -115,6 +115,47 @@ function RepositoryComponentCard({ component }: { component: RepositoryComponent
   );
 }
 
+function RepositorySkeleton() {
+  return (
+    <div className="repository-skeleton-list" role="status" aria-busy="true" aria-label="Cargando pipelines e imágenes de los repositorios">
+      {["ScaleGrams", "Whatplan", "Notes"].map((project) => (
+        <section className="repository-project repository-skeleton-project" aria-hidden="true" key={project}>
+          <header className="repository-project-header">
+            <div className="repository-skeleton-project-heading">
+              <span className="repository-skeleton-line repository-skeleton-project-index" />
+              <span className="repository-skeleton-line repository-skeleton-project-name" />
+            </div>
+            <span className="repository-skeleton-line repository-skeleton-service-count" />
+          </header>
+          <div className="repository-components">
+            {["Frontend", "Backend"].map((service) => (
+              <article className="repository-component repository-component-skeleton" key={service}>
+                <div className="repository-component-header">
+                  <div className="repository-skeleton-component-heading">
+                    <span className="repository-skeleton-line repository-skeleton-kind" />
+                    <span className="repository-skeleton-line repository-skeleton-repository" />
+                  </div>
+                  <span className="repository-skeleton-line repository-skeleton-status" />
+                </div>
+                <div className="repository-run">
+                  <span className="repository-skeleton-line repository-skeleton-label" />
+                  <span className="repository-skeleton-line repository-skeleton-workflow" />
+                  <span className="repository-skeleton-line repository-skeleton-commit" />
+                </div>
+                <div className="repository-deployment">
+                  <span className="repository-skeleton-line repository-skeleton-label" />
+                  <span className="repository-skeleton-line repository-skeleton-image" />
+                  <span className="repository-skeleton-line repository-skeleton-age" />
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
 export function RepositoriesView() {
   const [data, setData] = useState<RepositoryStatuses | null>(null);
   const [error, setError] = useState("");
@@ -182,7 +223,7 @@ export function RepositoriesView() {
         </section>
       ) : null}
 
-      {loading && !data ? <div className="repository-loading" role="status">Cargando estado de pipelines e imágenes…</div> : null}
+      {loading && !data ? <RepositorySkeleton /> : null}
 
       {data ? (
         <div className="repository-project-list" aria-live="polite">
