@@ -218,18 +218,8 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
   }, [data?.refreshAvailableAt, load]);
 
   const checkedAt = data?.checkedAt ? Date.parse(data.checkedAt) : NaN;
-  const manualRefreshAt = data?.manualRefreshAvailableAt ? Date.parse(data.manualRefreshAvailableAt) : NaN;
-  const manualRefreshAvailable = !Number.isFinite(manualRefreshAt) || now >= manualRefreshAt;
   const refreshAt = data?.refreshAvailableAt ? Date.parse(data.refreshAvailableAt) : NaN;
   const nextCheck = Number.isFinite(refreshAt) && refreshAt > now ? timeAgo(new Date(refreshAt).toISOString()) : null;
-
-  useEffect(() => {
-    if (!Number.isFinite(manualRefreshAt)) return;
-    const delay = manualRefreshAt - Date.now();
-    if (delay <= 0) return;
-    const timer = window.setTimeout(() => setNow(Date.now()), delay + 25);
-    return () => window.clearTimeout(timer);
-  }, [manualRefreshAt]);
 
   return (
     <div className="repositories-view">
@@ -240,22 +230,20 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
             <span className="repository-field-label">ÚLTIMA CONSULTA A GITHUB</span>
             <strong>{Number.isFinite(checkedAt) ? timeAgo(data?.checkedAt) : loading ? "Consultando…" : "Todavía sin datos"}</strong>
             <span className="repository-refresh-note">
-              {!manualRefreshAvailable
-                ? "Consulta manual disponible " + timeAgo(new Date(manualRefreshAt).toISOString()) + "."
-                : nextCheck
-                  ? "Próxima consulta automática " + nextCheck
-                  : "Se actualiza automáticamente cada 10 minutos."}
+              {nextCheck
+                ? "Próxima consulta automática " + nextCheck + "."
+                : "Consulta automática cada 4 horas."}
             </span>
             <button
               type="button"
               className="repository-refresh-button"
-              disabled={loading || refreshing || !manualRefreshAvailable}
+              disabled={loading || refreshing}
               onClick={() => void refreshGithub()}
               aria-busy={refreshing}
               aria-label={refreshing ? "Consultando GitHub" : "Actualizar consulta a GitHub"}
             >
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.1 6A5.2 5.2 0 0 0 3.4 4.8L2 6.2m0-3v3h3m-2.1 3.8A5.2 5.2 0 0 0 12.6 11l1.4-1.4m0 3v-3h-3" /></svg>
-              <span>{refreshing ? "Consultando GitHub…" : manualRefreshAvailable ? "Actualizar ahora" : "Disponible " + timeAgo(new Date(manualRefreshAt).toISOString())}</span>
+              <span>{refreshing ? "Consultando GitHub…" : "Consultar ahora"}</span>
             </button>
           </div>
         }

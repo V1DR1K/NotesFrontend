@@ -64,7 +64,6 @@ export type RepositoryProject = { id: string; name: string; components: Reposito
 export type RepositoryStatuses = {
   checkedAt: string;
   refreshAvailableAt: string;
-  manualRefreshAvailableAt: string;
   projects: RepositoryProject[];
 };
 

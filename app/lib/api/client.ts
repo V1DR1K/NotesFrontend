@@ -298,7 +298,6 @@ function normalizeRepositoryStatuses(value: unknown): RepositoryStatuses {
   return {
     checkedAt: String(record.checkedAt ?? ""),
     refreshAvailableAt: String(record.refreshAvailableAt ?? ""),
-    manualRefreshAvailableAt: String(record.manualRefreshAvailableAt ?? ""),
     projects: projects.map((value) => {
       const project = asRecord(value);
       return {
