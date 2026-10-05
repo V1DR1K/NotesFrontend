@@ -527,8 +527,40 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .note-symbol { color: var(--section-accent); font-family: var(--font-display); font-size: 25px; }
 .note-category { color: var(--section-accent); font-size: 9px; }
 .note-card h2 { margin-top: 16px; }
-.note-card p { max-width: 300px; }
-.note-body { white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-body { min-width: 0; overflow-wrap: anywhere; }
+.note-markdown { color: var(--muted-strong); font-size: 11px; line-height: 1.65; }
+.note-markdown > :first-child { margin-top: 0; }
+.note-markdown > :last-child { margin-bottom: 0; }
+.note-markdown p { max-width: 68ch; margin: 0 0 14px; line-height: 1.7; }
+.note-markdown h1, .note-markdown h2, .note-markdown h3, .note-markdown h4, .note-markdown h5, .note-markdown h6 { max-width: none; margin: 22px 0 9px; color: var(--ink); font-family: var(--font-display); font-weight: 500; letter-spacing: -.025em; line-height: 1.15; }
+.note-markdown h1 { font-size: 25px; }
+.note-markdown h2 { font-size: 21px; }
+.note-markdown h3 { font-size: 18px; }
+.note-markdown h4, .note-markdown h5, .note-markdown h6 { font-size: 15px; }
+.note-markdown ul, .note-markdown ol { max-width: 68ch; margin: 0 0 15px; padding-inline-start: 22px; }
+.note-markdown li { padding-inline-start: 3px; }
+.note-markdown li + li { margin-top: 6px; }
+.note-markdown li::marker { color: var(--section-accent); }
+.note-markdown strong { color: var(--ink); font-weight: 600; }
+.note-markdown blockquote { max-width: 68ch; margin: 0 0 14px; padding-inline-start: 14px; border-inline-start: 1px solid var(--section-accent); color: var(--muted); }
+.note-markdown blockquote > :last-child { margin-bottom: 0; }
+.note-markdown hr { height: 1px; margin: 18px 0; border: 0; background: var(--line); }
+.note-markdown pre { max-width: 100%; margin: 0 0 15px; padding: 13px; overflow: auto; border: 1px solid var(--line); background: var(--panel-soft); color: var(--ink); font: 10px/1.6 var(--font-mono); }
+.note-markdown :not(pre) > code { padding: 2px 4px; background: var(--panel-soft); color: var(--section-accent); font: 10px var(--font-mono); }
+.note-markdown table { display: block; width: 100%; max-width: 100%; margin: 0 0 15px; overflow-x: auto; border-collapse: collapse; }
+.note-markdown th, .note-markdown td { min-width: 90px; padding: 8px 10px; border: 1px solid var(--line); text-align: left; vertical-align: top; }
+.note-markdown th { color: var(--section-accent); font-size: 9px; font-weight: 600; }
+.note-markdown img { max-width: 100%; height: auto; }
+.note-content-field { display: flex; flex-direction: column; min-width: 0; }
+.note-content-field > .form-field { width: 100%; }
+.note-markdown-toolbar { display: flex; align-self: flex-start; gap: 1px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
+.note-markdown-mode { min-height: 36px; padding: 0 13px; color: var(--muted); background: transparent; border: 0; border-bottom: 2px solid transparent; font: 9px var(--font-mono); cursor: pointer; }
+.note-markdown-mode:hover { color: var(--ink); }
+.note-markdown-mode:focus-visible { outline: 2px solid var(--section-accent); outline-offset: -2px; }
+.note-markdown-mode-active { color: var(--section-accent); border-bottom-color: var(--section-accent); }
+.note-markdown-preview { max-height: min(48dvh, 440px); min-height: 120px; margin-top: 2px; padding: 15px; overflow: auto; border: 1px solid var(--line); background: var(--panel); }
+.note-markdown-hint { margin: 8px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+.note-markdown-empty { margin: 0; color: var(--muted); font-size: 11px; font-style: italic; }
 .note-link { color: var(--section-accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
 .note-link:hover { color: var(--ink); }
 
