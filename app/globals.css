@@ -53,6 +53,11 @@
 .task-card-preview-trigger { display: flex; flex-direction: column; width: 100%; min-width: 0; padding: 0; color: inherit; background: transparent; border: 0; font: inherit; text-align: left; cursor: pointer; }
 .task-card h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 18px 0 7px; color: var(--ink); font-family: var(--font-display); font-size: 21px; font-weight: 500; letter-spacing: -.035em; line-height: 1.05; }
 .task-card p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 4; overflow: hidden; margin: 0; color: var(--muted-strong); font-size: 11px; line-height: 1.6; }
+.task-card-markdown { max-height: 7em; overflow: hidden; color: var(--muted-strong); font-size: 11px; line-height: 1.6; }
+.task-card-markdown .note-markdown { font-size: inherit; line-height: inherit; }
+.task-card-markdown .note-markdown p { display: block; margin: 0 0 7px; line-height: inherit; }
+.task-card-markdown .note-markdown h1, .task-card-markdown .note-markdown h2, .task-card-markdown .note-markdown h3, .task-card-markdown .note-markdown h4, .task-card-markdown .note-markdown h5, .task-card-markdown .note-markdown h6 { margin: 0 0 5px; font-size: 12px; }
+.task-card-markdown .note-markdown ul, .task-card-markdown .note-markdown ol { margin: 0 0 7px; padding-inline-start: 18px; }
 .task-due { display: flex; align-items: center; gap: 6px; margin-top: 15px; color: var(--muted); font: 9px var(--font-mono); }
 .task-due-overdue { color: var(--danger); }
 .task-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 17px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -61,7 +66,12 @@
 .task-drag-ghost { position: fixed; z-index: 1001; max-width: min(260px, 60vw); padding: 10px 13px; color: var(--section-contrast); background: var(--section-accent); box-shadow: 0 16px 34px var(--section-shadow); font-family: var(--font-display); font-size: 15px; pointer-events: none; transform: rotate(2deg); }
 .task-global-error { margin-top: 18px; }
 .task-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.task-form-grid .form-field:nth-child(4) { grid-column: 1 / -1; }
+.task-form-grid > .task-detail-field { grid-column: 1 / -1; }
+.task-detail-field { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.task-detail-field > .form-field { width: 100%; }
+.task-preview-markdown .note-markdown { font-size: inherit; line-height: inherit; }
+.task-preview-markdown .note-markdown p { max-width: none; }
+.task-preview-markdown .note-markdown > :first-child { margin-top: 0; }
 .dashboard-signal-tasks { --section-accent: #72d6d2; --section-surface: rgba(114, 214, 210, .12); --section-shadow: rgba(114, 214, 210, .18); }
 .dashboard-task-panel { margin-top: 12px; }
 .dashboard-task-list { display: grid; gap: 0; margin: 20px 0; border-top: 1px solid var(--line); }
@@ -570,6 +580,11 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .note-markdown img { max-width: 100%; height: auto; }
 .note-content-field { display: flex; flex-direction: column; min-width: 0; }
 .note-content-field > .form-field { width: 100%; }
+.note-content-actions { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px 16px; margin-bottom: 10px; }
+.note-content-actions .note-markdown-toolbar { margin-bottom: 0; }
+.markdown-assistant { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; min-width: 0; }
+.markdown-assistant .button { min-height: 36px; padding-inline: 13px; font-size: 9px; }
+.markdown-assistant-error { max-width: 44ch; margin: 0; color: var(--danger); font-size: 10px; line-height: 1.5; }
 .note-markdown-toolbar { display: flex; align-self: flex-start; gap: 1px; margin-bottom: 10px; border-bottom: 1px solid var(--line); }
 .note-markdown-mode { min-height: 36px; padding: 0 13px; color: var(--muted); background: transparent; border: 0; border-bottom: 2px solid transparent; font: 9px var(--font-mono); cursor: pointer; }
 .note-markdown-mode:hover { color: var(--ink); }

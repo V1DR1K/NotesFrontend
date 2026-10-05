@@ -4,6 +4,8 @@ import type {
   AuthUser,
   Dashboard,
   DayEntry,
+  MarkdownKind,
+  MarkdownResponse,
   CalendarEvent,
   FinanceMovement,
   FinanceAnalytics,
@@ -561,6 +563,10 @@ export const api = {
   createDay: (body: { date: string; description: string }) => request<unknown>("/day-entries", { method: "POST", body }).then(normalizeDay),
   updateDay: (id: string, body: { date: string; description: string }) => request<unknown>(`/day-entries/${encodeURIComponent(id)}`, { method: "PATCH", body }).then(normalizeDay),
   analyzeDay: (id: string) => request<unknown>(`/day-entries/${encodeURIComponent(id)}/analyze`, { method: "POST" }).then(normalizeDay),
+  formatMarkdown: (body: { kind: MarkdownKind; title: string; content: string }) => post<MarkdownResponse>("/ai/markdown", body).then((response) => {
+    if (typeof response.markdown !== "string" || !response.markdown.trim()) throw new ApiError("Gemini devolvió un texto vacío. Probá de nuevo.", 502);
+    return response.markdown;
+  }),
   deleteDay: (id: string) => request<void>(`/day-entries/${encodeURIComponent(id)}`, { method: "DELETE" }),
   events: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/events?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeCalendarEvent)),
   createEvent: (body: { date: string; description: string; categoryCode: string; projectCode: string }) => request<unknown>("/events", { method: "POST", body }).then(normalizeCalendarEvent),

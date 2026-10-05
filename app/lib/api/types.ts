@@ -106,6 +106,8 @@ export type DayEntry = {
   description: string;
 };
 export type DaySuggestion = { analyzed: boolean; statusCode: string; feelingCodes: string[] };
+export type MarkdownKind = "NOTE" | "TASK";
+export type MarkdownResponse = { markdown: string };
 export type CalendarEvent = {
   id: string;
   date: string;
