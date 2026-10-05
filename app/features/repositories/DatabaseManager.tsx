@@ -6,6 +6,7 @@ import { oneDark } from "@codemirror/theme-one-dark";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "../../lib/api/client";
 import type { DatabaseColumn, DatabaseScriptResult, DatabaseTable, DatabaseTablePage, RepositoryBackup } from "../../lib/api/types";
+import { Dialog } from "../../ui/Primitives";
 
 type ProjectId = "scalegrams" | "whatplan" | "notes";
 const projects: Array<{ id: ProjectId; label: string }> = [
@@ -16,6 +17,15 @@ const initialSql = "select table_name\nfrom information_schema.tables\nwhere tab
 function showValue(value: unknown) {
   if (value === null || value === undefined) return "NULL";
   return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
+function detailValue(value: unknown) {
+  if (value === null || value === undefined) return "NULL";
+  return typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
+}
+function isExpandableValue(value: unknown) {
+  if (value === null || value === undefined) return false;
+  const text = showValue(value);
+  return text.length > 24 || /[\r\n]/.test(text);
 }
 function keyFor(row: Record<string, unknown>, columns: string[]) {
   return Object.fromEntries(columns.map((column) => [column, row[column]]));
@@ -60,6 +70,7 @@ export function DatabaseManager() {
   const [mode, setMode] = useState<"read" | "write">("read");
   const [running, setRunning] = useState(false);
   const [scriptResult, setScriptResult] = useState<DatabaseScriptResult | null>(null);
+  const [cellDetail, setCellDetail] = useState<{ column: string; dataType: string; context: string; value: string } | null>(null);
   const [scriptError, setScriptError] = useState("");
   const [backups, setBackups] = useState<RepositoryBackup[]>([]);
   const [backupError, setBackupError] = useState("");
@@ -217,7 +228,7 @@ export function DatabaseManager() {
             <CodeMirror value={script} onChange={setScript} height="210px" theme={oneDark} extensions={extensions} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} aria-label="Editor de sentencias SQL PostgreSQL" />
             <div className="db-sql-footer"><span>PostgreSQL · hasta 500 filas por resultado</span><span>Ctrl / ⌘ + Enter para ejecutar</span></div>
           </div>
-          <SqlOutput result={scriptResult} error={scriptError} />
+          <SqlOutput result={scriptResult} error={scriptError} onOpenCell={(column, dataType, context, value) => setCellDetail({ column, dataType, context, value: detailValue(value) })} />
         </section>
 
         <section className="db-data-panel">
@@ -244,7 +255,13 @@ export function DatabaseManager() {
               <tbody>
                 {inserting && activeTable ? <EditableRow columns={activeTable.columns} values={editValues} onChange={setEditValues} onSave={() => void saveRow(null)} onCancel={() => setInserting(false)} /> : null}
                 {tablePage.rows.map((row, index) => editingRow === index && activeTable ? <EditableRow key={index} columns={activeTable.columns} values={editValues} onChange={setEditValues} onSave={() => void saveRow(index)} onCancel={() => setEditingRow(null)} /> :
-                  <tr key={index}>{tablePage.columns.map((column) => <td key={column.name} title={showValue(row[column.name])}>{showValue(row[column.name])}</td>)}{!tablePage.readOnly ? <td className="db-row-actions"><button type="button" onClick={() => { setEditingRow(index); setInserting(false); setEditValues({ ...row }); }}>Editar</button><button type="button" className="danger" onClick={() => void deleteRow(row)}>Eliminar</button></td> : null}</tr>)}
+                  <tr key={index}>{tablePage.columns.map((column) => {
+                    const value = row[column.name];
+                    const text = showValue(value);
+                    return <td key={column.name} title={isExpandableValue(value) ? "Abrir contenido completo" : text}>
+                      {isExpandableValue(value) ? <button type="button" className="db-cell-preview" aria-haspopup="dialog" aria-label={`Ver ${column.name}, fila ${page * pageSize + index + 1}`} onClick={() => setCellDetail({ column: column.name, dataType: column.dataType, context: `${selectedTable} · fila ${page * pageSize + index + 1}`, value: detailValue(value) })}>{text}</button> : text}
+                    </td>;
+                  })}{!tablePage.readOnly ? <td className="db-row-actions"><button type="button" onClick={() => { setEditingRow(index); setInserting(false); setEditValues({ ...row }); }}>Editar</button><button type="button" className="danger" onClick={() => void deleteRow(row)}>Eliminar</button></td> : null}</tr>)}
                 {!inserting && tablePage.rows.length === 0 ? <tr><td className="db-grid-empty" colSpan={tablePage.columns.length + (tablePage.readOnly ? 0 : 1)}>No hay filas que coincidan.</td></tr> : null}
               </tbody>
             </table>
@@ -254,6 +271,16 @@ export function DatabaseManager() {
         <BackupAudit backup={currentBackup} pending={backupPending} backupError={backupError} onRun={() => void runBackup()} />
       </div>
     </div>
+    {cellDetail ? <Dialog ariaLabel={`Contenido completo de ${cellDetail.column}`} onClose={() => setCellDetail(null)} trackChanges={false}>
+      <section className="db-cell-detail">
+        <header className="db-cell-detail-header">
+          <div><span>Detalle de celda</span><h2>{cellDetail.column}</h2><p>{cellDetail.context} · {cellDetail.dataType}</p></div>
+          <button type="button" className="db-cell-detail-close" aria-label="Cerrar detalle" onClick={() => setCellDetail(null)}><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8" /></svg></button>
+        </header>
+        <div className="db-cell-detail-content"><pre>{cellDetail.value}</pre></div>
+        <footer className="db-cell-detail-footer"><span>{cellDetail.value.length.toLocaleString("es-AR")} caracteres</span><button type="button" className="db-button db-button-quiet" onClick={() => setCellDetail(null)}>Cerrar</button></footer>
+      </section>
+    </Dialog> : null}
   </div>;
 }
 
@@ -261,13 +288,17 @@ function EditableRow({ columns, values, onChange, onSave, onCancel }: { columns:
   return <tr className="db-editing-row">{columns.map((column) => <td key={column.name}>{column.generated ? <span className="db-generated">Generada</span> : column.primaryKey && Object.hasOwn(values, column.name) ? <code>{showValue(values[column.name])}</code> :
     <input aria-label={column.name} value={values[column.name] === null ? "" : String(values[column.name] ?? "")} placeholder={column.nullable ? "NULL" : column.dataType} onChange={(event) => onChange({ ...values, [column.name]: event.target.value })} />}</td>)}<td className="db-row-actions"><button type="button" onClick={onSave}>Guardar</button><button type="button" onClick={onCancel}>Cancelar</button></td></tr>;
 }
-function SqlOutput({ result, error }: { result: DatabaseScriptResult | null; error: string }) {
+function SqlOutput({ result, error, onOpenCell }: { result: DatabaseScriptResult | null; error: string; onOpenCell: (column: string, dataType: string, context: string, value: unknown) => void }) {
   if (error) return <div className="db-sql-error" role="alert">{error}</div>;
   if (!result) return null;
   return <div className="db-sql-output" aria-live="polite">
     <div className="db-output-status">{result.committed ? "Transacción confirmada" : "Sin cambios"} · {result.elapsedMilliseconds} ms · {result.results.length} sentencias</div>
     {result.results.map((item, index) => <div className="db-result-table" key={index}>
-      {item.columns.length ? <div className="db-grid-scroll"><table className="db-grid"><thead><tr>{item.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{item.rows.map((row, rowIndex) => <tr key={rowIndex}>{item.columns.map((column) => <td key={column}>{showValue(row[column])}</td>)}</tr>)}</tbody></table></div> : <p>{item.affectedRows ?? 0} filas afectadas</p>}
+      {item.columns.length ? <div className="db-grid-scroll"><table className="db-grid"><thead><tr>{item.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead><tbody>{item.rows.map((row, rowIndex) => <tr key={rowIndex}>{item.columns.map((column) => {
+        const value = row[column];
+        const text = showValue(value);
+        return <td key={column} title={isExpandableValue(value) ? "Abrir contenido completo" : text}>{isExpandableValue(value) ? <button type="button" className="db-cell-preview" aria-haspopup="dialog" aria-label={`Ver ${column}, sentencia ${index + 1}, fila ${rowIndex + 1}`} onClick={() => onOpenCell(column, "Resultado SQL", `Sentencia ${index + 1} · fila ${rowIndex + 1}`, value)}>{text}</button> : text}</td>;
+      })}</tr>)}</tbody></table></div> : <p>{item.affectedRows ?? 0} filas afectadas</p>}
       {item.truncated ? <span className="db-truncated">Se muestran las primeras 500 filas.</span> : null}
     </div>)}
   </div>;
