@@ -218,7 +218,7 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
   }, [data?.refreshAvailableAt, load]);
 
   const checkedAt = data?.checkedAt ? Date.parse(data.checkedAt) : NaN;
-  const manualRefreshAt = Number.isFinite(checkedAt) ? checkedAt + 30_000 : NaN;
+  const manualRefreshAt = data?.manualRefreshAvailableAt ? Date.parse(data.manualRefreshAvailableAt) : NaN;
   const manualRefreshAvailable = !Number.isFinite(manualRefreshAt) || now >= manualRefreshAt;
   const refreshAt = data?.refreshAvailableAt ? Date.parse(data.refreshAvailableAt) : NaN;
   const nextCheck = Number.isFinite(refreshAt) && refreshAt > now ? timeAgo(new Date(refreshAt).toISOString()) : null;
@@ -241,7 +241,7 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
             <strong>{Number.isFinite(checkedAt) ? timeAgo(data?.checkedAt) : loading ? "Consultando…" : "Todavía sin datos"}</strong>
             <span className="repository-refresh-note">
               {!manualRefreshAvailable
-                ? "Consulta manual disponible en unos segundos."
+                ? "Consulta manual disponible " + timeAgo(new Date(manualRefreshAt).toISOString()) + "."
                 : nextCheck
                   ? "Próxima consulta automática " + nextCheck
                   : "Se actualiza automáticamente cada 10 minutos."}
@@ -255,7 +255,7 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
               aria-label={refreshing ? "Consultando GitHub" : "Actualizar consulta a GitHub"}
             >
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.1 6A5.2 5.2 0 0 0 3.4 4.8L2 6.2m0-3v3h3m-2.1 3.8A5.2 5.2 0 0 0 12.6 11l1.4-1.4m0 3v-3h-3" /></svg>
-              <span>{refreshing ? "Consultando GitHub…" : manualRefreshAvailable ? "Actualizar ahora" : "Consulta recién actualizada"}</span>
+              <span>{refreshing ? "Consultando GitHub…" : manualRefreshAvailable ? "Actualizar ahora" : "Disponible " + timeAgo(new Date(manualRefreshAt).toISOString())}</span>
             </button>
           </div>
         }
