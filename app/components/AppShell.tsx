@@ -3,6 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { NAV_ITEMS, SECTION_META, type SectionKey } from "../config/sections";
 import type { AuthUser } from "../lib/api/types";
+import { SectionIcon } from "../ui/SectionIcon";
 
 export function AppShell({ activeSection, onNavigate, onOpenSearch, onOpenSettings, children, style, user, onLogout, logoutPending }: { activeSection: SectionKey; onNavigate: (section: SectionKey) => void; onOpenSearch: () => void; onOpenSettings: () => void; children: ReactNode; style?: CSSProperties; user: AuthUser; onLogout: () => void; logoutPending?: boolean }) {
   const displayName = user.username || "Mi espacio";
@@ -18,10 +19,9 @@ export function AppShell({ activeSection, onNavigate, onOpenSearch, onOpenSettin
         <div className="sidebar-section-label">ESPACIOS</div>
         <nav className="main-nav" aria-label="Secciones principales">
           {NAV_ITEMS.map((item) => {
-            const meta = SECTION_META[item.key];
             return (
               <button className={`nav-item ${activeSection === item.key ? "nav-item-active" : ""}`} type="button" onClick={() => onNavigate(item.key)} aria-current={activeSection === item.key ? "page" : undefined} key={item.key}>
-                <span className="nav-icon" aria-hidden="true">{meta.icon}</span>
+                <span className="nav-icon" aria-hidden="true"><SectionIcon section={item.key} /></span>
                 <span>{item.short}</span>
                 {activeSection === item.key ? <span className="nav-active-dot" aria-hidden="true" /> : null}
               </button>
@@ -51,8 +51,8 @@ export function AppShell({ activeSection, onNavigate, onOpenSearch, onOpenSettin
         <div className="content-wrap">{children}</div>
         <nav className="mobile-nav" aria-label="Secciones principales">
           {NAV_ITEMS.map((item) => <button className={activeSection === item.key ? "mobile-nav-active" : ""} type="button" onClick={() => onNavigate(item.key)} aria-current={activeSection === item.key ? "page" : undefined} key={item.key}>
-            <span className="mobile-nav-icon" aria-hidden="true">{SECTION_META[item.key].icon}</span>
-            <span>{item.short}</span>
+            <span className="mobile-nav-icon" aria-hidden="true"><SectionIcon section={item.key} /></span>
+            <span>{item.mobileShort ?? item.short}</span>
           </button>)}
         </nav>
       </main>

@@ -23,6 +23,7 @@ import type {
   PageResponse,
   ConfigKind,
   SearchResult,
+  RepositoryStatuses,
 } from "./types";
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE || "/api").replace(/\/$/, "");
@@ -290,6 +291,51 @@ function normalizeTask(value: unknown): Task {
   };
 }
 
+function normalizeRepositoryStatuses(value: unknown): RepositoryStatuses {
+  const record = asRecord(value);
+  const projects = Array.isArray(record.projects) ? record.projects : [];
+  return {
+    checkedAt: String(record.checkedAt ?? ""),
+    refreshAvailableAt: String(record.refreshAvailableAt ?? ""),
+    projects: projects.map((value) => {
+      const project = asRecord(value);
+      return {
+        id: String(project.id ?? ""),
+        name: String(project.name ?? ""),
+        components: Array.isArray(project.components) ? project.components.map((value) => {
+          const component = asRecord(value);
+          const pipeline = asRecord(component.pipeline);
+          const deployment = asRecord(component.deployment);
+          return {
+            id: String(component.id ?? ""),
+            label: String(component.label ?? ""),
+            fullName: String(component.fullName ?? ""),
+            pipeline: {
+              status: String(pipeline.status ?? "unavailable"),
+              conclusion: pipeline.conclusion == null ? null : String(pipeline.conclusion),
+              workflowName: pipeline.workflowName == null ? null : String(pipeline.workflowName),
+              sha: pipeline.sha == null ? null : String(pipeline.sha),
+              runNumber: pipeline.runNumber == null ? null : Number(pipeline.runNumber),
+              startedAt: pipeline.startedAt == null ? null : String(pipeline.startedAt),
+              updatedAt: pipeline.updatedAt == null ? null : String(pipeline.updatedAt),
+              url: pipeline.url == null ? null : String(pipeline.url),
+              available: Boolean(pipeline.available),
+              stale: Boolean(pipeline.stale),
+            },
+            deployment: {
+              state: String(deployment.state ?? "unknown"),
+              health: deployment.health == null ? null : String(deployment.health),
+              image: deployment.image == null ? null : String(deployment.image),
+              imageId: deployment.imageId == null ? null : String(deployment.imageId),
+              startedAt: deployment.startedAt == null ? null : String(deployment.startedAt),
+            },
+          };
+        }) : [],
+      };
+    }),
+  };
+}
+
 function normalizeDashboard(value: unknown): Dashboard {
   const record = asRecord(value);
   const dayStats = asRecord(record.dayStats);
@@ -496,6 +542,7 @@ export const api = {
   deleteCategory: (id: string) => del(`/config/categories/${encodeURIComponent(id)}`),
   search: (query: string, signal?: AbortSignal) => get<unknown>(`/search?q=${encodeURIComponent(query)}`, { signal }).then(normalizeSearchResults),
   dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
+  repositories: (signal?: AbortSignal) => request<unknown>("/repositories", { signal }).then(normalizeRepositoryStatuses),
   tasks: (query: URLSearchParams, signal?: AbortSignal) => request<unknown>(`/tasks?${query}`, { signal }).then((payload) => normalizePageItems(payload, normalizeTask)),
   getTask: (id: string) => request<unknown>(`/tasks/${encodeURIComponent(id)}`).then(normalizeTask),
   createTask: (body: { title: string; detail?: string; categoryCode: string; status?: TaskStatus; dueDate?: string | null; projectCode: string }) => request<unknown>("/tasks", { method: "POST", body }).then(normalizeTask),

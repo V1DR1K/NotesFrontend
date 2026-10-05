@@ -21,6 +21,7 @@ const NotasModule = lazy(() => import("../modules/NotasModule").then((module) =>
 const SettingsModule = lazy(() => import("../modules/SettingsModule").then((module) => ({ default: module.SettingsModule })));
 const SearchPalette = lazy(() => import("./SearchPalette").then((module) => ({ default: module.SearchPalette })));
 const ProjectsView = lazy(() => import("../features/projects/ProjectsView").then((module) => ({ default: module.ProjectsView })));
+const RepositoriesView = lazy(() => import("../features/repositories/RepositoriesView").then((module) => ({ default: module.RepositoriesView })));
 
 const projectTabFor = (value: string | null): ProjectTab => value === "notes" || value === "files" ? value : "tasks";
 const financeTabFor = (value: string | null): FinanceTab => value === "crypto" || value === "movimientos" ? value : "inicio";
@@ -154,6 +155,7 @@ export function PersonalNotesApp() {
         case "finances": return <FinanzasModule config={config} focusId={focusId} tab={financeTab} onTabChange={changeFinanceTab} />;
         case "files": return <ArchivosModule config={config} focusId={focusId} />;
         case "notes": return <NotasModule config={config} focusId={focusId} />;
+        case "repositories": return <RepositoriesView />;
         case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
         default: return <HomeView onNavigate={navigate} />;
       }

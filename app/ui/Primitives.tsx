@@ -3,6 +3,7 @@
 import type { ButtonHTMLAttributes, FormEvent, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react";
 import { createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { SECTION_META, type SectionKey } from "../config/sections";
+import { SectionIcon } from "./SectionIcon";
 
 const DialogCloseContext = createContext<(() => void) | null>(null);
 const DialogDirtyContext = createContext<(() => void) | null>(null);
@@ -265,7 +266,7 @@ export function SectionHero({
     <section className="section-hero">
       <div className="hero-copy">
         <div className="eyebrow-row">
-          <span className="hero-mark" aria-hidden="true">{meta.icon}</span>
+          <span className="hero-mark" aria-hidden="true"><SectionIcon section={section} /></span>
           <span className="eyebrow">{meta.eyebrow}</span>
         </div>
         {headingLevel === 1 ? <h1>{meta.title}</h1> : <h2>{meta.title}</h2>}

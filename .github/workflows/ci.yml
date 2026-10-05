@@ -9,6 +9,10 @@ on:
 env:
   IMAGE: ghcr.io/v1dr1k/notes-frontend
 
+concurrency:
+  group: notes-frontend-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   verify:
     runs-on: ubuntu-latest

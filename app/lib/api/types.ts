@@ -34,6 +34,39 @@ export type ApiConfig = {
 export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "categories" | "projects";
 export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
 
+export type RepositoryPipeline = {
+  status: string;
+  conclusion: string | null;
+  workflowName: string | null;
+  sha: string | null;
+  runNumber: number | null;
+  startedAt: string | null;
+  updatedAt: string | null;
+  url: string | null;
+  available: boolean;
+  stale: boolean;
+};
+export type RepositoryDeployment = {
+  state: string;
+  health: string | null;
+  image: string | null;
+  imageId: string | null;
+  startedAt: string | null;
+};
+export type RepositoryComponent = {
+  id: string;
+  label: string;
+  fullName: string;
+  pipeline: RepositoryPipeline;
+  deployment: RepositoryDeployment;
+};
+export type RepositoryProject = { id: string; name: string; components: RepositoryComponent[] };
+export type RepositoryStatuses = {
+  checkedAt: string;
+  refreshAvailableAt: string;
+  projects: RepositoryProject[];
+};
+
 export type AuthUser = {
   id: string;
   username: string;

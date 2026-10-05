@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 
-export type SectionKey = "overview" | "day" | "calendar" | "projects" | "tasks" | "finances" | "files" | "notes" | "settings";
+export type SectionKey = "overview" | "day" | "calendar" | "projects" | "tasks" | "finances" | "files" | "notes" | "repositories" | "settings";
 
 export type SectionTokens = {
   accent: string;
@@ -67,6 +67,13 @@ export const SECTION_TOKENS: Record<SectionKey, SectionTokens> = {
     shadow: "rgba(232, 169, 211, 0.22)",
     surface: "rgba(232, 169, 211, 0.12)",
     soft: "#f4d8e9",
+  },
+  repositories: {
+    accent: "#b7d88a",
+    contrast: "#202716",
+    shadow: "rgba(183, 216, 138, 0.2)",
+    surface: "rgba(183, 216, 138, 0.1)",
+    soft: "#e4f0cc",
   },
   settings: {
     accent: "#b6c6c8",
@@ -149,6 +156,14 @@ export const SECTION_META: Record<SectionKey, {
     icon: "✎",
     action: "Escribir nota",
   },
+  repositories: {
+    label: "Repositorios",
+    eyebrow: "ESTADO DE LOS SERVICIOS",
+    title: "Repositorios",
+    description: "Últimas pipelines, commits y las imágenes activas en la VPS.",
+    icon: "",
+    action: "Actualizar estados",
+  },
   settings: {
     label: "Configuración",
     eyebrow: "ORDEN Y PREFERENCIAS / 08",
@@ -159,12 +174,13 @@ export const SECTION_META: Record<SectionKey, {
   },
 };
 
-export const NAV_ITEMS: Array<{ key: SectionKey; short: string }> = [
+export const NAV_ITEMS: Array<{ key: SectionKey; short: string; mobileShort?: string }> = [
   { key: "overview", short: "Inicio" },
   { key: "day", short: "Mi día" },
   { key: "calendar", short: "Agenda" },
   { key: "projects", short: "Proyecto" },
   { key: "finances", short: "Finanzas" },
+  { key: "repositories", short: "Repositorios", mobileShort: "Repos." },
 ];
 
 export function tokenStyle(section: SectionKey): CSSProperties {
