@@ -239,7 +239,7 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
           <div className="repository-refresh-card">
             <span className="repository-field-label">ÚLTIMA CONSULTA A GITHUB</span>
             <strong>{Number.isFinite(checkedAt) ? timeAgo(data?.checkedAt) : loading ? "Consultando…" : "Todavía sin datos"}</strong>
-            <span>
+            <span className="repository-refresh-note">
               {!manualRefreshAvailable
                 ? "Consulta manual disponible en unos segundos."
                 : nextCheck
