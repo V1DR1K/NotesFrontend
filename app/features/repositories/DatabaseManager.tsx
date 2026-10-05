@@ -48,6 +48,7 @@ export function DatabaseManager() {
   const [selectedTable, setSelectedTable] = useState("");
   const [tablePage, setTablePage] = useState<DatabaseTablePage | null>(null);
   const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(25);
   const [filterColumn, setFilterColumn] = useState("");
   const [filterValue, setFilterValue] = useState("");
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -55,6 +56,7 @@ export function DatabaseManager() {
   const [loadingRows, setLoadingRows] = useState(false);
   const [error, setError] = useState("");
   const [script, setScript] = useState(initialSql);
+  const [sqlEditorCollapsed, setSqlEditorCollapsed] = useState(false);
   const [mode, setMode] = useState<"read" | "write">("read");
   const [running, setRunning] = useState(false);
   const [scriptResult, setScriptResult] = useState<DatabaseScriptResult | null>(null);
@@ -96,12 +98,12 @@ export function DatabaseManager() {
     if (!selectedTable) { setTablePage(null); return; }
     setLoadingRows(true); setError("");
     try {
-      const result = await api.databaseRows(project, selectedTable, { page, pageSize: 100, filters }, signal);
+      const result = await api.databaseRows(project, selectedTable, { page, pageSize, filters }, signal);
       if (!signal?.aborted) setTablePage(result);
     } catch (cause) {
       if (!signal?.aborted) setError(cause instanceof Error ? cause.message : "No se pudieron cargar las filas.");
     } finally { if (!signal?.aborted) setLoadingRows(false); }
-  }, [project, selectedTable, page, filters]);
+  }, [project, selectedTable, page, pageSize, filters]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -112,6 +114,8 @@ export function DatabaseManager() {
   const currentBackup = backups.find((entry) => entry.id === project);
   const activeTable = tables.find((table) => table.name === selectedTable);
   const pageCount = tablePage ? Math.max(1, Math.ceil(tablePage.totalElements / tablePage.pageSize)) : 1;
+  const firstRow = tablePage && tablePage.totalElements > 0 ? page * tablePage.pageSize + 1 : 0;
+  const lastRow = tablePage ? Math.min((page + 1) * tablePage.pageSize, tablePage.totalElements) : 0;
 
   const resetGridState = () => { setPage(0); setFilters({}); setFilterColumn(""); setFilterValue(""); setEditingRow(null); setInserting(false); };
   const applyFilter = (event: React.FormEvent) => {
@@ -192,6 +196,16 @@ export function DatabaseManager() {
           <header className="db-panel-header">
             <div><h2>Editor SQL</h2><span>{mode === "read" ? "Sólo lectura" : "Escritura confirmada"}</span></div>
             <div className="db-sql-actions">
+              <button
+                type="button"
+                className="db-button db-button-quiet db-collapse-button"
+                aria-expanded={!sqlEditorCollapsed}
+                aria-controls="db-sql-editor-body"
+                onClick={() => setSqlEditorCollapsed((collapsed) => !collapsed)}
+              >
+                <svg viewBox="0 0 16 16" aria-hidden="true"><path d={sqlEditorCollapsed ? "m4 6 4 4 4-4" : "m4 10 4-4 4 4"} /></svg>
+                <span>{sqlEditorCollapsed ? "Expandir" : "Contraer"}</span>
+              </button>
               <div className="db-mode-toggle" role="group" aria-label="Modo SQL">
                 <button type="button" className={mode === "read" ? "selected" : ""} onClick={() => changeMode("read")}>Lectura</button>
                 <button type="button" className={mode === "write" ? "selected write" : ""} onClick={() => changeMode("write")}>Escritura</button>
@@ -199,8 +213,10 @@ export function DatabaseManager() {
               <button type="button" className="db-button db-button-run" disabled={running} onClick={() => void runQuery()}>{running ? "Ejecutando…" : "Ejecutar"}</button>
             </div>
           </header>
-          <CodeMirror value={script} onChange={setScript} height="210px" theme={oneDark} extensions={extensions} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} aria-label="Editor de sentencias SQL PostgreSQL" />
-          <div className="db-sql-footer"><span>PostgreSQL · hasta 500 filas por resultado</span><span>Ctrl / ⌘ + Enter para ejecutar</span></div>
+          <div id="db-sql-editor-body" hidden={sqlEditorCollapsed}>
+            <CodeMirror value={script} onChange={setScript} height="210px" theme={oneDark} extensions={extensions} basicSetup={{ lineNumbers: true, foldGutter: true, highlightActiveLine: true }} aria-label="Editor de sentencias SQL PostgreSQL" />
+            <div className="db-sql-footer"><span>PostgreSQL · hasta 500 filas por resultado</span><span>Ctrl / ⌘ + Enter para ejecutar</span></div>
+          </div>
           <SqlOutput result={scriptResult} error={scriptError} />
         </section>
 
@@ -214,6 +230,14 @@ export function DatabaseManager() {
             <input aria-label="Texto de filtro" value={filterValue} onChange={(event) => setFilterValue(event.target.value)} placeholder="Buscar en esta tabla" />
             <button className="db-button db-button-quiet" type="submit">Aplicar</button>
           </form> : null}
+          {tablePage ? <nav className="db-pagination" aria-label="Paginación de filas">
+            <span>Filas {firstRow.toLocaleString("es-AR")}–{lastRow.toLocaleString("es-AR")} de {tablePage.totalElements.toLocaleString("es-AR")} · Página {page + 1} de {pageCount}</span>
+            <div className="db-pagination-actions">
+              <label className="db-page-size"><span>Filas</span><select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(0); }} aria-label="Filas por página"><option value={25}>25</option><option value={50}>50</option><option value={100}>100</option></select></label>
+              <button type="button" disabled={page === 0 || loadingRows} onClick={() => setPage((value) => Math.max(0, value - 1))}>Anterior</button>
+              <button type="button" disabled={page + 1 >= pageCount || loadingRows} onClick={() => setPage((value) => value + 1)}>Siguiente</button>
+            </div>
+          </nav> : null}
           {loadingRows && !tablePage ? <DatabaseSkeleton /> : null}
           {tablePage ? <div className="db-grid-scroll">
             <table className="db-grid"><thead><tr>{tablePage.columns.map((column) => <th key={column.name}><span>{column.name}</span><small>{column.dataType}{column.primaryKey ? " · PK" : ""}</small></th>)}{!tablePage.readOnly ? <th className="db-actions-heading">Acciones</th> : null}</tr></thead>
@@ -225,7 +249,6 @@ export function DatabaseManager() {
               </tbody>
             </table>
           </div> : !loadingTables && !selectedTable ? <p className="db-empty db-empty-main">Seleccioná una tabla para explorar sus datos.</p> : null}
-          {tablePage ? <footer className="db-pagination"><span>Página {page + 1} de {pageCount}</span><div><button type="button" disabled={page === 0 || loadingRows} onClick={() => setPage((value) => Math.max(0, value - 1))}>Anterior</button><button type="button" disabled={page + 1 >= pageCount || loadingRows} onClick={() => setPage((value) => value + 1)}>Siguiente</button></div></footer> : null}
         </section>
 
         <BackupAudit backup={currentBackup} pending={backupPending} backupError={backupError} onRun={() => void runBackup()} />

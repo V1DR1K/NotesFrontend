@@ -544,6 +544,7 @@ export const api = {
   search: (query: string, signal?: AbortSignal) => get<unknown>(`/search?q=${encodeURIComponent(query)}`, { signal }).then(normalizeSearchResults),
   dashboard: (signal?: AbortSignal) => request<unknown>("/dashboard", { signal }).then(normalizeDashboard),
   repositories: (signal?: AbortSignal) => request<unknown>("/repositories", { signal }).then(normalizeRepositoryStatuses),
+  refreshRepositories: () => request<unknown>("/repositories/refresh", { method: "POST" }).then(normalizeRepositoryStatuses),
   databaseTargets: () => get<DatabaseTarget[]>("/repositories/databases"),
   databaseTables: (project: string, signal?: AbortSignal) => get<DatabaseTable[]>(`/repositories/databases/${encodeURIComponent(project)}/tables`, { signal }),
   databaseRows: (project: string, table: string, body: { page: number; pageSize: number; filters: Record<string, string> }, signal?: AbortSignal) => request<DatabaseTablePage>(`/repositories/databases/${encodeURIComponent(project)}/tables/${encodeURIComponent(table)}/rows`, { method: "POST", body, signal }),

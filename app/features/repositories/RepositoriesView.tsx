@@ -163,6 +163,7 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
   const [data, setData] = useState<RepositoryStatuses | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   const load = useCallback(async (signal?: AbortSignal) => {
@@ -177,6 +178,21 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
       if (!signal?.aborted) setLoading(false);
     }
   }, []);
+
+  const refreshGithub = useCallback(async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const result = await api.refreshRepositories();
+      setData(result);
+      setError("");
+      setNow(Date.now());
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No se pudo actualizar la consulta a GitHub.");
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshing]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -202,8 +218,18 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
   }, [data?.refreshAvailableAt, load]);
 
   const checkedAt = data?.checkedAt ? Date.parse(data.checkedAt) : NaN;
+  const manualRefreshAt = Number.isFinite(checkedAt) ? checkedAt + 30_000 : NaN;
+  const manualRefreshAvailable = !Number.isFinite(manualRefreshAt) || now >= manualRefreshAt;
   const refreshAt = data?.refreshAvailableAt ? Date.parse(data.refreshAvailableAt) : NaN;
   const nextCheck = Number.isFinite(refreshAt) && refreshAt > now ? timeAgo(new Date(refreshAt).toISOString()) : null;
+
+  useEffect(() => {
+    if (!Number.isFinite(manualRefreshAt)) return;
+    const delay = manualRefreshAt - Date.now();
+    if (delay <= 0) return;
+    const timer = window.setTimeout(() => setNow(Date.now()), delay + 25);
+    return () => window.clearTimeout(timer);
+  }, [manualRefreshAt]);
 
   return (
     <div className="repositories-view">
@@ -213,7 +239,24 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
           <div className="repository-refresh-card">
             <span className="repository-field-label">ÚLTIMA CONSULTA A GITHUB</span>
             <strong>{Number.isFinite(checkedAt) ? timeAgo(data?.checkedAt) : loading ? "Consultando…" : "Todavía sin datos"}</strong>
-            <span>{nextCheck ? "Próxima consulta " + nextCheck : "Se actualiza automáticamente cada 10 minutos."}</span>
+            <span>
+              {!manualRefreshAvailable
+                ? "Consulta manual disponible en unos segundos."
+                : nextCheck
+                  ? "Próxima consulta automática " + nextCheck
+                  : "Se actualiza automáticamente cada 10 minutos."}
+            </span>
+            <button
+              type="button"
+              className="repository-refresh-button"
+              disabled={loading || refreshing || !manualRefreshAvailable}
+              onClick={() => void refreshGithub()}
+              aria-busy={refreshing}
+              aria-label={refreshing ? "Consultando GitHub" : "Actualizar consulta a GitHub"}
+            >
+              <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.1 6A5.2 5.2 0 0 0 3.4 4.8L2 6.2m0-3v3h3m-2.1 3.8A5.2 5.2 0 0 0 12.6 11l1.4-1.4m0 3v-3h-3" /></svg>
+              <span>{refreshing ? "Consultando GitHub…" : manualRefreshAvailable ? "Actualizar ahora" : "Consulta recién actualizada"}</span>
+            </button>
           </div>
         }
       />
