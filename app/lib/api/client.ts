@@ -532,13 +532,13 @@ export const api = {
     if (results[4].status === "rejected") throw results[4].reason;
     return { dayStatuses: options(results[0]), dayFeelings: options(results[1]), financeItems: options(results[2]), categories: options(results[3]), projects: options(results[4]) };
   },
-  createConfigOption: (kind: ConfigKind, body: { code: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
+  createConfigOption: (kind: ConfigKind, body: { code?: string; label: string; emoji?: string; sortOrder: number; active: boolean; financeType?: string }) => {
     const payload = kind === "day-statuses" ? { code: body.code, label: body.label, emoji: body.emoji ?? "", sortOrder: body.sortOrder } : body;
     return post<unknown>(`/config/${kind}`, payload);
   },
   updateConfigOption: (kind: ConfigKind, code: string, body: { label?: string; emoji?: string; sortOrder?: number; active?: boolean; financeType?: string }) => patch<unknown>(`/config/${kind}/${encodeURIComponent(code)}`, body),
   deleteConfigOption: (kind: ConfigKind, code: string) => del(`/config/${kind}/${encodeURIComponent(code)}`),
-  createCategory: (body: { code: string; label: string; sortOrder: number; active: boolean; projectCode: string }) => post<unknown>("/config/categories", body),
+  createCategory: (body: { code?: string; label: string; sortOrder: number; active: boolean; projectCode: string }) => post<unknown>("/config/categories", body),
   updateCategory: (id: string, body: { label?: string; sortOrder?: number; active?: boolean; projectCode?: string }) => patch<unknown>(`/config/categories/${encodeURIComponent(id)}`, body),
   deleteCategory: (id: string) => del(`/config/categories/${encodeURIComponent(id)}`),
   search: (query: string, signal?: AbortSignal) => get<unknown>(`/search?q=${encodeURIComponent(query)}`, { signal }).then(normalizeSearchResults),

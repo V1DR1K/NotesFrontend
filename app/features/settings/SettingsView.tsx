@@ -9,7 +9,7 @@ import { Button, ConfirmDialog, Dialog, FormField, FormPanel, IconButton, Sectio
 
 type ConfigKey = "dayStatuses" | "dayFeelings" | "financeItems" | "categories" | "projects";
 type ConfigGroup = { kind: ConfigKind; key: ConfigKey; label: string; description: string; emoji: boolean; fixed?: boolean };
-type Draft = { code: string; label: string; emoji: string; sortOrder: string; active: boolean; financeType: FinanceItemType; projectCode: string };
+type Draft = { label: string; emoji: string; sortOrder: string; active: boolean; financeType: FinanceItemType; projectCode: string };
 
 const GROUPS: ConfigGroup[] = [
   { kind: "day-statuses", key: "dayStatuses", label: "Semáforo del día", description: "Los tres colores fijos para describir el balance general del día.", emoji: true, fixed: true },
@@ -19,19 +19,7 @@ const GROUPS: ConfigGroup[] = [
   { kind: "categories", key: "categories", label: "Categorías por proyecto", description: "Las mismas categorías se comparten entre tareas, notas y eventos.", emoji: false },
 ];
 
-const emptyDraft = (projectCode = "personal"): Draft => ({ code: "", label: "", emoji: "", sortOrder: "0", active: true, financeType: "EXPENSE", projectCode });
-
-function categoryCodeFor(label: string, projectCode: string, categories: ApiOption[]) {
-  const base = label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 80).replace(/_+$/g, "") || "categoria";
-  const existing = new Set(categories.filter((category) => category.projectCode === projectCode).map((category) => category.code.toLowerCase()));
-  let code = base;
-  let suffix = 2;
-  while (existing.has(code.toLowerCase())) {
-    const tail = `_${suffix++}`;
-    code = `${base.slice(0, 80 - tail.length).replace(/_+$/g, "")}${tail}`;
-  }
-  return code;
-}
+const emptyDraft = (projectCode = "personal"): Draft => ({ label: "", emoji: "", sortOrder: "0", active: true, financeType: "EXPENSE", projectCode });
 
 export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; onConfigChanged: (config: ApiConfig) => void }) {
   const [editing, setEditing] = useState<{ group: ConfigGroup; option?: ApiOption } | null>(null);
@@ -50,19 +38,19 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
   });
 
   const openCreate = (group: ConfigGroup) => { setGroupExpanded(group.kind, true); setError(""); setDraft(emptyDraft(config.projects.find((item) => item.active !== false)?.code ?? "personal")); setEditing({ group }); };
-  const openEdit = (group: ConfigGroup, option: ApiOption) => { setError(""); setDraft({ code: option.code, label: option.label, emoji: option.emoji ?? "", sortOrder: String(option.sortOrder ?? 0), active: option.active !== false, financeType: option.financeType ?? "EXPENSE", projectCode: option.projectCode ?? "personal" }); setEditing({ group, option }); };
+  const openEdit = (group: ConfigGroup, option: ApiOption) => { setError(""); setDraft({ label: option.label, emoji: option.emoji ?? "", sortOrder: String(option.sortOrder ?? 0), active: option.active !== false, financeType: option.financeType ?? "EXPENSE", projectCode: option.projectCode ?? "personal" }); setEditing({ group, option }); };
   const closeEditor = () => { if (!saving) setEditing(null); };
   const save = async () => {
-    if (!editing || !draft.label.trim() || (!editing.option && editing.group.kind !== "categories" && !draft.code.trim())) return;
+    if (!editing || !draft.label.trim()) return;
     setSaving(true);
     setError("");
     try {
       const financeType = editing.group.kind === "finance-items" ? draft.financeType : undefined;
       if (editing.group.kind === "categories") {
         if (editing.option) await api.updateCategory(editing.option.id!, { label: draft.label.trim(), active: draft.active, projectCode: draft.projectCode });
-        else await api.createCategory({ code: categoryCodeFor(draft.label, draft.projectCode, config.categories), label: draft.label.trim(), sortOrder: 0, active: draft.active, projectCode: draft.projectCode });
+        else await api.createCategory({ label: draft.label.trim(), sortOrder: 0, active: draft.active, projectCode: draft.projectCode });
       } else if (editing.option) await api.updateConfigOption(editing.group.kind, editing.option.code, { label: draft.label.trim(), emoji: editing.group.emoji ? draft.emoji.trim() : undefined, sortOrder: Number(draft.sortOrder) || 0, active: draft.active, financeType });
-      else await api.createConfigOption(editing.group.kind, { code: draft.code.trim().toLowerCase().replace(/\s+/g, "_"), label: draft.label.trim(), emoji: editing.group.emoji ? draft.emoji.trim() : undefined, sortOrder: Number(draft.sortOrder) || 0, active: draft.active, financeType });
+      else await api.createConfigOption(editing.group.kind, { label: draft.label.trim(), emoji: editing.group.emoji ? draft.emoji.trim() : undefined, sortOrder: Number(draft.sortOrder) || 0, active: draft.active, financeType });
        invalidateApiQueryCache(); onConfigChanged(await api.config());
       setEditing(null);
     } catch (reason) {
@@ -86,7 +74,7 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
        const options = group.kind === "categories" ? sortCategoryOptions(rawOptions) : [...rawOptions].sort((left, right) => (left.projectCode ?? "").localeCompare(right.projectCode ?? "") || (left.sortOrder ?? 0) - (right.sortOrder ?? 0) || left.label.localeCompare(right.label, "es", { sensitivity: "base" }));
         const protectedOption = (option: ApiOption) => group.kind === "finance-items" && option.code.toLowerCase() === "transferencia";
         const renderOption = (option: ApiOption) => {
-          const metadata = [group.kind === "categories" ? null : option.code, option.financeType ? option.financeType === "INCOME" ? "ingreso" : option.financeType === "EXPENSE" ? "egreso" : "transferencia" : null, option.active === false ? "inactivo" : null].filter(Boolean).join(" · ");
+          const metadata = [option.financeType ? option.financeType === "INCOME" ? "ingreso" : option.financeType === "EXPENSE" ? "egreso" : "transferencia" : null, option.active === false ? "inactivo" : null].filter(Boolean).join(" · ");
           return <div className={`settings-row ${option.active === false ? "settings-row-inactive" : ""}`} key={option.id ?? option.code}>
           <div className="settings-option-mark">{group.emoji && option.emoji ? option.emoji : <span>◆</span>}</div>
           <div className="settings-option-copy"><strong>{option.label}</strong>{metadata ? <span>{metadata}</span> : null}</div>
@@ -108,9 +96,9 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
       })}
     </div>
     {editing ? <Dialog ariaLabel={`${editing.option ? "Editar" : "Agregar"} ${editing.group.label.toLowerCase()}`} onClose={closeEditor}><FormPanel eyebrow={editing.option ? "EDITAR OPCIÓN" : "NUEVA OPCIÓN"} onSubmit={() => void save()} title={editing.option ? `Editar ${editing.group.label.toLowerCase()}` : `Agregar ${editing.group.label.toLowerCase()}`} description={editing.group.kind === "categories" && editing.option ? "Al cambiar el proyecto, las tareas, notas y eventos de esta categoría también se moverán." : "Este cambio se verá en los formularios y filtros de tu cuaderno."} onClose={closeEditor}>
-       <div className="settings-form-grid">{editing.group.kind === "categories" ? <SelectField label="Proyecto" value={draft.projectCode} onChange={(projectCode) => setDraft({ ...draft, projectCode })} options={config.projects.filter((project) => project.active !== false || project.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /> : null}<FormField label="Nombre visible" value={draft.label} onChange={(label) => setDraft({ ...draft, label })} placeholder="Ej. Reuniones" />{editing.group.kind !== "categories" ? editing.option ? <label className="form-field" htmlFor="settings-code"><span>Código</span><input id="settings-code" value={draft.code} readOnly /></label> : <FormField label="Código interno" value={draft.code} onChange={(code) => setDraft({ ...draft, code })} placeholder="Ej. reuniones" /> : null}{editing.group.kind === "finance-items" ? <SelectField label="Tipo de movimiento" id="settings-finance-type" value={draft.financeType} onChange={(financeType) => setDraft({ ...draft, financeType: financeType as FinanceItemType })} options={[{ value: "INCOME", label: "Ingreso" }, { value: "EXPENSE", label: "Egreso" }, { value: "TRANSFER", label: "Transferencia" }]} disabled={editing.option?.code.toLowerCase() === "transferencia"} /> : null}{editing.group.emoji ? <FormField label="Símbolo" value={draft.emoji} onChange={(emoji) => setDraft({ ...draft, emoji })} placeholder="Ej. ✦" /> : null}{editing.group.kind !== "categories" ? <label className="form-field" htmlFor="settings-order"><span>Orden</span><input id="settings-order" type="number" inputMode="numeric" min="0" step="1" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: event.target.value })} /></label> : null}<label className="settings-active"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} disabled={editing.option?.code.toLowerCase() === "transferencia" || (editing.group.kind === "projects" && editing.option?.code.toLowerCase() === "personal")} /><span>Disponible en formularios y filtros</span></label></div>
-      {error ? <div className="inline-error" role="alert">{error}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeEditor} disabled={saving}>Cancelar</Button><Button onClick={() => void save()} disabled={saving || !draft.label.trim() || (!editing.option && editing.group.kind !== "categories" && !draft.code.trim()) || (editing.group.kind === "categories" && !draft.projectCode)}>{saving ? "Guardando..." : "Guardar opción"}<span aria-hidden="true">↗</span></Button></div>
+       <div className="settings-form-fields">{editing.group.kind === "categories" ? <SelectField label="Proyecto" value={draft.projectCode} onChange={(projectCode) => setDraft({ ...draft, projectCode })} options={config.projects.filter((project) => project.active !== false || project.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /> : null}<FormField label="Nombre" value={draft.label} onChange={(label) => setDraft({ ...draft, label })} placeholder="Ej. Reuniones" />{editing.group.kind === "finance-items" ? <SelectField label="Tipo de movimiento" id="settings-finance-type" value={draft.financeType} onChange={(financeType) => setDraft({ ...draft, financeType: financeType as FinanceItemType })} options={[{ value: "INCOME", label: "Ingreso" }, { value: "EXPENSE", label: "Egreso" }, { value: "TRANSFER", label: "Transferencia" }]} disabled={editing.option?.code.toLowerCase() === "transferencia"} /> : null}{editing.group.emoji ? <FormField label="Símbolo" value={draft.emoji} onChange={(emoji) => setDraft({ ...draft, emoji })} placeholder="Ej. ✦" /> : null}{editing.group.kind !== "categories" ? <label className="form-field" htmlFor="settings-order"><span>Orden</span><input id="settings-order" type="number" inputMode="numeric" min="0" step="1" value={draft.sortOrder} onChange={(event) => setDraft({ ...draft, sortOrder: event.target.value })} /></label> : null}<label className="settings-active"><input type="checkbox" checked={draft.active} onChange={(event) => setDraft({ ...draft, active: event.target.checked })} disabled={editing.option?.code.toLowerCase() === "transferencia" || (editing.group.kind === "projects" && editing.option?.code.toLowerCase() === "personal")} /><span>Disponible en formularios y filtros</span></label></div>
+      {error ? <div className="inline-error" role="alert">{error}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeEditor} disabled={saving}>Cancelar</Button><Button onClick={() => void save()} disabled={saving || !draft.label.trim() || (editing.group.kind === "categories" && !draft.projectCode)}>{saving ? "Guardando..." : "Guardar opción"}<span aria-hidden="true">↗</span></Button></div>
     </FormPanel></Dialog> : null}
-    {pendingDelete ? <ConfirmDialog title={`¿Eliminar ${pendingDelete.option.label}?`} description={pendingDelete.group.kind === "projects" ? "Podés eliminar este proyecto cuando ya no tenga tareas, notas, archivos ni eventos asociados." : "La opción dejará de aparecer en formularios y filtros. Los registros históricos conservarán su código."} onCancel={() => setPendingDelete(null)} onConfirm={() => void remove()} /> : null}
+    {pendingDelete ? <ConfirmDialog title={`¿Eliminar ${pendingDelete.option.label}?`} description={pendingDelete.group.kind === "projects" ? "Podés eliminar este proyecto cuando ya no tenga tareas, notas, archivos ni eventos asociados." : "La opción dejará de aparecer en formularios y filtros. Los registros históricos conservarán la opción asociada."} onCancel={() => setPendingDelete(null)} onConfirm={() => void remove()} /> : null}
   </div>;
 }

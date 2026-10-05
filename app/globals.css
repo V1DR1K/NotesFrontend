@@ -567,8 +567,9 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .settings-option-copy span { overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .settings-row-actions { display: flex; gap: 3px; margin-left: auto; }
 .settings-empty { margin: 18px 0 2px; color: var(--muted); font-size: 10px; }
-.settings-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; margin-top: 26px; }
-.settings-form-grid .settings-active { grid-column: 1 / -1; }
+.settings-form-fields { display: flex; flex-direction: column; align-items: stretch; gap: 15px; width: 100%; margin-top: 26px; }
+.settings-form-fields > .form-field, .settings-form-fields > .field-label { width: 100%; min-width: 0; }
+.settings-form-fields .form-field input, .settings-form-fields .field-label .select-wrap, .settings-form-fields .field-label select { width: 100%; }
 .settings-active { display: flex; align-items: center; gap: 9px; min-height: 44px; color: var(--muted-strong); font-size: 11px; }
 .settings-active input { width: 18px; height: 18px; accent-color: var(--section-accent); }
 .search-dialog { width: min(680px, 100%); padding: 26px; border: 1px solid var(--section-accent); background: var(--panel-strong); box-shadow: 0 22px 70px var(--section-shadow); }
@@ -899,8 +900,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .settings-group-heading { gap: 10px; }
   .settings-group-heading h2 { font-size: 22px; }
   .settings-group-actions .button { min-height: 44px; }
-  .settings-form-grid { grid-template-columns: 1fr; }
-  .settings-form-grid .settings-active { grid-column: auto; }
   .search-dialog { padding: 20px 16px; }
   .search-dialog-heading h2 { font-size: 25px; }
   .search-results { max-height: 48dvh; }
