@@ -149,7 +149,7 @@ export function PersonalNotesApp() {
     const section = (() => {
       switch (activeSection) {
         case "day": return <MiDiaModule config={config} focusId={focusId} />;
-        case "calendar": return <CalendarModule config={config} onOpenTask={(taskId) => navigate("tasks", taskId, "edit")} />;
+        case "calendar": return <CalendarModule config={config} onOpenTask={(taskId) => navigate("tasks", taskId)} />;
         case "projects": return <ProjectsView config={config} tab={projectTab} onTabChange={changeProjectTab} focusId={focusId} editId={editId} />;
         case "tasks": return <TasksModule config={config} focusId={focusId} editId={editId} />;
         case "finances": return <FinanzasModule config={config} focusId={focusId} tab={financeTab} onTabChange={changeFinanceTab} />;

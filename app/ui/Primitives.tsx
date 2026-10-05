@@ -379,19 +379,26 @@ export function FormField({ label, value, onChange, placeholder, multiline = fal
   );
 }
 
-export function FormPanel({ children, title, description, onClose, onSubmit, eyebrow = "NUEVO REGISTRO" }: { children: ReactNode; title: string; description: string; onClose: () => void; onSubmit?: () => void; eyebrow?: string }) {
+export function FormPanel({ children, title, description, onClose, onSubmit, eyebrow = "NUEVO REGISTRO", mode = "edit", onEdit, onEditLabel = "Editar" }: { children: ReactNode; title: string; description: string; onClose: () => void; onSubmit?: () => void; eyebrow?: string; mode?: "edit" | "preview"; onEdit?: () => void; onEditLabel?: string }) {
   const dialogClose = useContext(DialogCloseContext);
   const childNodes = Children.toArray(children);
   const footer = childNodes.filter((child) => isValidElement<{ className?: string }>(child) && child.props.className?.split(/\s+/).includes("form-actions"));
   const content = childNodes.filter((child) => !footer.includes(child));
+  const closePanel = dialogClose ?? onClose;
+  const panel = <>
+    <div className="form-panel-heading">
+      <div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>
+      <IconButton label={mode === "preview" ? "Cerrar vista previa" : "Cerrar formulario"} onClick={closePanel}>×</IconButton>
+    </div>
+    <div className="form-panel-content">{mode === "preview" ? children : content}</div>
+    {mode === "preview" ? <div className="form-actions"><Button variant="quiet" onClick={closePanel}>Cerrar</Button>{onEdit ? <Button onClick={() => { onEdit(); closePanel(); }}>{onEditLabel}<span aria-hidden="true">↗</span></Button> : null}</div> : footer}
+  </>;
+
+  if (mode === "preview") return <section className="form-panel form-panel-preview">{panel}</section>;
+
   return (
     <form className="form-panel" onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); onSubmit?.(); }}>
-      <div className="form-panel-heading">
-        <div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>
-        <IconButton label="Cerrar formulario" onClick={dialogClose ?? onClose}>×</IconButton>
-      </div>
-      <div className="form-panel-content">{content}</div>
-      {footer}
+      {panel}
     </form>
   );
 }

@@ -52,12 +52,10 @@ type Draft = { title: string; detail: string; categoryCode: string; status: Task
 
 const emptyDraft = (categoryCode: string, projectCode = "personal"): Draft => ({ title: "", detail: "", categoryCode, status: "PENDING", dueDate: "", projectCode });
 
-function TaskCard({ task, projectLabel, onEdit, onDelete, onStatusChange, onPointerDown, dragging, shaking }: { task: Task; projectLabel: string; onEdit: () => void; onDelete: () => void; onStatusChange: (status: TaskStatus) => void; onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void; dragging: boolean; shaking: boolean }) {
+function TaskCard({ task, projectLabel, onEdit, onDelete, onPreview, onStatusChange, onPointerDown, dragging, shaking }: { task: Task; projectLabel: string; onEdit: () => void; onDelete: () => void; onPreview: () => void; onStatusChange: (status: TaskStatus) => void; onPointerDown: (event: ReactPointerEvent<HTMLElement>) => void; dragging: boolean; shaking: boolean }) {
   return <article id={`record-${task.id}`} className={`task-card ${dragging ? "task-card-dragging" : ""} ${shaking ? "task-card-shake" : ""} ${isOverdue(task) ? "task-card-overdue" : ""}`} onPointerDown={onPointerDown}>
     <div className="task-card-top"><span className="task-grip" aria-hidden="true">⠿</span><span className="task-category">{task.category.label} · {projectLabel}</span><CardActions onEdit={onEdit} onDelete={onDelete} /></div>
-    <h3>{task.title}</h3>
-    {task.detail ? <p>{task.detail}</p> : null}
-    <div className={`task-due ${isOverdue(task) ? "task-due-overdue" : ""}`}><span aria-hidden="true">◷</span>{taskDueLabel(task)}</div>
+    <button type="button" className="task-card-preview-trigger" onClick={onPreview} aria-label={`Ver tarea ${task.title}`}><h3>{task.title}</h3>{task.detail ? <p>{task.detail}</p> : null}<div className={`task-due ${isOverdue(task) ? "task-due-overdue" : ""}`}><span aria-hidden="true">◷</span>{taskDueLabel(task)}</div></button>
     <div className="task-card-footer">
       <span className="task-drag-hint">Arrastrá para mover</span>
       <label className="task-status-select"><span className="visually-hidden">Cambiar estado de {task.title}</span><select value={task.status} onChange={(event) => onStatusChange(event.target.value as TaskStatus)}><option value="PENDING">Pendientes</option><option value="IN_PROGRESS">En proceso</option><option value="COMPLETED">Finalizadas</option></select></label>
@@ -81,6 +79,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const [deletedIds, setDeletedIds] = useState<string[]>([]);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editing, setEditing] = useState<Task | null>(null);
+  const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const firstProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode;
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(sortCategoryOptions(config.categories).find((option) => option.projectCode === firstProject && option.active !== false)?.code ?? "", firstProject));
   const [pendingDelete, setPendingDelete] = useState<Task | null>(null);
@@ -91,6 +90,8 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const [pulsingStatus, setPulsingStatus] = useState<TaskStatus | null>(null);
   const dragRef = useRef<{ task: Task; x: number; y: number; moved: boolean } | null>(null);
   const lastEditId = useRef<string | null>(null);
+  const lastPreviewFocusId = useRef<string | null>(null);
+  const pendingPreviewEdit = useRef<Task | null>(null);
 
   const tasks = useMemo(() => {
     const serverTasks = data.data?.content ?? [];
@@ -105,6 +106,15 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     const target = document.getElementById(`record-${focusId}`);
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusId, tasks]);
+
+  useEffect(() => {
+    if (!focusId) { lastPreviewFocusId.current = null; return; }
+    if (editId || lastPreviewFocusId.current === focusId) return;
+    const task = tasks.find((item) => item.id === focusId);
+    if (!task) return;
+    lastPreviewFocusId.current = focusId;
+    setPreviewTask(task);
+  }, [editId, focusId, tasks]);
 
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, Task[]> = { PENDING: [], IN_PROGRESS: [], COMPLETED: [] };
@@ -129,6 +139,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
 
   const openCreate = () => { mutation.clearError(); setEditing(null); const nextProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode; setDraft(emptyDraft(sortCategoryOptions(config.categories).find((option) => option.projectCode === nextProject && option.active !== false)?.code ?? "", nextProject)); setComposerOpen(true); };
   const openEdit = useCallback((task: Task) => { clearError(); setEditing(task); setDraft({ title: task.title, detail: task.detail ?? "", categoryCode: task.category.code, status: task.status, dueDate: task.dueDate ?? "", projectCode: task.projectCode }); setComposerOpen(true); }, [clearError]);
+  const closePreview = () => { const task = pendingPreviewEdit.current; pendingPreviewEdit.current = null; setPreviewTask(null); if (task) openEdit(task); };
   useEffect(() => {
     if (!editId || !data.data || lastEditId.current === editId) return;
     const task = tasks.find((item) => item.id === editId);
@@ -247,7 +258,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
           : tasksByStatus[status];
         return <section className={`task-column ${dropTarget === status ? "task-column-drop-target" : ""} ${pulsingStatus === status ? "task-column-pulse" : ""}`} data-task-status-column={status} aria-labelledby={`task-column-${status}`} key={status}>
           <div className="task-column-heading"><div><span className="eyebrow">{STATUS_META[status].eyebrow}</span><h2 id={`task-column-${status}`}>{STATUS_META[status].label}</h2></div><span className="task-column-count">{columnTasks.length}</span></div>
-          <div className="task-column-list" id={status === "COMPLETED" ? "task-previous-list" : undefined}>{columnTasks.length ? columnTasks.map((task) => <TaskCard key={task.id} task={task} projectLabel={config.projects.find((item) => item.code === task.projectCode)?.label ?? task.projectCode} onEdit={() => openEdit(task)} onDelete={() => setPendingDelete(task)} onStatusChange={(nextStatus) => void moveTask(task, nextStatus)} onPointerDown={(event) => handlePointerDown(event, task)} dragging={draggingId === task.id} shaking={shakingIds.includes(task.id)} />) : <div className="task-column-empty">{status === "COMPLETED" ? "Sin finalizadas recientes" : "Soltá una tarea acá"}</div>}</div>
+          <div className="task-column-list" id={status === "COMPLETED" ? "task-previous-list" : undefined}>{columnTasks.length ? columnTasks.map((task) => <TaskCard key={task.id} task={task} projectLabel={config.projects.find((item) => item.code === task.projectCode)?.label ?? task.projectCode} onEdit={() => openEdit(task)} onDelete={() => setPendingDelete(task)} onPreview={() => setPreviewTask(task)} onStatusChange={(nextStatus) => void moveTask(task, nextStatus)} onPointerDown={(event) => handlePointerDown(event, task)} dragging={draggingId === task.id} shaking={shakingIds.includes(task.id)} />) : <div className="task-column-empty">{status === "COMPLETED" ? "Sin finalizadas recientes" : "Soltá una tarea acá"}</div>}</div>
           {status === "COMPLETED" && previousCount > 0 ? <>
             <Button variant="quiet" className="task-previous-toggle" onClick={() => void togglePreviousTasks()} disabled={data.previousLoading} ariaExpanded={showPreviousTasks} aria-controls="task-previous-list">
               {data.previousLoading ? "Cargando anteriores…" : showPreviousTasks ? "Ocultar anteriores" : `Ver anteriores (${previousCount})`}
@@ -258,6 +269,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
       })}
     </section>}
     {draggingId ? <div className="task-drag-ghost" style={{ left: pointer.x + 14, top: pointer.y + 14 }} aria-hidden="true">{tasks.find((task) => task.id === draggingId)?.title}</div> : null}
+    {previewTask ? <Dialog ariaLabel={`Vista previa de ${previewTask.title}`} trackChanges={false} onClose={closePreview}><FormPanel mode="preview" eyebrow={`VISTA PREVIA · ${previewTask.category.label.toUpperCase()}`} title={previewTask.title} description={`${previewTask.category.label} · ${config.projects.find((item) => item.code === previewTask.projectCode)?.label ?? previewTask.projectCode}`} onClose={closePreview} onEdit={() => { pendingPreviewEdit.current = previewTask; }}><div className="record-preview-meta"><span><strong>Estado</strong>{STATUS_META[previewTask.status].label}</span><span><strong>Fecha límite</strong>{previewTask.dueDate ? dateLabel(previewTask.dueDate) : "Sin fecha límite"}</span></div>{previewTask.detail ? <p className="record-preview-copy multiline-copy">{previewTask.detail}</p> : <p className="record-preview-empty">Esta tarea no tiene detalles adicionales.</p>}</FormPanel></Dialog> : null}
     {composerOpen ? <Dialog ariaLabel={editing ? "Editar tarea" : "Crear tarea"} onClose={closeComposer}><FormPanel eyebrow={editing ? "EDITAR TAREA" : "NUEVA TAREA"} title={editing ? "Editar tarea" : "Crear tarea"} description="Las tareas se guardan en tu espacio y podés moverlas cuando cambien de estado." onClose={closeComposer} onSubmit={() => void saveTask()}><div className="form-grid task-form-grid"><FormField label="Tarea" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Entregar el trabajo práctico" /><SelectField label="Proyecto" value={draft.projectCode} onChange={changeDraftProject} options={config.projects.filter((item) => item.active !== false || item.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /><SelectField label="Categoría" value={draft.categoryCode} onChange={(value) => setDraft({ ...draft, categoryCode: value })} options={draftCategories.map((option) => ({ value: option.code, label: option.label }))} disabled={!draftCategories.length} /><FormField label="Detalle (opcional)" value={draft.detail} onChange={(detail) => setDraft({ ...draft, detail })} placeholder="Agregá contexto o el próximo paso" multiline /><SelectField label="Estado" value={draft.status} onChange={(value) => setDraft({ ...draft, status: value as TaskStatus })} options={STATUSES.map((status) => ({ value: status, label: STATUS_META[status].label }))} /><label className="form-field"><span>Fecha límite (opcional)</span><input type="date" value={draft.dueDate} onChange={(event) => setDraft({ ...draft, dueDate: event.target.value })} /></label></div>{mutation.error ? <div className="inline-error" role="alert">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={closeComposer} disabled={mutation.pending}>Cancelar</Button><Button type="submit" disabled={mutation.pending || !draft.title.trim() || !draft.categoryCode || !draft.projectCode}>{mutation.pending ? "Guardando..." : editing ? "Guardar cambios" : "Crear tarea"}<span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
     {pendingDelete ? <ConfirmDialog title={`¿Eliminar ${pendingDelete.title}?`} description="La tarea se quitará del tablero, pero la acción no modifica tus categorías." onCancel={() => setPendingDelete(null)} onConfirm={() => void removeTask()} /> : null}
   </div>;

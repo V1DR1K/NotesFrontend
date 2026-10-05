@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import type { ApiConfig } from "../../lib/api/types";
+import { useRef, useState } from "react";
+import type { ApiConfig, DayEntry } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { currentMonth, dateLabel, fieldError, monthBounds, todayIso, weekdayLabel } from "../../lib/presentation";
@@ -37,6 +37,8 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [previewEntry, setPreviewEntry] = useState<DayEntry | null>(null);
+  const pendingPreviewEdit = useRef<DayEntry | null>(null);
   const [analyzingIds, setAnalyzingIds] = useState<string[]>([]);
   const [analysisNotice, setAnalysisNotice] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,7 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
 
   const startNew = () => { setEditingId(null); setDraft({ date: todayIso(), description: "" }); setAnalysisNotice(""); mutation.clearError(); setComposerOpen(true); };
   const startEdit = (entry: NonNullable<typeof data.data>["content"][number]) => { setEditingId(entry.id); setDraft({ date: entry.date, description: entry.description }); setAnalysisNotice(""); mutation.clearError(); setComposerOpen(true); };
+  const closePreview = () => { const entry = pendingPreviewEdit.current; pendingPreviewEdit.current = null; setPreviewEntry(null); if (entry) startEdit(entry); };
   const openFilters = () => { setDraftFilter(filter); setDraftFeelings(feelings); setFiltersOpen(true); };
   const applyFilters = () => { setFilter(draftFilter); setFeelings(draftFeelings); setPage(0); setFiltersOpen(false); };
   const clearDraftFilters = () => { setDraftFilter("all"); setDraftFeelings([]); };
@@ -128,11 +131,14 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
       const analyzing = analyzingIds.includes(entry.id);
        return <article id={`record-${entry.id}`} className={`content-card day-card ${pending ? "day-card-pending" : ""}`} key={entry.id}>
          <div className="content-card-top"><span className="mono-date">{dateLabel(entry.date, true)} <span className="card-weekday">· {weekdayLabel(entry.date)}</span></span><CardActions onEdit={() => startEdit(entry)} onDelete={() => setPendingDelete(entry.id)} /></div>
-        {pending ? <div className="day-analysis-pending"><span className="day-analysis-mark" aria-hidden="true">◌</span><div><strong>Análisis pendiente</strong><span>La descripción está guardada, pero todavía no tiene color ni sensaciones.</span></div></div> : <><div className="day-card-heading"><StatusDot status={statusTone(entry.statusCode)} /><span className="status-copy">{entry.status?.label ?? statusLabel(entry.statusCode)}</span><span className="day-mood">{entry.status?.emoji ?? statusEmoji(entry.statusCode)}</span></div><div className="day-feeling-tags" aria-label="Sensaciones del día">{parseFeelings(entry.feeling).map((feeling) => <span className="day-feeling-tag" key={feeling}>{feelingOptions.find((option) => option.code === feeling)?.label ?? feeling}</span>)}</div></>}
-        <p className="multiline-copy">{entry.description}</p><div className="card-footer">{pending ? <button type="button" className="card-link-button" onClick={() => void runAnalysis(entry.id)} disabled={analyzing}>{analyzing ? "ANALIZANDO..." : "ANALIZAR DE NUEVO"}</button> : <span className="eyebrow">REGISTRO ANALIZADO</span>}<span className="card-arrow" aria-hidden="true">↗</span></div>
+        <button type="button" className="content-card-preview-trigger" onClick={() => setPreviewEntry(entry)} aria-label={`Ver registro del ${dateLabel(entry.date)}`}>
+          {pending ? <div className="day-analysis-pending"><span className="day-analysis-mark" aria-hidden="true">◌</span><div><strong>Análisis pendiente</strong><span>La descripción está guardada, pero todavía no tiene color ni sensaciones.</span></div></div> : <><div className="day-card-heading"><StatusDot status={statusTone(entry.statusCode)} /><span className="status-copy">{entry.status?.label ?? statusLabel(entry.statusCode)}</span><span className="day-mood">{entry.status?.emoji ?? statusEmoji(entry.statusCode)}</span></div><div className="day-feeling-tags" aria-label="Sensaciones del día">{parseFeelings(entry.feeling).map((feeling) => <span className="day-feeling-tag" key={feeling}>{feelingOptions.find((option) => option.code === feeling)?.label ?? feeling}</span>)}</div></>}
+          <p className="multiline-copy">{entry.description}</p>
+        </button><div className="card-footer">{pending ? <button type="button" className="card-link-button" onClick={() => void runAnalysis(entry.id)} disabled={analyzing}>{analyzing ? "ANALIZANDO..." : "ANALIZAR DE NUEVO"}</button> : <span className="eyebrow">REGISTRO ANALIZADO</span>}<span className="card-arrow" aria-hidden="true">↗</span></div>
       </article>;
     })}</div> : <EmptyState title="Todavía no hay registros con esos filtros" description="Probá otro filtro o dejá un nuevo registro para empezar a construir memoria." action="Anotar el día" onAction={startNew} />}
     <div className="module-bottom"><span className="bottom-caption">CADA REGISTRO ES UNA FOTO, NO UN JUICIO.</span><Pagination page={Math.min(page + 1, Math.max(1, pageCount))} pages={pageCount} onChange={(next) => setPage(next - 1)} /></div>
+    {previewEntry ? <Dialog ariaLabel={`Vista previa del registro del ${dateLabel(previewEntry.date)}`} trackChanges={false} onClose={closePreview}><FormPanel mode="preview" eyebrow={previewEntry.analysisStatus === "COMPLETED" ? "VISTA PREVIA · MI DÍA" : "VISTA PREVIA · ANÁLISIS PENDIENTE"} title={dateLabel(previewEntry.date, true)} description={`${weekdayLabel(previewEntry.date)} · ${previewEntry.status?.label ?? statusLabel(previewEntry.statusCode)}`} onClose={closePreview} onEdit={() => { pendingPreviewEdit.current = previewEntry; }}><div className="record-preview-meta"><span><strong>Sensaciones</strong>{parseFeelings(previewEntry.feeling).map((feeling) => feelingOptions.find((option) => option.code === feeling)?.label ?? feeling).join(" · ") || "Sin clasificar"}</span><span><strong>Estado del análisis</strong>{previewEntry.analysisStatus === "COMPLETED" ? "Completado" : "Pendiente"}</span></div><p className="record-preview-copy multiline-copy">{previewEntry.description}</p></FormPanel></Dialog> : null}
     {pendingDelete ? <ConfirmDialog title="¿Eliminar este registro?" description="El registro se eliminará de tu cuaderno y no se puede deshacer." onCancel={() => setPendingDelete(null)} onConfirm={() => void remove()} /> : null}
   </div>;
 }
