@@ -56,7 +56,7 @@ export function DatabaseManager() {
   const [loadingRows, setLoadingRows] = useState(false);
   const [error, setError] = useState("");
   const [script, setScript] = useState(initialSql);
-  const [sqlEditorCollapsed, setSqlEditorCollapsed] = useState(false);
+  const [sqlEditorCollapsed, setSqlEditorCollapsed] = useState(true);
   const [mode, setMode] = useState<"read" | "write">("read");
   const [running, setRunning] = useState(false);
   const [scriptResult, setScriptResult] = useState<DatabaseScriptResult | null>(null);
