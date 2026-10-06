@@ -60,7 +60,12 @@ export function PersonalNotesApp() {
     if (targetId) url.searchParams.set("focus", targetId); else url.searchParams.delete("focus");
     if (targetId && mode === "edit") url.searchParams.set("edit", targetId); else url.searchParams.delete("edit");
     if (section === "calendar" && targetDate) url.searchParams.set("focusDate", targetDate); else url.searchParams.delete("focusDate");
-    window.history.pushState({ ...window.history.state, notesSection: nextSection }, "", url);
+    const currentHistoryState = window.history.state as Record<string, unknown> | null;
+    const isNavigatingFromDialog = Boolean(currentHistoryState?.notesDialogId);
+    const nextHistoryState: Record<string, unknown> = { ...(currentHistoryState ?? {}), notesSection: nextSection };
+    delete nextHistoryState.notesDialogId;
+    if (isNavigatingFromDialog) window.history.replaceState(nextHistoryState, "", url);
+    else window.history.pushState(nextHistoryState, "", url);
     setActiveSection(nextSection);
     setProjectTab(nextTab);
     setFinanceTab(nextFinanceTab);
