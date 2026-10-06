@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import type { ApiConfig, Task, TaskStatus } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
-import { dateLabel } from "../../lib/presentation";
+import { dateLabel, isTaskOverdue } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { useTasksData } from "./useTasksData";
@@ -19,18 +19,9 @@ const STATUS_META: Record<TaskStatus, { label: string; eyebrow: string }> = {
 };
 const STATUSES: TaskStatus[] = ["PENDING", "IN_PROGRESS", "COMPLETED"];
 
-function todayIso() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-
-function isOverdue(task: Task) {
-  return task.status !== "COMPLETED" && Boolean(task.dueDate && task.dueDate < todayIso());
-}
-
 function taskDueLabel(task: Task) {
   if (!task.dueDate) return "Sin fecha límite";
-  return isOverdue(task) ? `Vencida · ${dateLabel(task.dueDate)}` : `Límite · ${dateLabel(task.dueDate)}`;
+  return isTaskOverdue(task) ? `Vencida · ${dateLabel(task.dueDate)}` : `Límite · ${dateLabel(task.dueDate)}`;
 }
 
 function sortTasks(tasks: Task[]) {

@@ -1,12 +1,8 @@
 "use client";
 
 import type { CalendarEvent, Task } from "../../lib/api/types";
-import { dateLabel, todayIso } from "../../lib/presentation";
+import { dateLabel, isTaskOverdue } from "../../lib/presentation";
 import { MonthCalendar } from "../../ui/Calendar";
-
-function taskIsOverdue(task: Task) {
-  return task.status !== "COMPLETED" && Boolean(task.dueDate && task.dueDate < todayIso());
-}
 
 export function EventsCalendar({ month, events, tasks, selectedDate, onMonthChange, onSelectDate }: { month: string; events: CalendarEvent[]; tasks: Task[]; selectedDate: string; onMonthChange: (month: string) => void; onSelectDate: (date: string) => void }) {
   const byDate = new Map<string, Array<{ kind: "event"; item: CalendarEvent } | { kind: "task"; item: Task }>>();
@@ -22,7 +18,7 @@ export function EventsCalendar({ month, events, tasks, selectedDate, onMonthChan
       <span className="calendar-day-number">{dayNumber}</span>
       {dayItems.length ? <span className="event-day-list">{dayItems.slice(0, 2).map((entry) => entry.kind === "event"
         ? <span className="event-day-chip" key={`event-${entry.item.id}`} title={entry.item.description}>Evento · {entry.item.description}</span>
-        : <span className={`task-day-chip ${entry.item.status === "COMPLETED" ? "task-day-chip-completed" : ""} ${taskIsOverdue(entry.item) ? "task-day-chip-overdue" : ""}`} key={`task-${entry.item.id}`} title={entry.item.title}>Tarea · {entry.item.title}</span>)}{dayItems.length > 2 ? <span className="event-day-more">+{dayItems.length - 2} más</span> : null}</span> : null}
+        : <span className={`task-day-chip ${entry.item.status === "COMPLETED" ? "task-day-chip-completed" : ""} ${isTaskOverdue(entry.item) ? "task-day-chip-overdue" : ""}`} key={`task-${entry.item.id}`} title={entry.item.title}>Tarea · {entry.item.title}</span>)}{dayItems.length > 2 ? <span className="event-day-more">+{dayItems.length - 2} más</span> : null}</span> : null}
     </button>;
   }} />;
 }

@@ -1,8 +1,14 @@
+import type { Task } from "./api/types";
+
 export const todayIso = () => {
   const now = new Date();
   const offset = now.getTimezoneOffset();
   return new Date(now.getTime() - offset * 60_000).toISOString().slice(0, 10);
 };
+
+export function isTaskOverdue(task: Pick<Task, "dueDate" | "status">, today = todayIso()) {
+  return task.status !== "COMPLETED" && Boolean(task.dueDate && task.dueDate < today);
+}
 
 export function monthBounds(month: string) {
   const [year, monthNumber] = month.split("-").map(Number);

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ApiConfig, CalendarEvent, Task } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
-import { currentMonth, dateLabel, fieldError, monthBounds, todayIso, weekdayLabel } from "../../lib/presentation";
+import { currentMonth, dateLabel, fieldError, isTaskOverdue, monthBounds, todayIso, weekdayLabel } from "../../lib/presentation";
 import { sortCategoryOptions } from "../../lib/categories";
 import { useFocusTarget } from "../../lib/ui/useFocusTarget";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
@@ -16,10 +16,6 @@ const TASK_STATUS_LABEL: Record<Task["status"], string> = {
   IN_PROGRESS: "En proceso",
   COMPLETED: "Completada",
 };
-
-function taskIsOverdue(task: Task) {
-  return task.status !== "COMPLETED" && Boolean(task.dueDate && task.dueDate < todayIso());
-}
 
 export function CalendarView({ config, onOpenTask, focusId, focusDate }: { config: ApiConfig; onOpenTask?: (taskId: string) => void; focusId?: string | null; focusDate?: string | null }) {
   const [month, setMonth] = useState(() => focusDate?.slice(0, 7) ?? currentMonth());
@@ -98,7 +94,7 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
         <div className="section-heading-row"><div><span className="eyebrow">DÍA SELECCIONADO</span><h2 id="calendar-selected-day">{weekdayLabel(visibleSelectedDate)} · {dateLabel(visibleSelectedDate)}</h2></div><Button variant="ghost" onClick={() => startNew(visibleSelectedDate)}>+ Agregar evento</Button></div>
         {visibleSelectedEvents.length || visibleSelectedTasks.length ? <div className="calendar-detail-groups">
           {visibleSelectedEvents.length ? <section className="calendar-detail-group" aria-labelledby="calendar-events-heading"><div className="calendar-detail-group-heading"><h3 id="calendar-events-heading">Eventos</h3><span>{visibleSelectedEvents.length}</span></div><div className="event-detail-list">{visibleSelectedEvents.map((event) => <article className="event-detail-card" id={"record-" + event.id} key={event.id}><button type="button" className="event-detail-preview-trigger" onClick={() => setPreviewEvent(event)} aria-label={`Ver evento: ${event.description}`}><span className="event-category-label">{event.category.label || categoryLabel(event.category.code)} · {projectLabel(event.projectCode)}</span><p className="multiline-copy">{event.description}</p></button><CardActions onEdit={() => startEdit(event)} onDelete={() => setPendingDelete(event.id)} /></article>)}</div></section> : null}
-          {visibleSelectedTasks.length ? <section className="calendar-detail-group" aria-labelledby="calendar-tasks-heading"><div className="calendar-detail-group-heading"><h3 id="calendar-tasks-heading">Tareas</h3><span>{visibleSelectedTasks.length}</span></div><div className="event-detail-list">{visibleSelectedTasks.map((task) => <button type="button" className={`calendar-task-detail-card ${task.status === "COMPLETED" ? "calendar-task-detail-card-completed" : ""} ${taskIsOverdue(task) ? "calendar-task-detail-card-overdue" : ""}`} key={task.id} onClick={() => onOpenTask?.(task.id)} aria-label={`Abrir tarea ${task.title}`}><span className="calendar-task-detail-status">{TASK_STATUS_LABEL[task.status]}</span><span className="calendar-task-detail-copy"><strong>{task.title}</strong><small>{task.category.label} · {projectLabel(task.projectCode)} · Límite {dateLabel(task.dueDate ?? undefined)}</small></span><span className="activity-arrow" aria-hidden="true">→</span></button>)}</div></section> : null}
+          {visibleSelectedTasks.length ? <section className="calendar-detail-group" aria-labelledby="calendar-tasks-heading"><div className="calendar-detail-group-heading"><h3 id="calendar-tasks-heading">Tareas</h3><span>{visibleSelectedTasks.length}</span></div><div className="event-detail-list">{visibleSelectedTasks.map((task) => <button type="button" className={`calendar-task-detail-card ${task.status === "COMPLETED" ? "calendar-task-detail-card-completed" : ""} ${isTaskOverdue(task) ? "calendar-task-detail-card-overdue" : ""}`} key={task.id} onClick={() => onOpenTask?.(task.id)} aria-label={`Abrir tarea ${task.title}`}><span className="calendar-task-detail-status">{TASK_STATUS_LABEL[task.status]}</span><span className="calendar-task-detail-copy"><strong>{task.title}</strong><small>{task.category.label} · {projectLabel(task.projectCode)} · Límite {dateLabel(task.dueDate ?? undefined)}</small></span><span className="activity-arrow" aria-hidden="true">→</span></button>)}</div></section> : null}
         </div> : <EmptyState title="No hay elementos para este día" description="Elegí otra fecha o agregá un evento para empezar a ordenar tu agenda." action="Agregar evento" onAction={() => startNew(visibleSelectedDate)} />}
       </section>
     </>}
