@@ -11,14 +11,14 @@ import type { ApiConfig, AuthUser } from "../lib/api/types";
 import type { ProjectTab } from "../features/projects/ProjectsView";
 import type { FinanceTab } from "../features/finances/FinancesView";
 
-const ArchivosModule = lazy(() => import("../modules/ArchivosModule").then((module) => ({ default: module.ArchivosModule })));
-const FinanzasModule = lazy(() => import("../modules/FinanzasModule").then((module) => ({ default: module.FinanzasModule })));
-const HomeView = lazy(() => import("../modules/HomeView").then((module) => ({ default: module.HomeView })));
-const MiDiaModule = lazy(() => import("../modules/MiDiaModule").then((module) => ({ default: module.MiDiaModule })));
-const CalendarModule = lazy(() => import("../modules/CalendarModule").then((module) => ({ default: module.CalendarModule })));
-const TasksModule = lazy(() => import("../modules/TasksModule").then((module) => ({ default: module.TasksModule })));
-const NotasModule = lazy(() => import("../modules/NotasModule").then((module) => ({ default: module.NotasModule })));
-const SettingsModule = lazy(() => import("../modules/SettingsModule").then((module) => ({ default: module.SettingsModule })));
+const FilesView = lazy(() => import("../features/files/FilesView").then((module) => ({ default: module.FilesView })));
+const FinancesView = lazy(() => import("../features/finances/FinancesView").then((module) => ({ default: module.FinancesView })));
+const DashboardView = lazy(() => import("../features/dashboard/DashboardView").then((module) => ({ default: module.DashboardView })));
+const DayView = lazy(() => import("../features/day/DayView").then((module) => ({ default: module.DayView })));
+const CalendarView = lazy(() => import("../features/calendar/CalendarView").then((module) => ({ default: module.CalendarView })));
+const TasksView = lazy(() => import("../features/tasks/TasksView").then((module) => ({ default: module.TasksView })));
+const NotesView = lazy(() => import("../features/notes/NotesView").then((module) => ({ default: module.NotesView })));
+const SettingsView = lazy(() => import("../features/settings/SettingsView").then((module) => ({ default: module.SettingsView })));
 const SearchPalette = lazy(() => import("./SearchPalette").then((module) => ({ default: module.SearchPalette })));
 const ProjectsView = lazy(() => import("../features/projects/ProjectsView").then((module) => ({ default: module.ProjectsView })));
 const RepositoriesView = lazy(() => import("../features/repositories/RepositoriesView").then((module) => ({ default: module.RepositoriesView })));
@@ -162,16 +162,16 @@ export function PersonalNotesApp() {
     if (!config) return null;
     const section = (() => {
       switch (activeSection) {
-        case "day": return <MiDiaModule key={focusId ? `${focusId}:${focusRevision}` : "day"} config={config} focusId={focusId} />;
-        case "calendar": return <CalendarModule key={focusId ? `${focusId}:${focusRevision}` : "calendar"} config={config} focusId={focusId} focusDate={focusDate} onOpenTask={(taskId) => navigate("tasks", taskId)} />;
+        case "day": return <DayView key={focusId ? `${focusId}:${focusRevision}` : "day"} config={config} focusId={focusId} />;
+        case "calendar": return <CalendarView key={focusId ? `${focusId}:${focusRevision}` : "calendar"} config={config} focusId={focusId} focusDate={focusDate} onOpenTask={(taskId) => navigate("tasks", taskId)} />;
         case "projects": return <ProjectsView key={focusId ? `${focusId}:${focusRevision}` : "projects"} config={config} tab={projectTab} onTabChange={changeProjectTab} focusId={focusId} editId={editId} />;
-        case "tasks": return <TasksModule key={focusId ? `${focusId}:${focusRevision}` : "tasks"} config={config} focusId={focusId} editId={editId} />;
-        case "finances": return <FinanzasModule key={focusId ? `${focusId}:${focusRevision}` : "finances"} config={config} focusId={focusId} tab={financeTab} onTabChange={changeFinanceTab} />;
-        case "files": return <ArchivosModule key={focusId ? `${focusId}:${focusRevision}` : "files"} config={config} focusId={focusId} />;
-        case "notes": return <NotasModule key={focusId ? `${focusId}:${focusRevision}` : "notes"} config={config} focusId={focusId} />;
+        case "tasks": return <TasksView key={focusId ? `${focusId}:${focusRevision}` : "tasks"} config={config} focusId={focusId} editId={editId} />;
+        case "finances": return <FinancesView key={focusId ? `${focusId}:${focusRevision}` : "finances"} config={config} focusId={focusId} tab={financeTab} onTabChange={changeFinanceTab} />;
+        case "files": return <FilesView key={focusId ? `${focusId}:${focusRevision}` : "files"} config={config} focusId={focusId} />;
+        case "notes": return <NotesView key={focusId ? `${focusId}:${focusRevision}` : "notes"} config={config} focusId={focusId} />;
         case "repositories": return <RepositoriesView role={user?.role ?? "USER"} />;
-        case "settings": return <SettingsModule config={config} onConfigChanged={setConfig} />;
-        default: return <HomeView onNavigate={navigate} />;
+        case "settings": return <SettingsView config={config} onConfigChanged={setConfig} />;
+        default: return <DashboardView onNavigate={navigate} />;
       }
     })();
     return <Suspense fallback={<div className="app-loading" aria-live="polite"><p>Abriendo el módulo...</p></div>}>{section}</Suspense>;
