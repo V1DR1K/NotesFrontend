@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import type { ApiConfig, Task, TaskStatus } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
-import { dateLabel, isTaskOverdue } from "../../lib/presentation";
+import { dateLabel, isTaskOverdue as isOverdue } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { useTasksData } from "./useTasksData";
@@ -21,7 +21,7 @@ const STATUSES: TaskStatus[] = ["PENDING", "IN_PROGRESS", "COMPLETED"];
 
 function taskDueLabel(task: Task) {
   if (!task.dueDate) return "Sin fecha límite";
-  return isTaskOverdue(task) ? `Vencida · ${dateLabel(task.dueDate)}` : `Límite · ${dateLabel(task.dueDate)}`;
+  return isOverdue(task) ? `Vencida · ${dateLabel(task.dueDate)}` : `Límite · ${dateLabel(task.dueDate)}`;
 }
 
 function sortTasks(tasks: Task[]) {
@@ -135,7 +135,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const previousCount = data.data?.previousCount ?? 0;
   const completedColumnVisible = recentCompleted.length > 0 || previousCount > 0;
   const visibleStatuses = completedColumnVisible ? STATUSES : STATUSES.slice(0, 2);
-  const totalTaskCount = tasks.length + (data.previousTasks.length ? 0 : previousCount);
+  const totalTaskCount = data.data?.totalCount ?? tasks.length + (data.previousTasks.length ? 0 : previousCount);
 
   const openCreate = () => { mutation.clearError(); setEditing(null); const nextProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode; setDraft(emptyDraft(defaultCategoryCode(config.categories, nextProject), nextProject)); setComposerOpen(true); };
   const openEdit = useCallback((task: Task) => { clearError(); setEditing(task); setDraft({ title: task.title, detail: task.detail ?? "", categoryCode: task.category.code, status: task.status, dueDate: task.dueDate ?? "", projectCode: task.projectCode }); setComposerOpen(true); }, [clearError]);
@@ -239,7 +239,9 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   if (editing && editing.projectCode === draft.projectCode && editing.category.code === draft.categoryCode && !draftCategories.some((option) => option.code === editing.category.code)) draftCategories = sortCategoryOptions([...draftCategories, { ...editing.category, projectCode: draft.projectCode }]);
   const selectedDraftCategoryCode = draftCategories.some((option) => option.code === draft.categoryCode) ? draft.categoryCode : draftCategories[0]?.code ?? "";
   const changeDraftProject = (nextProject: string) => setDraft((current) => ({ ...current, projectCode: nextProject, categoryCode: config.categories.some((option) => option.projectCode === nextProject && option.code === current.categoryCode && option.active !== false) ? current.categoryCode : defaultCategoryCode(config.categories, nextProject) }));
-  const totalOpen = tasksByStatus.PENDING.length + tasksByStatus.IN_PROGRESS.length;
+  const pendingCount = data.data?.statusCounts.PENDING ?? tasksByStatus.PENDING.length;
+  const inProgressCount = data.data?.statusCounts.IN_PROGRESS ?? tasksByStatus.IN_PROGRESS.length;
+  const totalOpen = pendingCount + inProgressCount;
   const togglePreviousTasks = async () => {
     if (showPreviousTasks) {
       setPreviousVisibility({ categoryCode: `${categoryCode}:${filterProjectCode}`, visible: false });
@@ -250,7 +252,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
 
   return <div className="view view-tasks">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
-    <SectionHero section="tasks" headingLevel={nested ? 2 : 1} onAction={openCreate} rightSlot={<div className="tasks-summary-card"><span className="eyebrow">TAREAS ABIERTAS</span><strong>{totalOpen}</strong><span>{tasksByStatus.PENDING.length} pendientes · {tasksByStatus.IN_PROGRESS.length} en proceso</span></div>} />
+    <SectionHero section="tasks" headingLevel={nested ? 2 : 1} onAction={openCreate} rightSlot={<div className="tasks-summary-card"><span className="eyebrow">TAREAS ABIERTAS</span><strong>{totalOpen}</strong><span>{pendingCount} pendientes · {inProgressCount} en proceso</span></div>} />
     <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}>
       {!nested && <SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} />}
       <SelectField label="Categoría" compact value={categoryCode} onChange={(value) => setCategoryFilter({ contextProjectCode: projectCode, projectCode: filterProjectCode, value })} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: `${option.projectCode}:${option.code}`, label: filterProjectCode === "all" ? `${option.label} · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : option.label }))]} />
@@ -261,9 +263,12 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
         const columnTasks = status === "COMPLETED"
           ? [...recentCompleted, ...(showPreviousTasks ? previousCompleted : [])]
           : tasksByStatus[status];
+        const columnCount = data.data?.statusCounts[status] ?? columnTasks.length;
         return <section className={`task-column ${dropTarget === status ? "task-column-drop-target" : ""} ${pulsingStatus === status ? "task-column-pulse" : ""}`} data-task-status-column={status} aria-labelledby={`task-column-${status}`} key={status}>
-          <div className="task-column-heading"><div><span className="eyebrow">{STATUS_META[status].eyebrow}</span><h2 id={`task-column-${status}`}>{STATUS_META[status].label}</h2></div><span className="task-column-count">{columnTasks.length}</span></div>
+          <div className="task-column-heading"><div><span className="eyebrow">{STATUS_META[status].eyebrow}</span><h2 id={`task-column-${status}`}>{STATUS_META[status].label}</h2></div><span className="task-column-count">{columnCount}</span></div>
           <div className="task-column-list" id={status === "COMPLETED" ? "task-previous-list" : undefined}>{columnTasks.length ? columnTasks.map((task) => <TaskCard key={task.id} task={task} projectLabel={config.projects.find((item) => item.code === task.projectCode)?.label ?? task.projectCode} onEdit={() => openEdit(task)} onDelete={() => setPendingDelete(task)} onPreview={() => setPreviewTask(task)} onStatusChange={(nextStatus) => void moveTask(task, nextStatus)} onPointerDown={(event) => handlePointerDown(event, task)} dragging={draggingId === task.id} shaking={shakingIds.includes(task.id)} />) : <div className="task-column-empty">{status === "COMPLETED" ? "Sin finalizadas recientes" : "Soltá una tarea acá"}</div>}</div>
+          {data.hasMore[status] !== null ? <Button variant="quiet" className="task-column-more" onClick={() => void data.loadMore(status)} disabled={data.refreshing || data.loadingMore === status}>{data.loadingMore === status ? "Cargando tareas…" : "Cargar más"}</Button> : null}
+          {data.loadMoreError?.status === status ? <div className="inline-error task-column-error" role="alert">{data.loadMoreError.message}</div> : null}
           {status === "COMPLETED" && previousCount > 0 ? <>
             <Button variant="quiet" className="task-previous-toggle" onClick={() => void togglePreviousTasks()} disabled={data.previousLoading} ariaExpanded={showPreviousTasks} aria-controls="task-previous-list">
               {data.previousLoading ? "Cargando anteriores…" : showPreviousTasks ? "Ocultar anteriores" : `Ver anteriores (${previousCount})`}
