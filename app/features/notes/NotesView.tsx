@@ -8,6 +8,7 @@ import { dateLabel, todayIso, fieldError } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, Pagination, SectionHero, SelectField, SkeletonGrid, VisualTile } from "../../ui/Primitives";
 import { NoteBody } from "./NoteBody";
+import { MarkdownEditor } from "../../ui/MarkdownEditor";
 import { MarkdownAssistant } from "../../ui/MarkdownAssistant";
 import { useNotesData } from "./useNotesData";
 import { useFocusTarget } from "../../lib/ui/useFocusTarget";
@@ -20,7 +21,6 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const [sort, setSort] = useState("recent");
   const [page, setPage] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [bodyMode, setBodyMode] = useState<"edit" | "preview">("edit");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [previewNote, setPreviewNote] = useState<Note | null>(null);
@@ -32,8 +32,8 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const categoryLabel = (code: string) => config.categories.find((item) => item.code === code)?.label ?? code;
   const notes = data.data?.content ?? [];
   useFocusTarget(focusId, Boolean(data.data));
-  const startNew = () => { setEditingId(null); setBodyMode("edit"); const nextProject = projectCode === "all" ? config.projects.find((item) => item.code === "personal" && item.active !== false)?.code ?? config.projects.find((item) => item.active !== false)?.code ?? "personal" : projectCode; setDraft({ title: "", body: "", categoryCode: defaultCategoryCode(config.categories, nextProject), date: todayIso(), projectCode: nextProject }); mutation.clearError(); setComposerOpen(true); };
-  const startEdit = (note: Note) => { setEditingId(note.id); setBodyMode("edit"); setDraft({ title: note.title, body: note.body, categoryCode: note.categoryCode, date: note.date, projectCode: note.projectCode }); mutation.clearError(); setComposerOpen(true); };
+  const startNew = () => { setEditingId(null); const nextProject = projectCode === "all" ? config.projects.find((item) => item.code === "personal" && item.active !== false)?.code ?? config.projects.find((item) => item.active !== false)?.code ?? "personal" : projectCode; setDraft({ title: "", body: "", categoryCode: defaultCategoryCode(config.categories, nextProject), date: todayIso(), projectCode: nextProject }); mutation.clearError(); setComposerOpen(true); };
+  const startEdit = (note: Note) => { setEditingId(note.id); setDraft({ title: note.title, body: note.body, categoryCode: note.categoryCode, date: note.date, projectCode: note.projectCode }); mutation.clearError(); setComposerOpen(true); };
   const closePreview = () => { const note = pendingPreviewEdit.current; pendingPreviewEdit.current = null; setPreviewNote(null); if (note) startEdit(note); };
   const activeCategories = sortCategoryOptions(config.categories.filter((item) => item.active !== false && (filterProjectCode === "all" || item.projectCode === filterProjectCode)));
   let draftCategories = sortCategoryOptions(config.categories.filter((item) => item.projectCode === draft.projectCode && (item.active !== false || item.code === draft.categoryCode)));
@@ -54,10 +54,9 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
 
   return <div className="view module-view">
     <SectionHero section="notes" headingLevel={nested ? 2 : 1} onAction={startNew} rightSlot={<div className="notes-stamp"><VisualTile emoji="✎" label="Notas" /><div><span className="eyebrow">ÚLTIMA NOTA</span><strong>{notes[0]?.title ?? "Todavía no hay notas"}</strong><span>{notes[0] ? dateLabel(notes[0].date, true) : "Empezá cuando quieras"}</span></div></div>} />
-    {composerOpen ? <Dialog ariaLabel="Escribir una nota" onClose={() => setComposerOpen(false)}><FormPanel eyebrow={editingId ? "EDITAR NOTA" : "NUEVA NOTA"} onSubmit={() => void save()} title={editingId ? "Editar nota" : "Escribir una nota"} description="Dale estructura a tus resúmenes con títulos, listas y otros formatos Markdown." onClose={() => setComposerOpen(false)}><div className="form-grid form-grid-notes">
+    {composerOpen ? <Dialog ariaLabel="Escribir una nota" onClose={() => setComposerOpen(false)} wide><FormPanel eyebrow={editingId ? "EDITAR NOTA" : "NUEVA NOTA"} onSubmit={() => void save()} title={editingId ? "Editar nota" : "Escribir una nota"} description="Dale estructura a tus resúmenes con títulos, listas y otros formatos Markdown." onClose={() => setComposerOpen(false)}><div className="form-grid form-grid-notes">
        <FormField label="Título" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Una idea para mañana" /><SelectField label="Proyecto" value={draft.projectCode} onChange={changeDraftProject} options={config.projects.filter((item) => item.active !== false || item.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /><SelectField label="Categoría" id="note-category" value={selectedDraftCategoryCode} onChange={(categoryCode) => setDraft({ ...draft, categoryCode })} options={draftCategories.map(({ code, label }) => ({ value: code, label }))} disabled={!draftCategories.length} /><label className="form-field" htmlFor="note-date"><span>Fecha</span><input id="note-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label><div className="form-field-full note-content-field">
-         <div className="note-content-actions"><div className="note-markdown-toolbar" role="group" aria-label="Modo del contenido de la nota"><button className={`note-markdown-mode ${bodyMode === "edit" ? "note-markdown-mode-active" : ""}`} type="button" aria-pressed={bodyMode === "edit"} onClick={() => setBodyMode("edit")}>Escribir</button><button className={`note-markdown-mode ${bodyMode === "preview" ? "note-markdown-mode-active" : ""}`} type="button" aria-pressed={bodyMode === "preview"} onClick={() => setBodyMode("preview")}>Vista previa</button></div><MarkdownAssistant kind="NOTE" title={draft.title} content={draft.body} onGenerated={(body) => setDraft((current) => ({ ...current, body }))} /></div>
-         {bodyMode === "edit" ? <FormField label="Contenido de la nota" value={draft.body} onChange={(body) => setDraft({ ...draft, body })} placeholder="Escribí tu resumen..." multiline /> : <div className="note-markdown-preview" role="region" aria-label="Vista previa del contenido de la nota">{draft.body.trim() ? <NoteBody body={draft.body} /> : <p className="note-markdown-empty">Escribí algo para ver la vista previa.</p>}</div>}
+         <MarkdownEditor label="Contenido de la nota" value={draft.body} onChange={(body) => setDraft((current) => ({ ...current, body }))} placeholder="Escribí tu resumen..." preview={<NoteBody body={draft.body} />} assistant={<MarkdownAssistant kind="NOTE" title={draft.title} content={draft.body} onGenerated={(body) => setDraft((current) => ({ ...current, body }))} />} />
          <p className="note-markdown-hint">Admite títulos, negrita, listas, enlaces, tablas y bloques de código Markdown.</p>
        </div>
     </div>{mutation.error ? <div className="inline-error" role="alert" aria-live="polite">{mutation.error.message || fieldError(mutation.error, "title", "body", "categoryCode", "date")}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={() => setComposerOpen(false)}>Cancelar</Button><Button onClick={() => void save()} disabled={!draft.title.trim() || !draft.body.trim() || !selectedDraftCategoryCode || !draft.date}>{editingId ? "Guardar cambios" : "Guardar nota"} <span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}

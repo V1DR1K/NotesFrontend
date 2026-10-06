@@ -8,6 +8,10 @@ import { SectionIcon } from "./SectionIcon";
 const DialogCloseContext = createContext<(() => void) | null>(null);
 const DialogDirtyContext = createContext<(() => void) | null>(null);
 
+export function useDialogDirty() {
+  return useContext(DialogDirtyContext);
+}
+
 function useDialogHistory(onClose: () => void) {
   const onCloseRef = useRef(onClose);
   const dirtyRef = useRef(false);
@@ -403,7 +407,7 @@ export function FormPanel({ children, title, description, onClose, onSubmit, eye
   );
 }
 
-export function Dialog({ children, onClose, ariaLabel, trackChanges = true }: { children: ReactNode; onClose: () => void; ariaLabel: string; trackChanges?: boolean }) {
+export function Dialog({ children, onClose, ariaLabel, trackChanges = true, wide = false }: { children: ReactNode; onClose: () => void; ariaLabel: string; trackChanges?: boolean; wide?: boolean }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialog = useDialogHistory(onClose);
   const { requestClose } = dialog;
@@ -434,7 +438,7 @@ export function Dialog({ children, onClose, ariaLabel, trackChanges = true }: { 
     <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
       <DialogCloseContext.Provider value={dialog.requestClose}>
         <DialogDirtyContext.Provider value={trackChanges ? dialog.markDirty : null}>
-        <div ref={dialogRef} className="modal-dialog" role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={trackChanges ? dialog.markDirty : undefined} onChangeCapture={trackChanges ? dialog.markDirty : undefined} onDropCapture={trackChanges ? dialog.markDirty : undefined}>
+        <div ref={dialogRef} className={`modal-dialog ${wide ? "modal-dialog-wide" : ""}`} role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={trackChanges ? dialog.markDirty : undefined} onChangeCapture={trackChanges ? dialog.markDirty : undefined} onDropCapture={trackChanges ? dialog.markDirty : undefined}>
           {children}
         </div>
         </DialogDirtyContext.Provider>
