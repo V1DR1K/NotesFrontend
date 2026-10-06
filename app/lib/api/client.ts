@@ -392,7 +392,18 @@ function normalizeSearchResults(value: unknown): SearchResult[] {
     const record = validatedRecord(item, "búsqueda");
     const section = textField(record, "section", "búsqueda");
     if (!["day", "finances", "files", "notes", "tasks", "calendar"].includes(section)) throw new ApiError("La respuesta de búsqueda contiene una sección inválida.", 502);
-    return { section: section as SearchResult["section"], id: textField(record, "id", "búsqueda"), title: textField(record, "title", "búsqueda"), detail: textField(record, "detail", "búsqueda"), date: record.date ? String(record.date) : undefined };
+    const normalizedSection = section as SearchResult["section"];
+    const date = typeof record.date === "string" && record.date.trim() ? record.date : undefined;
+    const title = typeof record.title === "string" && record.title.trim() ? record.title.trim() : `${{
+      day: "Registro del día",
+      finances: "Movimiento financiero",
+      files: "Archivo",
+      notes: "Nota",
+      tasks: "Tarea",
+      calendar: "Evento",
+    }[normalizedSection]}${date ? ` · ${date}` : ""}`;
+    const detail = typeof record.detail === "string" ? record.detail : "";
+    return { section: normalizedSection, id: textField(record, "id", "búsqueda"), title, detail, date };
   });
 }
 
