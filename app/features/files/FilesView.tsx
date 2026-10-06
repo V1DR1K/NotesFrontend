@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ApiConfig, FileItem } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
@@ -35,8 +35,10 @@ export function FilesView({ config, focusId, projectCode = "all", nested = false
   const [renameProjectCode, setRenameProjectCode] = useState("personal");
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [focusedLightboxFile, setFocusedLightboxFile] = useState<FileItem | null>(null);
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
   const [infoFile, setInfoFile] = useState<FileItem | null>(null);
+  const [focusError, setFocusError] = useState("");
   const pendingPreviewRename = useRef<FileItem | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const data = useFilesData(page, kind, folderId, search, projectCode);
@@ -46,10 +48,31 @@ export function FilesView({ config, focusId, projectCode = "all", nested = false
   const folderOptions = (selectedProject: string) => (folders?.content ?? []).filter((folder) => selectedProject === "all" || folder.projectCode === selectedProject).map((folder) => ({ value: folder.id, label: selectedProject === "all" ? `${folder.name} · ${config.projects.find((item) => item.code === folder.projectCode)?.label ?? folder.projectCode}` : folder.name }));
   const allFiles = files?.content ?? [];
   const imageFiles = allFiles.filter(isImageFile);
+  const lightboxFiles = focusedLightboxFile ? [focusedLightboxFile] : imageFiles;
   const imageIndexMap = new Map(imageFiles.map((f, i) => [f.id, i]));
   const kinds = Array.from(new Set(allFiles.map((file) => file.kind))).filter(Boolean);
   const selectedFolder = folders?.content.find((folder) => folder.id === folderId);
   useFocusTarget(focusId, Boolean(data.data));
+  useEffect(() => {
+    if (!focusId) return;
+    let cancelled = false;
+    void api.getFile(focusId).then((file) => {
+      if (cancelled) return;
+      setFocusError("");
+      const previewKind = getFilePreviewKind(file);
+      if (isImageFile(file) || previewKind === "image") {
+        setFocusedLightboxFile(file);
+        setLightboxIndex(0);
+      } else if (previewKind) {
+        setPreviewFile(file);
+      } else {
+        setInfoFile(file);
+      }
+    }).catch(() => {
+      if (!cancelled) setFocusError("No pudimos abrir ese archivo. Puede que se haya eliminado o que ya no esté disponible.");
+    });
+    return () => { cancelled = true; };
+  }, [focusId]);
   const prepareFile = (file: File) => { setSelectedFile(file); setUploadName(file.name); mutation.clearError(); };
   const closeUpload = () => { setUploadComposerOpen(false); setSelectedFile(null); setUploadName(""); setUploadFolderId(""); };
   const handleFile = async () => { if (!selectedFile || !uploadName.trim() || mutation.pending) return; try { await mutation.run(() => api.uploadFile(selectedFile, uploadFolderId || undefined, uploadName.trim(), uploadProjectCode)); closeUpload(); invalidateApiQueryCache(); data.reload(); } catch { /* shown in the dialog */ } };
@@ -68,9 +91,10 @@ export function FilesView({ config, focusId, projectCode = "all", nested = false
     {folderComposerOpen ? <Dialog ariaLabel="Crear carpeta" onClose={() => setFolderComposerOpen(false)}><FormPanel title="Crear carpeta" description="La carpeta quedará disponible dentro del proyecto elegido." onClose={() => setFolderComposerOpen(false)}><div className="form-grid"><SelectField label="Proyecto" value={folderProjectCode} onChange={setFolderProjectCode} options={config.projects.filter((item) => item.active !== false || item.code === folderProjectCode).map(({ code, label }) => ({ value: code, label }))} /><FormField label="Nombre de la carpeta" value={folderName} onChange={setFolderName} placeholder="Ej. Documentación" /></div>{mutation.error ? <div className="inline-error" role="alert" aria-live="polite">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={() => setFolderComposerOpen(false)}>Cancelar</Button><Button onClick={() => void createFolder()} disabled={!folderName.trim()}>Crear carpeta <span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
        {renameId ? <Dialog ariaLabel="Editar archivo" onClose={() => setRenameId(null)}><FormPanel title="Editar archivo" description="El nombre es también el título con el que se muestra y se busca el archivo." onClose={() => setRenameId(null)} onSubmit={() => void saveRename()}><div className="form-grid"><SelectField label="Proyecto" value={renameProjectCode} onChange={(value) => { setRenameProjectCode(value); setRenameFolderId(""); }} options={config.projects.filter((item) => item.active !== false || item.code === renameProjectCode).map(({ code, label }) => ({ value: code, label }))} /><FormField label="Nombre del archivo" value={renameValue} onChange={setRenameValue} /><SelectField label="Carpeta" id="rename-folder" value={renameFolderId} onChange={setRenameFolderId} options={[{ value: "", label: "Sin carpeta" }, ...folderOptions(renameProjectCode)]} /></div>{mutation.error ? <div className="inline-error" role="alert" aria-live="polite">{mutation.error.message}</div> : null}<div className="form-actions"><Button variant="quiet" onClick={() => setRenameId(null)}>Cancelar</Button><Button type="submit" disabled={!renameValue.trim() || mutation.pending}>Guardar cambios <span aria-hidden="true">↗</span></Button></div></FormPanel></Dialog> : null}
      <ModuleToolbar resultLabel={`${files?.totalElements ?? 0} archivos`}><FilterPills active={kind} onChange={(value) => { setKind(value); setPage(0); }} options={[{ value: "all", label: "Todos" }, ...kinds.map((value) => ({ value, label: kindLabel(value) }))]} /><div className="file-filter-row"><label className="toolbar-search-field" htmlFor="file-search"><span>Buscar por título</span><input id="file-search" type="search" value={search} onChange={(event) => { setSearch(event.target.value); setPage(0); }} placeholder="Título o nombre..." /></label><SelectField label="Carpeta" id="file-folder-filter" compact value={folderId} onChange={(value) => { setFolderId(value); setPage(0); }} options={[{ value: "all", label: "Todas las carpetas" }, ...folderOptions(projectCode)]} /></div></ModuleToolbar>
+      {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
       {data.loading ? <SkeletonGrid count={4} /> : data.error ? <ErrorState onRetry={data.reload} /> : allFiles.length ? <div className="content-grid files-grid">{allFiles.map((file) => { const imgIdx = imageIndexMap.get(file.id); const previewKind = getFilePreviewKind(file); return <article id={`record-${file.id}`} className={`content-card file-card ${typeof imgIdx === "number" ? "file-card--image" : ""}`} key={file.id}><div className="content-card-top"><span className="mono-date">{dateLabel(file.uploadedAt, true)}</span><CardActions onEdit={() => startRename(file)} onDelete={() => setPendingDelete(file.id)} /></div><button type="button" className="content-card-preview-trigger" onClick={() => openFilePreview(file, imgIdx, previewKind)} aria-label={`Ver archivo ${file.name}`}>{typeof imgIdx === "number" ? <div className="file-card-preview"><AuthImage file={file} alt={file.name} loading="lazy" /></div> : <div className="file-card-heading"><VisualTile emoji={kindIcon(file.kind)} label={kindLabel(file.kind)} /><div><span className="file-kind">{kindLabel(file.kind)}</span><span className="file-size">{fileSize(file.sizeBytes)}</span></div></div>}<h2 title={file.name}>{file.name}</h2><div className="file-folder"><span>▱</span>{file.folder?.name ?? "Sin carpeta"} · {config.projects.find((item) => item.code === file.projectCode)?.label ?? file.projectCode}</div><div className="card-footer"><span className="eyebrow">{typeof imgIdx === "number" ? "VER FOTO" : previewKind ? "PREVISUALIZAR" : "DETALLES DEL ARCHIVO"}</span><span className="card-arrow">↗</span></div></button><div className="card-footer file-card-actions"><button type="button" className="eyebrow card-link-button" onClick={() => void download(file)}>DESCARGAR</button></div></article>; })}</div> : <EmptyState title="No encontramos archivos" description={selectedFolder ? `No hay archivos en ${selectedFolder.name}.` : "Probá con otra carpeta, tipo o nombre. Tu repositorio está listo para recibir el primero."} action="Subir archivo" onAction={() => { mutation.clearError(); setUploadProjectCode(projectCode === "all" ? config.projects.find((item) => item.active !== false)?.code ?? "personal" : projectCode); setUploadComposerOpen(true); }} />}
     <div className="module-bottom"><span className="bottom-caption">CARPETAS PRIMERO. CAOS, DESPUÉS NUNCA.</span><Pagination page={Math.min(page + 1, Math.max(1, files?.totalPages ?? 0))} pages={files?.totalPages ?? 0} onChange={(next) => setPage(next - 1)} /></div>{pendingDelete ? <ConfirmDialog title="¿Eliminar este archivo?" description="El archivo y sus metadatos se eliminarán del repositorio." onCancel={() => setPendingDelete(null)} onConfirm={() => void remove()} /> : null}
-    {lightboxIndex !== null && imageFiles.length > 0 && <ImageLightbox images={imageFiles} startIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />}
+    {lightboxIndex !== null && lightboxFiles.length > 0 && <ImageLightbox images={lightboxFiles} startIndex={focusedLightboxFile ? 0 : lightboxIndex} onClose={() => { setLightboxIndex(null); setFocusedLightboxFile(null); }} />}
     {previewFile ? (() => { const kind = getFilePreviewKind(previewFile); return kind && kind !== "image" ? <FilePreviewDialog key={previewFile.id} file={previewFile} kind={kind} onClose={() => setPreviewFile(null)} onDownload={() => void download(previewFile)} /> : null; })() : null}
     {infoFile ? <Dialog ariaLabel={`Vista previa del archivo ${infoFile.name}`} trackChanges={false} onClose={closeInfoPreview}><FormPanel mode="preview" eyebrow="VISTA PREVIA · ARCHIVO" title={infoFile.name} description={`${kindLabel(infoFile.kind)} · ${config.projects.find((item) => item.code === infoFile.projectCode)?.label ?? infoFile.projectCode}`} onClose={closeInfoPreview} onEdit={() => { pendingPreviewRename.current = infoFile; }}><div className="record-preview-meta"><span><strong>Tamaño</strong>{fileSize(infoFile.sizeBytes)}</span><span><strong>Carpeta</strong>{infoFile.folder?.name ?? "Sin carpeta"}</span><span><strong>Tipo</strong>{infoFile.mimeType ?? infoFile.extension ?? kindLabel(infoFile.kind)}</span></div><p className="record-preview-copy multiline-copy">{infoFile.description || "Este archivo no tiene una descripción adicional."}</p></FormPanel></Dialog> : null}
   </div>;

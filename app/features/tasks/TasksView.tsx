@@ -84,6 +84,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   const [editing, setEditing] = useState<Task | null>(null);
   const [previewTask, setPreviewTask] = useState<Task | null>(null);
   const [previewEditTask, setPreviewEditTask] = useState<Task | null>(null);
+  const [focusError, setFocusError] = useState("");
   const [dismissedFocusId, setDismissedFocusId] = useState<string | null>(null);
   const firstProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode;
   const [draft, setDraft] = useState<Draft>(() => emptyDraft(defaultCategoryCode(config.categories, firstProject), firstProject));
@@ -112,6 +113,17 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     const target = document.getElementById(`record-${focusId}`);
     target?.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [focusId, tasks]);
+
+  useEffect(() => {
+    if (!focusId || editId) return;
+    let cancelled = false;
+    void api.getTask(focusId).then((task) => {
+      if (!cancelled) { setFocusError(""); setPreviewTask(task); }
+    }).catch(() => {
+      if (!cancelled) setFocusError("No pudimos abrir esa tarea. Puede que se haya eliminado o que ya no esté disponible.");
+    });
+    return () => { cancelled = true; };
+  }, [editId, focusId]);
 
   const tasksByStatus = useMemo(() => {
     const grouped: Record<TaskStatus, Task[]> = { PENDING: [], IN_PROGRESS: [], COMPLETED: [] };
@@ -246,6 +258,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   };
 
   return <div className="view view-tasks">
+    {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
     <SectionHero section="tasks" headingLevel={nested ? 2 : 1} onAction={openCreate} rightSlot={<div className="tasks-summary-card"><span className="eyebrow">TAREAS ABIERTAS</span><strong>{totalOpen}</strong><span>{tasksByStatus.PENDING.length} pendientes · {tasksByStatus.IN_PROGRESS.length} en proceso</span></div>} />
     <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}>
       {!nested && <SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} />}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ApiConfig, CalendarEvent, Task } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
@@ -32,11 +32,26 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const [composerOpen, setComposerOpen] = useState(false);
   const [editing, setEditing] = useState<CalendarEvent | null>(null);
   const [previewEvent, setPreviewEvent] = useState<CalendarEvent | null>(null);
+  const [focusError, setFocusError] = useState("");
   const pendingPreviewEdit = useRef<CalendarEvent | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [draft, setDraft] = useState({ date: todayIso(), description: "", categoryCode: "", projectCode: "personal" });
   const data = useCalendarData(month, type, categoryKey, from, to, projectCode);
   useFocusTarget(focusId, Boolean(data.data));
+  useEffect(() => {
+    if (!focusId) return;
+    let cancelled = false;
+    void api.getEvent(focusId).then((event) => {
+      if (cancelled) return;
+      setFocusError("");
+      setPreviewEvent(event);
+      setSelectedDate(event.date);
+      setMonth(event.date.slice(0, 7));
+    }).catch(() => {
+      if (!cancelled) setFocusError("No pudimos abrir ese evento. Puede que se haya eliminado o que ya no esté disponible.");
+    });
+    return () => { cancelled = true; };
+  }, [focusId]);
   const mutation = useMutationError();
   const events = data.data?.events ?? [];
   const tasks = data.data?.tasks ?? [];
@@ -67,6 +82,7 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const hasFilters = type !== "all" || categoryKey !== "all" || projectCode !== "all" || Boolean(from || to);
 
   return <div className="view module-view">
+    {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
     <SectionHero section="calendar" onAction={() => startNew(visibleSelectedDate)} rightSlot={<div className="calendar-note-card"><span className="eyebrow">ESTE MES</span><strong>{totalElements}</strong><span>elementos en agenda</span><div className="calendar-note-mark" aria-hidden="true">▦</div></div>} />
     <ModuleToolbar resultLabel={`${totalElements} ${totalElements === 1 ? "elemento" : "elementos"}`}>
       <FilterPills ariaLabel="Tipo de elemento" active={type} options={[{ value: "all", label: "Todo" }, { value: "events", label: "Eventos" }, { value: "tasks", label: "Tareas" }]} onChange={(value) => setType(value as CalendarItemType)} />

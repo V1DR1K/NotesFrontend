@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ApiConfig, Note } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
@@ -24,6 +24,7 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [previewNote, setPreviewNote] = useState<Note | null>(null);
+  const [focusError, setFocusError] = useState("");
   const pendingPreviewEdit = useRef<Note | null>(null);
   const firstProject = projectCode === "all" ? config.projects.find((item) => item.code === "personal" && item.active !== false)?.code ?? config.projects.find((item) => item.active !== false)?.code ?? "personal" : projectCode;
   const [draft, setDraft] = useState({ title: "", body: "", categoryCode: defaultCategoryCode(config.categories, firstProject), date: todayIso(), projectCode: firstProject });
@@ -32,6 +33,16 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const categoryLabel = (code: string) => config.categories.find((item) => item.code === code)?.label ?? code;
   const notes = data.data?.content ?? [];
   useFocusTarget(focusId, Boolean(data.data));
+  useEffect(() => {
+    if (!focusId) return;
+    let cancelled = false;
+    void api.getNote(focusId).then((note) => {
+      if (!cancelled) { setFocusError(""); setPreviewNote(note); }
+    }).catch(() => {
+      if (!cancelled) setFocusError("No pudimos abrir esa nota. Puede que se haya eliminado o que ya no esté disponible.");
+    });
+    return () => { cancelled = true; };
+  }, [focusId]);
   const startNew = () => { setEditingId(null); const nextProject = projectCode === "all" ? config.projects.find((item) => item.code === "personal" && item.active !== false)?.code ?? config.projects.find((item) => item.active !== false)?.code ?? "personal" : projectCode; setDraft({ title: "", body: "", categoryCode: defaultCategoryCode(config.categories, nextProject), date: todayIso(), projectCode: nextProject }); mutation.clearError(); setComposerOpen(true); };
   const startEdit = (note: Note) => { setEditingId(note.id); setDraft({ title: note.title, body: note.body, categoryCode: note.categoryCode, date: note.date, projectCode: note.projectCode }); mutation.clearError(); setComposerOpen(true); };
   const closePreview = () => { const note = pendingPreviewEdit.current; pendingPreviewEdit.current = null; setPreviewNote(null); if (note) startEdit(note); };
@@ -54,6 +65,7 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
 
   return <div className="view module-view">
     <SectionHero section="notes" headingLevel={nested ? 2 : 1} onAction={startNew} rightSlot={<div className="notes-stamp"><VisualTile emoji="✎" label="Notas" /><div><span className="eyebrow">ÚLTIMA NOTA</span><strong>{notes[0]?.title ?? "Todavía no hay notas"}</strong><span>{notes[0] ? dateLabel(notes[0].date, true) : "Empezá cuando quieras"}</span></div></div>} />
+    {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
     {composerOpen ? <Dialog ariaLabel="Escribir una nota" onClose={() => setComposerOpen(false)} wide><FormPanel eyebrow={editingId ? "EDITAR NOTA" : "NUEVA NOTA"} onSubmit={() => void save()} title={editingId ? "Editar nota" : "Escribir una nota"} description="Dale estructura a tus resúmenes con títulos, listas y otros formatos Markdown." onClose={() => setComposerOpen(false)}><div className="form-grid form-grid-notes">
        <FormField label="Título" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Una idea para mañana" /><SelectField label="Proyecto" value={draft.projectCode} onChange={changeDraftProject} options={config.projects.filter((item) => item.active !== false || item.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /><SelectField label="Categoría" id="note-category" value={selectedDraftCategoryCode} onChange={(categoryCode) => setDraft({ ...draft, categoryCode })} options={draftCategories.map(({ code, label }) => ({ value: code, label }))} disabled={!draftCategories.length} /><label className="form-field" htmlFor="note-date"><span>Fecha</span><input id="note-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label><div className="form-field-full note-content-field">
          <MarkdownEditor label="Contenido de la nota" value={draft.body} onChange={(body) => setDraft((current) => ({ ...current, body }))} placeholder="Escribí tu resumen..." preview={<NoteBody body={draft.body} />} assistant={<MarkdownAssistant kind="NOTE" title={draft.title} content={draft.body} onGenerated={(body) => setDraft((current) => ({ ...current, body }))} />} />

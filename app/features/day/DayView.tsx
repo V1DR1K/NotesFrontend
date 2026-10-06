@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ApiConfig, DayEntry } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
@@ -38,6 +38,7 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
   const [editingId, setEditingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [previewEntry, setPreviewEntry] = useState<DayEntry | null>(null);
+  const [focusError, setFocusError] = useState("");
   const pendingPreviewEdit = useRef<DayEntry | null>(null);
   const [analyzingIds, setAnalyzingIds] = useState<string[]>([]);
   const [analysisNotice, setAnalysisNotice] = useState("");
@@ -50,6 +51,22 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
   const statusOptions = config.dayStatuses.filter((option) => option.active !== false);
   const feelingOptions = config.dayFeelings.filter((option) => option.active !== false);
   useFocusTarget(focusId, Boolean(data.data));
+  useEffect(() => {
+    if (!focusId) return;
+    let cancelled = false;
+    void api.getDay(focusId).then((entry) => {
+      if (cancelled) return;
+      setFocusError("");
+      setPreviewEntry(entry);
+      setFrom(entry.date);
+      setTo(entry.date);
+      setPage(0);
+      setCalendarMonth(entry.date.slice(0, 7));
+    }).catch(() => {
+      if (!cancelled) setFocusError("No pudimos abrir ese registro del día. Puede que se haya eliminado o que ya no esté disponible.");
+    });
+    return () => { cancelled = true; };
+  }, [focusId]);
   const statusLabel = (code: string) => statusOptions.find((item) => item.code === code)?.label ?? code;
   const statusEmoji = (code: string) => statusOptions.find((item) => item.code === code)?.emoji ?? "◌";
 
@@ -101,6 +118,7 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
 
   return <div className="view module-view">
      <SectionHero section="day" onAction={startNew} rightSlot={<div className="streak-card"><span className="eyebrow">RACHA ACTUAL</span><strong>—</strong><span>calculada con tus registros</span><div className="streak-dots"><i /><i /><i /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /></div></div>} />
+     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
      {calendarData.error ? <div className="analysis-notice" role="status">No se pudo cargar el calendario. El listado sigue disponible.</div> : <DayCalendar month={calendarMonth} entries={calendarData.data?.content ?? []} selectedDate={exactDate} onMonthChange={setCalendarMonth} onSelectDate={(selected) => { setFrom(selected); setTo(selected); setPage(0); }} />}
     {composerOpen ? <Dialog ariaLabel="Registrar un día" onClose={() => setComposerOpen(false)}><FormPanel eyebrow={editingId ? "EDITAR REGISTRO" : "NUEVO REGISTRO"} onSubmit={() => void save()} title={editingId ? "Editar el registro" : "Registrar el día"} description="Escribí lo que pasó. La IA va a identificar el balance y las sensaciones presentes." onClose={() => setComposerOpen(false)}>
       <div className="form-grid form-grid-day">

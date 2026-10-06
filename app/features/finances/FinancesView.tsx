@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ApiConfig, CryptoAssetCode, CryptoInvestment, FinanceAccount, FinanceBucket, FinanceMovement, FinanceSummary } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
@@ -64,6 +64,7 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [previewMovement, setPreviewMovement] = useState<FinanceMovement | null>(null);
+  const [focusError, setFocusError] = useState("");
   const [previewEditMovement, setPreviewEditMovement] = useState<FinanceMovement | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [syncingAccount, setSyncingAccount] = useState<FinanceAccount | null>(null);
@@ -101,6 +102,16 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   const cash = cashAccount ? asNumber(cashAccount.balanceArs) : summaryValue(summary, ["cash", "availableCash"], income - expense - periodInvested);
   const visible = movements?.content ?? [];
   useFocusTarget(focusId, Boolean(data.data));
+  useEffect(() => {
+    if (!focusId) return;
+    let cancelled = false;
+    void api.getMovement(focusId).then((movement) => {
+      if (!cancelled) { setFocusError(""); setPreviewMovement(movement); }
+    }).catch(() => {
+      if (!cancelled) setFocusError("No pudimos abrir ese movimiento. Puede que se haya eliminado o que ya no esté disponible.");
+    });
+    return () => { cancelled = true; };
+  }, [focusId]);
   const itemLabel = (code: string) => config.financeItems.find((item) => item.code === code)?.label ?? code;
 
   const startNew = (bucket = "EXPENSE") => {
@@ -281,6 +292,7 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   };
 
    return <div className="view module-view">
+     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
      {transferOpen ? <FinanceTransferDialog accounts={accounts} draft={transferDraft} onChange={(draft) => { setTransferDraft(draft); setTransferAmountError(""); }} editing={Boolean(transferId)} pending={mutation.pending} error={mutation.error?.message} amountError={transferAmountError} onClose={() => { if (!mutation.pending) setTransferOpen(false); }} onSave={() => void saveTransfer()} /> : null}
      <CryptoInvestmentDialogs
        availableUsd={cryptoSummary ? asNumber(cryptoSummary.available.usd) : null}
