@@ -2,6 +2,9 @@ import type { CalendarEvent, PageResponse, Task } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { useApiQuery } from "../../lib/api/hooks";
 import { monthBounds } from "../../lib/presentation";
+import { resolveCategoryScope } from "../../lib/categories";
+
+const CALENDAR_ITEMS_PAGE_SIZE = 100;
 
 export type CalendarItemType = "all" | "events" | "tasks";
 
@@ -26,19 +29,19 @@ export function useCalendarData(month: string, type: CalendarItemType, categoryK
   const queryFrom = from && from > monthRange.from ? from : monthRange.from;
   const queryTo = to && to < monthRange.to ? to : monthRange.to;
   const emptyRange = queryFrom > queryTo;
-  const [categoryProject, categoryCode] = categoryKey === "all" ? ["all", "all"] : categoryKey.split(":", 2);
-  const effectiveProject = categoryProject !== "all" ? categoryProject : projectCode;
+  const scope = resolveCategoryScope(categoryKey);
+  const effectiveProject = scope.projectCode !== "all" ? scope.projectCode : projectCode;
   const key = `calendar:${month}:${type}:${categoryKey}:${from}:${to}:${projectCode}`;
 
   return useApiQuery<CalendarData>(key, async (signal) => {
     if (emptyRange) return { events: [], tasks: [], totalElements: 0 };
 
-    const eventQuery = new URLSearchParams({ from: queryFrom, to: queryTo, page: "0", size: "100", sort: "date,asc" });
-    if (categoryCode !== "all") eventQuery.set("categoryCode", categoryCode);
+    const eventQuery = new URLSearchParams({ from: queryFrom, to: queryTo, page: "0", size: String(CALENDAR_ITEMS_PAGE_SIZE), sort: "date,asc" });
+    if (scope.categoryCode !== "all") eventQuery.set("categoryCode", scope.categoryCode);
     if (effectiveProject !== "all") eventQuery.set("projectCode", effectiveProject);
 
-    const taskQuery = new URLSearchParams({ from: queryFrom, to: queryTo, page: "0", size: "100", sort: "dueDate,asc" });
-    if (categoryCode !== "all") taskQuery.set("categoryCode", categoryCode);
+    const taskQuery = new URLSearchParams({ from: queryFrom, to: queryTo, page: "0", size: String(CALENDAR_ITEMS_PAGE_SIZE), sort: "dueDate,asc" });
+    if (scope.categoryCode !== "all") taskQuery.set("categoryCode", scope.categoryCode);
     if (effectiveProject !== "all") taskQuery.set("projectCode", effectiveProject);
 
     const [events, tasks] = await Promise.all([

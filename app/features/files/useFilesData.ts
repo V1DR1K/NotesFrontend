@@ -1,8 +1,10 @@
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 
+const FILES_PAGE_SIZE = 8;
+
 export function useFilesData(page: number, kind: string, folderId: string, search: string, projectCode = "all") {
-  const query = new URLSearchParams({ page: String(page), size: "8" });
+  const query = new URLSearchParams({ page: String(page), size: String(FILES_PAGE_SIZE) });
   if (kind !== "all") query.set("kind", kind);
   if (folderId !== "all") query.set("folderId", folderId);
   if (projectCode !== "all") query.set("projectCode", projectCode);

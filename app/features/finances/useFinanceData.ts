@@ -1,8 +1,10 @@
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
 
+const FINANCE_MOVEMENTS_PAGE_SIZE = 8;
+
 export function useFinanceData(page: number, bucket: string, from: string, to: string, itemCode: string, sort: string) {
-  const query = new URLSearchParams({ page: String(page), size: "8", sort: sort === "large" ? "amountArs,desc" : "date,desc" });
+  const query = new URLSearchParams({ page: String(page), size: String(FINANCE_MOVEMENTS_PAGE_SIZE), sort: sort === "large" ? "amountArs,desc" : "date,desc" });
   if (bucket !== "all") query.set("movementType", bucket);
   if (from) query.set("from", from);
   if (to) query.set("to", to);

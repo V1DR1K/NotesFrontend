@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import type { Task, TaskStatus } from "../../lib/api/types";
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
+import { resolveCategoryScope } from "../../lib/categories";
 
 const PAGE_SIZE = 100;
 const COMPLETED_WINDOW_MS = 168 * 60 * 60 * 1000;
@@ -14,9 +15,9 @@ type TaskBoardData = {
 
 function taskQuery(categoryCode: string, projectCode: string, status: TaskStatus, page: number, sort: string, completedAfter?: string, completedBefore?: string, size = PAGE_SIZE) {
   const query = new URLSearchParams({ status, page: String(page), size: String(size), sort });
-  const [categoryProject, scopedCategory] = categoryCode === "all" ? ["all", "all"] : categoryCode.split(":", 2);
-  if (scopedCategory !== "all") query.set("categoryCode", scopedCategory);
-  const effectiveProject = categoryProject !== "all" ? categoryProject : projectCode;
+  const scope = resolveCategoryScope(categoryCode);
+  if (scope.categoryCode !== "all") query.set("categoryCode", scope.categoryCode);
+  const effectiveProject = scope.projectCode !== "all" ? scope.projectCode : projectCode;
   if (effectiveProject !== "all") query.set("projectCode", effectiveProject);
   if (completedAfter) query.set("completedAfter", completedAfter);
   if (completedBefore) query.set("completedBefore", completedBefore);
