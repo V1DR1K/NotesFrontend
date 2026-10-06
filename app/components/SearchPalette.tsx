@@ -28,8 +28,8 @@ export function SearchPalette({ onClose, onNavigate }: { onClose: () => void; on
   }, [cleanQuery]);
 
   const select = (result: SearchResult) => {
+    onNavigate(result.section, result.id, "focus", result.date);
     onClose();
-    queueMicrotask(() => onNavigate(result.section, result.id, "focus", result.date));
   };
 
   return <Dialog ariaLabel="Buscar en tu cuaderno" trackChanges={false} onClose={onClose}>
