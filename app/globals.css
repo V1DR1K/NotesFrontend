@@ -719,7 +719,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .modal-dialog > * { align-self: center; min-width: 0; max-height: 100%; }
 .modal-dialog .form-panel { display: flex; flex: 0 1 auto; flex-direction: column; width: 100%; min-height: 0; max-height: 100%; margin-top: 0; overflow: hidden; box-shadow: none; }
 .form-panel-heading { flex: 0 0 auto; }
-.form-panel-content { flex: 1 1 auto; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; }
+.form-panel-content { flex: 1 1 auto; min-height: 0; padding: 4px 6px 4px 2px; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; }
 .form-panel-content::-webkit-scrollbar { width: 6px; }
 .form-panel-content::-webkit-scrollbar-thumb { background: var(--section-accent); border-radius: 999px; }
 .modal-dialog .form-actions { flex: 0 0 auto; margin-top: 18px; }
