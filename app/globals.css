@@ -72,7 +72,6 @@
 .task-preview-markdown .note-markdown { font-size: inherit; line-height: inherit; }
 .task-preview-markdown .note-markdown p { max-width: none; }
 .task-preview-markdown .note-markdown > :first-child { margin-top: 0; }
-.dashboard-signal-tasks { --section-accent: #72d6d2; --section-surface: rgba(114, 214, 210, .12); --section-shadow: rgba(114, 214, 210, .18); }
 .dashboard-task-panel { margin-top: 12px; }
 .dashboard-task-list { display: grid; gap: 0; margin: 20px 0; border-top: 1px solid var(--line); }
 .dashboard-task-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 0; color: var(--ink); background: transparent; border: 0; border-bottom: 1px solid var(--line); text-align: left; cursor: pointer; }
@@ -230,10 +229,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .dashboard-signal strong { z-index: 1; max-width: 100%; margin-top: 21px; overflow: hidden; font-family: var(--font-display); font-size: 22px; font-weight: 500; letter-spacing: -.04em; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-signal > span:not(.eyebrow):not(.dashboard-signal-icon) { z-index: 1; max-width: 100%; margin-top: 8px; overflow: hidden; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-signal-icon { position: absolute; right: 17px; bottom: 2px; color: var(--section-accent); font-family: var(--font-display); font-size: 72px; line-height: 1; opacity: .18; }
-.dashboard-signal-day { --section-accent: #9bd7b3; --section-surface: rgba(155, 215, 179, .12); --section-shadow: rgba(155, 215, 179, .18); }
-.dashboard-signal-calendar { --section-accent: #f0b58a; --section-surface: rgba(240, 181, 138, .12); --section-shadow: rgba(240, 181, 138, .18); }
-.dashboard-signal-finance { --section-accent: #e5b86f; --section-surface: rgba(229, 184, 111, .12); --section-shadow: rgba(229, 184, 111, .18); }
-.dashboard-signal-pending { --section-accent: #d5c4ff; --section-surface: rgba(213, 196, 255, .12); --section-shadow: rgba(213, 196, 255, .18); }
 .dashboard-main-grid, .dashboard-lower-grid { display: grid; grid-template-columns: minmax(0, 1.18fr) minmax(0, .82fr); gap: 12px; margin-top: 12px; }
 .dashboard-panel { min-width: 0; padding: 25px; border: 1px solid var(--line); background: var(--panel); }
 .dashboard-panel .panel-heading { align-items: flex-start; }
@@ -275,12 +270,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .dashboard-space-card strong { overflow: hidden; color: var(--ink); font-family: var(--font-display); font-size: 19px; font-weight: 500; letter-spacing: -.04em; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-space-card em { overflow: hidden; color: var(--muted); font-size: 8px; font-style: normal; text-overflow: ellipsis; white-space: nowrap; }
 .dashboard-space-card b { position: absolute; right: 10px; top: 10px; color: var(--section-accent); font-size: 14px; font-weight: 400; }
-.dashboard-space-day { --section-accent: #9bd7b3; --section-shadow: rgba(155, 215, 179, .18); }
-.dashboard-space-calendar { --section-accent: #f0b58a; --section-shadow: rgba(240, 181, 138, .18); }
-.dashboard-space-finances { --section-accent: #e5b86f; --section-shadow: rgba(229, 184, 111, .18); }
-.dashboard-space-files { --section-accent: #a8b9ff; --section-shadow: rgba(168, 185, 255, .18); }
-.dashboard-space-notes { --section-accent: #e8a9d3; --section-shadow: rgba(232, 169, 211, .18); }
-.dashboard-space-tasks { --section-accent: #72d6d2; --section-shadow: rgba(114, 214, 210, .18); }
 .dashboard-storage { display: grid; grid-template-columns: auto minmax(80px, 1fr) auto; align-items: center; gap: 12px; margin-top: 16px; color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; }
 .dashboard-storage .storage-bar { margin-top: 0; }
 .dashboard-storage strong { color: var(--section-accent); font-weight: 500; }
