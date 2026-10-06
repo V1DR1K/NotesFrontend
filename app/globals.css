@@ -135,8 +135,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .breadcrumb strong { color: var(--muted-strong); font-weight: 500; }
 .breadcrumb i { color: var(--line-strong); font-style: normal; }
 .topbar-tools { display: flex; align-items: center; gap: 22px; }
-.sync-status { display: inline-flex; align-items: center; gap: 7px; color: var(--muted-strong); }
-.sync-dot { width: 6px; height: 6px; background: var(--section-accent); border-radius: 50%; box-shadow: 0 0 8px var(--section-accent); }
 .topbar-date { color: var(--muted); }
 .search-button { display: flex; align-items: center; gap: 10px; padding: 6px 0 6px 12px; color: var(--muted-strong); background: transparent; border: 0; border-left: 1px solid var(--line); }
 .search-button span { font-size: 22px; line-height: 0.5; transform: rotate(-20deg); }
@@ -790,7 +788,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .mobile-brand .brand-symbol { width: 24px; height: 24px; font-size: 13px; }
   .breadcrumb, .topbar-date { display: none; }
   .topbar-tools { gap: 12px; margin-left: auto; }
-  .sync-status { font-size: 8px; }
   .search-button { min-width: 44px; min-height: 44px; justify-content: center; border-left: 0; padding-left: 5px; }
   .search-button kbd { display: none; }
   .settings-button { width: 44px; height: 44px; }
@@ -1193,7 +1190,6 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .repository-inline-error { align-items: flex-start; flex-direction: column; gap: 6px; }
 }
 @media (max-width: 380px) {
-  .app-frame[data-section="repositories"] .sync-status { display: none; }
   .repository-project-header { align-items: flex-start; flex-direction: column; }
   .repository-component { padding: 12px; }
   .repository-component-header { grid-template-columns: minmax(0, 1fr); }

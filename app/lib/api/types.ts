@@ -32,7 +32,7 @@ export type ApiConfig = {
 };
 
 export type ConfigKind = "day-statuses" | "day-feelings" | "finance-items" | "categories" | "projects";
-export type SearchResult = { section: "day" | "finances" | "files" | "notes"; id: string; title: string; detail: string; date?: string };
+export type SearchResult = { section: "day" | "finances" | "files" | "notes" | "tasks" | "calendar"; id: string; title: string; detail: string; date?: string };
 
 export type RepositoryPipeline = {
   status: string;

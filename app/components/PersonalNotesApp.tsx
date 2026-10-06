@@ -36,6 +36,7 @@ export function PersonalNotesApp() {
   const [projectTab, setProjectTab] = useState<ProjectTab>(() => typeof window === "undefined" ? "tasks" : projectTabFor(new URLSearchParams(window.location.search).get("tab") ?? new URLSearchParams(window.location.search).get("section")));
   const [financeTab, setFinanceTab] = useState<FinanceTab>(() => typeof window === "undefined" ? "inicio" : financeTabFor(new URLSearchParams(window.location.search).get("financeTab")));
   const [focusId, setFocusId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("focus"));
+  const [focusDate, setFocusDate] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("focusDate"));
   const [editId, setEditId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("edit"));
   const [user, setUser] = useState<AuthUser | null>(null);
   const [config, setConfig] = useState<ApiConfig | null>(null);
@@ -45,7 +46,7 @@ export function PersonalNotesApp() {
   const [searchOpen, setSearchOpen] = useState(false);
   const sessionUserId = useRef<string | null>(null);
 
-  const navigate = (section: SectionKey, targetId?: string, mode: "focus" | "edit" = "focus") => {
+  const navigate = (section: SectionKey, targetId?: string, mode: "focus" | "edit" = "focus", targetDate?: string) => {
     const nextSection = displaySection(section);
     const nextTab = section === "tasks" || section === "notes" || section === "files" ? section : projectTab;
     if (nextSection === activeSection && nextTab === projectTab && !targetId) return;
@@ -55,10 +56,12 @@ export function PersonalNotesApp() {
     if (nextSection === "finances") url.searchParams.set("financeTab", financeTab); else url.searchParams.delete("financeTab");
     if (targetId) url.searchParams.set("focus", targetId); else url.searchParams.delete("focus");
     if (targetId && mode === "edit") url.searchParams.set("edit", targetId); else url.searchParams.delete("edit");
+    if (section === "calendar" && targetDate) url.searchParams.set("focusDate", targetDate); else url.searchParams.delete("focusDate");
     window.history.pushState({ ...window.history.state, notesSection: nextSection }, "", url);
     setActiveSection(nextSection);
     setProjectTab(nextTab);
     setFocusId(targetId ?? null);
+    setFocusDate(section === "calendar" ? targetDate ?? null : null);
     setEditId(targetId && mode === "edit" ? targetId : null);
   };
   const changeProjectTab = (tab: ProjectTab) => { const url = new URL(window.location.href); url.searchParams.set("section", "projects"); url.searchParams.set("tab", tab); window.history.pushState({ ...window.history.state, notesSection: "projects" }, "", url); setProjectTab(tab); };
@@ -92,6 +95,7 @@ export function PersonalNotesApp() {
       setProjectTab(projectTabFor(params.get("tab") ?? section));
       setFinanceTab(financeTabFor(params.get("financeTab")));
       setFocusId(params.get("focus"));
+      setFocusDate(params.get("focusDate"));
       setEditId(params.get("edit"));
     };
     window.addEventListener("popstate", handlePopState);
@@ -149,7 +153,7 @@ export function PersonalNotesApp() {
     const section = (() => {
       switch (activeSection) {
         case "day": return <MiDiaModule config={config} focusId={focusId} />;
-        case "calendar": return <CalendarModule config={config} onOpenTask={(taskId) => navigate("tasks", taskId)} />;
+        case "calendar": return <CalendarModule key={focusId ?? "calendar"} config={config} focusId={focusId} focusDate={focusDate} onOpenTask={(taskId) => navigate("tasks", taskId)} />;
         case "projects": return <ProjectsView config={config} tab={projectTab} onTabChange={changeProjectTab} focusId={focusId} editId={editId} />;
         case "tasks": return <TasksModule config={config} focusId={focusId} editId={editId} />;
         case "finances": return <FinanzasModule config={config} focusId={focusId} tab={financeTab} onTabChange={changeFinanceTab} />;

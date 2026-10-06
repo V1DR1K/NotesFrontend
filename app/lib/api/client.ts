@@ -391,7 +391,7 @@ function normalizeSearchResults(value: unknown): SearchResult[] {
   return value.map((item) => {
     const record = validatedRecord(item, "búsqueda");
     const section = textField(record, "section", "búsqueda");
-    if (!["day", "finances", "files", "notes"].includes(section)) throw new ApiError("La respuesta de búsqueda contiene una sección inválida.", 502);
+    if (!["day", "finances", "files", "notes", "tasks", "calendar"].includes(section)) throw new ApiError("La respuesta de búsqueda contiene una sección inválida.", 502);
     return { section: section as SearchResult["section"], id: textField(record, "id", "búsqueda"), title: textField(record, "title", "búsqueda"), detail: textField(record, "detail", "búsqueda"), date: record.date ? String(record.date) : undefined };
   });
 }

@@ -6,6 +6,7 @@ import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { currentMonth, dateLabel, fieldError, monthBounds, todayIso, weekdayLabel } from "../../lib/presentation";
 import { sortCategoryOptions } from "../../lib/categories";
+import { useFocusTarget } from "../../lib/ui/useFocusTarget";
 import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { EventsCalendar } from "./EventsCalendar";
 import { useCalendarData, type CalendarItemType } from "./useCalendarData";
@@ -20,9 +21,9 @@ function taskIsOverdue(task: Task) {
   return task.status !== "COMPLETED" && Boolean(task.dueDate && task.dueDate < todayIso());
 }
 
-export function CalendarView({ config, onOpenTask }: { config: ApiConfig; onOpenTask?: (taskId: string) => void }) {
-  const [month, setMonth] = useState(currentMonth());
-  const [selectedDate, setSelectedDate] = useState(todayIso());
+export function CalendarView({ config, onOpenTask, focusId, focusDate }: { config: ApiConfig; onOpenTask?: (taskId: string) => void; focusId?: string | null; focusDate?: string | null }) {
+  const [month, setMonth] = useState(() => focusDate?.slice(0, 7) ?? currentMonth());
+  const [selectedDate, setSelectedDate] = useState(() => focusDate ?? todayIso());
   const [type, setType] = useState<CalendarItemType>("all");
   const [categoryKey, setCategoryKey] = useState("all");
   const [projectCode, setProjectCode] = useState("all");
@@ -35,6 +36,7 @@ export function CalendarView({ config, onOpenTask }: { config: ApiConfig; onOpen
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [draft, setDraft] = useState({ date: todayIso(), description: "", categoryCode: "", projectCode: "personal" });
   const data = useCalendarData(month, type, categoryKey, from, to, projectCode);
+  useFocusTarget(focusId, Boolean(data.data));
   const mutation = useMutationError();
   const events = data.data?.events ?? [];
   const tasks = data.data?.tasks ?? [];
@@ -79,7 +81,7 @@ export function CalendarView({ config, onOpenTask }: { config: ApiConfig; onOpen
       <section className="calendar-day-detail" aria-labelledby="calendar-selected-day">
         <div className="section-heading-row"><div><span className="eyebrow">DÍA SELECCIONADO</span><h2 id="calendar-selected-day">{weekdayLabel(visibleSelectedDate)} · {dateLabel(visibleSelectedDate)}</h2></div><Button variant="ghost" onClick={() => startNew(visibleSelectedDate)}>+ Agregar evento</Button></div>
         {visibleSelectedEvents.length || visibleSelectedTasks.length ? <div className="calendar-detail-groups">
-          {visibleSelectedEvents.length ? <section className="calendar-detail-group" aria-labelledby="calendar-events-heading"><div className="calendar-detail-group-heading"><h3 id="calendar-events-heading">Eventos</h3><span>{visibleSelectedEvents.length}</span></div><div className="event-detail-list">{visibleSelectedEvents.map((event) => <article className="event-detail-card" key={event.id}><button type="button" className="event-detail-preview-trigger" onClick={() => setPreviewEvent(event)} aria-label={`Ver evento: ${event.description}`}><span className="event-category-label">{event.category.label || categoryLabel(event.category.code)} · {projectLabel(event.projectCode)}</span><p className="multiline-copy">{event.description}</p></button><CardActions onEdit={() => startEdit(event)} onDelete={() => setPendingDelete(event.id)} /></article>)}</div></section> : null}
+          {visibleSelectedEvents.length ? <section className="calendar-detail-group" aria-labelledby="calendar-events-heading"><div className="calendar-detail-group-heading"><h3 id="calendar-events-heading">Eventos</h3><span>{visibleSelectedEvents.length}</span></div><div className="event-detail-list">{visibleSelectedEvents.map((event) => <article className="event-detail-card" id={"record-" + event.id} key={event.id}><button type="button" className="event-detail-preview-trigger" onClick={() => setPreviewEvent(event)} aria-label={`Ver evento: ${event.description}`}><span className="event-category-label">{event.category.label || categoryLabel(event.category.code)} · {projectLabel(event.projectCode)}</span><p className="multiline-copy">{event.description}</p></button><CardActions onEdit={() => startEdit(event)} onDelete={() => setPendingDelete(event.id)} /></article>)}</div></section> : null}
           {visibleSelectedTasks.length ? <section className="calendar-detail-group" aria-labelledby="calendar-tasks-heading"><div className="calendar-detail-group-heading"><h3 id="calendar-tasks-heading">Tareas</h3><span>{visibleSelectedTasks.length}</span></div><div className="event-detail-list">{visibleSelectedTasks.map((task) => <button type="button" className={`calendar-task-detail-card ${task.status === "COMPLETED" ? "calendar-task-detail-card-completed" : ""} ${taskIsOverdue(task) ? "calendar-task-detail-card-overdue" : ""}`} key={task.id} onClick={() => onOpenTask?.(task.id)} aria-label={`Abrir tarea ${task.title}`}><span className="calendar-task-detail-status">{TASK_STATUS_LABEL[task.status]}</span><span className="calendar-task-detail-copy"><strong>{task.title}</strong><small>{task.category.label} · {projectLabel(task.projectCode)} · Límite {dateLabel(task.dueDate ?? undefined)}</small></span><span className="activity-arrow" aria-hidden="true">→</span></button>)}</div></section> : null}
         </div> : <EmptyState title="No hay elementos para este día" description="Elegí otra fecha o agregá un evento para empezar a ordenar tu agenda." action="Agregar evento" onAction={() => startNew(visibleSelectedDate)} />}
       </section>

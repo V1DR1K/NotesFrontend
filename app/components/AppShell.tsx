@@ -41,7 +41,6 @@ export function AppShell({ activeSection, onNavigate, onOpenSearch, onOpenSettin
           <div className="mobile-brand"><span className="brand-symbol">✦</span><strong>Cuaderno</strong></div>
           <div className="breadcrumb"><span>CUADERNO</span><i>/</i><strong>{SECTION_META[activeSection].label.toUpperCase()}</strong></div>
           <div className="topbar-tools">
-            <span className="sync-status"><span className="sync-dot" /> SESIÓN ACTIVA</span>
              <span className="topbar-date">{new Intl.DateTimeFormat("es-AR", { weekday: "short", day: "2-digit", month: "short", year: "numeric" }).format(new Date()).toUpperCase()}</span>
               <button type="button" className={`settings-button ${activeSection === "settings" ? "settings-button-active" : ""}`} onClick={onOpenSettings} aria-label="Abrir configuración" aria-current={activeSection === "settings" ? "page" : undefined}>⚙</button>
              <button type="button" className="search-button" onClick={onOpenSearch} aria-label="Buscar"><span>⌕</span><kbd>⌘ K</kbd></button>
