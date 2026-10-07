@@ -118,7 +118,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   projects: {
     label: "Proyecto",
-    eyebrow: "TUS PROYECTOS",
+    eyebrow: "TUS PROYECTOS / 04",
     title: "Todo lo que pertenece, junto.",
     description: "Tareas, notas y archivos reunidos por proyecto.",
     icon: "▤",
