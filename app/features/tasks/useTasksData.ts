@@ -25,7 +25,7 @@ type AdditionalTasksState = {
   errorStatus: TaskStatus | null;
 };
 
-function taskQuery(categoryCode: string, projectCode: string, status: TaskStatus, page: number, sort: string, completedAfter?: string, completedBefore?: string, size = TASK_BOARD_PAGE_SIZE) {
+function taskQuery(categoryCode: string, projectCode: string, status: TaskStatus, page: number, sort: string, completedAfter?: string, completedBefore?: string, from = "", to = "", size = TASK_BOARD_PAGE_SIZE) {
   const query = new URLSearchParams({ status, page: String(page), size: String(size), sort });
   const scope = resolveCategoryScope(categoryCode);
   if (scope.categoryCode !== "all") query.set("categoryCode", scope.categoryCode);
@@ -33,18 +33,20 @@ function taskQuery(categoryCode: string, projectCode: string, status: TaskStatus
   if (effectiveProject !== "all") query.set("projectCode", effectiveProject);
   if (completedAfter) query.set("completedAfter", completedAfter);
   if (completedBefore) query.set("completedBefore", completedBefore);
+  if (from) query.set("from", from);
+  if (to) query.set("to", to);
   return query;
 }
 
-export function useTasksData(categoryCode: string, projectCode = "all") {
-  const queryKey = `tasks-board:${categoryCode}:${projectCode}`;
+export function useTasksData(categoryCode: string, projectCode = "all", from = "", to = "") {
+  const queryKey = `tasks-board:${categoryCode}:${projectCode}:${from}:${to}`;
   const query = useApiQuery<TaskBoardData>(queryKey, async (signal) => {
     const completedAfter = new Date(Date.now() - COMPLETED_WINDOW_MS).toISOString();
     const [pending, inProgress, recent, previousCountPage] = await Promise.all([
-      api.tasks(taskQuery(categoryCode, projectCode, "PENDING", 0, "dueDate,asc"), signal),
-      api.tasks(taskQuery(categoryCode, projectCode, "IN_PROGRESS", 0, "dueDate,asc"), signal),
-      api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", 0, "completedAt,desc", completedAfter), signal),
-      api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", 0, "completedAt,desc", undefined, completedAfter, 1), signal),
+      api.tasks(taskQuery(categoryCode, projectCode, "PENDING", 0, "dueDate,asc", undefined, undefined, from, to), signal),
+      api.tasks(taskQuery(categoryCode, projectCode, "IN_PROGRESS", 0, "dueDate,asc", undefined, undefined, from, to), signal),
+      api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", 0, "completedAt,desc", completedAfter, undefined, from, to), signal),
+      api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", 0, "completedAt,desc", undefined, completedAfter, from, to, 1), signal),
     ]);
     const statusCounts: Record<TaskStatus, number> = {
       PENDING: pending.totalElements,
@@ -95,7 +97,7 @@ export function useTasksData(categoryCode: string, projectCode = "all") {
     try {
       const sort = status === "COMPLETED" ? "completedAt,desc" : "dueDate,asc";
       const completedAfter = status === "COMPLETED" ? board.completedAfter : undefined;
-      const result = await api.tasks(taskQuery(categoryCode, projectCode, status, page, sort, completedAfter));
+      const result = await api.tasks(taskQuery(categoryCode, projectCode, status, page, sort, completedAfter, undefined, from, to));
       setAdditionalTasks((current) => {
         const base = current.key === boardKey ? current : currentAdditionalTasks;
         return {
@@ -115,9 +117,9 @@ export function useTasksData(categoryCode: string, projectCode = "all") {
       });
       return false;
     }
-  }, [boardKey, categoryCode, currentAdditionalTasks, projectCode, query.data]);
+  }, [boardKey, categoryCode, currentAdditionalTasks, from, projectCode, query.data, to]);
 
-  const archiveKey = `${categoryCode}:${projectCode}:${query.data?.completedAfter ?? ""}`;
+  const archiveKey = `${categoryCode}:${projectCode}:${from}:${to}:${query.data?.completedAfter ?? ""}`;
   const [archiveState, setArchiveState] = useState<{ key: string; tasks: Task[]; loading: boolean; loaded: boolean; error: string | null }>({ key: "", tasks: [], loading: false, loaded: false, error: null });
   const currentArchive = archiveState.key === archiveKey ? archiveState : { key: archiveKey, tasks: [], loading: false, loaded: false, error: null };
 
@@ -130,7 +132,7 @@ export function useTasksData(categoryCode: string, projectCode = "all") {
       const tasks: Task[] = [];
       let page = 0;
       while (true) {
-        const result = await api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", page, "completedAt,desc", undefined, board.completedAfter));
+        const result = await api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", page, "completedAt,desc", undefined, board.completedAfter, from, to));
         tasks.push(...result.content);
         if (result.last) break;
         page += 1;
@@ -141,7 +143,7 @@ export function useTasksData(categoryCode: string, projectCode = "all") {
       setArchiveState({ key: archiveKey, tasks: [], loading: false, loaded: false, error: "No se pudieron cargar las tareas anteriores. Probá de nuevo." });
       return false;
     }
-  }, [archiveKey, currentArchive.loaded, currentArchive.loading, query.data, categoryCode, projectCode]);
+  }, [archiveKey, currentArchive.loaded, currentArchive.loading, query.data, categoryCode, from, projectCode, to]);
 
   const data = query.data
     ? { ...query.data, content: [...query.data.content, ...currentAdditionalTasks.tasks] }

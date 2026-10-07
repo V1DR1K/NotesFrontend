@@ -288,11 +288,13 @@ export function CompactSectionHeader({
   section,
   title,
   headingLevel = 1,
+  className = "",
   children,
 }: {
   section: SectionKey;
   title?: string;
   headingLevel?: 1 | 2;
+  className?: string;
   children?: ReactNode;
 }) {
   const meta = SECTION_META[section];
@@ -300,7 +302,7 @@ export function CompactSectionHeader({
   const description = meta.title;
 
   return (
-    <header className="compact-section-header">
+    <header className={`compact-section-header ${className}`.trim()}>
       <div className="compact-section-heading">
         {headingLevel === 1 ? <h1>{heading}</h1> : <h2>{heading}</h2>}
         <p>{description}</p>
@@ -321,6 +323,23 @@ export function ModuleToolbar({
     <div className="module-toolbar">
       <div className="toolbar-filters">{children}</div>
       {resultLabel ? <span className="toolbar-result">{resultLabel}</span> : null}
+    </div>
+  );
+}
+
+export function DateRangeFilter({ from, to, onFromChange, onToChange, onClear, idPrefix }: {
+  from: string;
+  to: string;
+  onFromChange: (value: string) => void;
+  onToChange: (value: string) => void;
+  onClear?: () => void;
+  idPrefix: string;
+}) {
+  return (
+    <div className="finance-period-fields module-date-range" role="group" aria-label="Filtrar por fecha">
+      <label className="toolbar-date-field" htmlFor={`${idPrefix}-from`}><span>Desde</span><input id={`${idPrefix}-from`} type="date" value={from} onChange={(event) => onFromChange(event.target.value)} /></label>
+      <label className="toolbar-date-field" htmlFor={`${idPrefix}-to`}><span>Hasta</span><input id={`${idPrefix}-to`} type="date" value={to} onChange={(event) => onToChange(event.target.value)} /></label>
+      {onClear && (from || to) ? <Button variant="quiet" className="filter-clear module-date-clear" onClick={onClear}>Limpiar fechas</Button> : null}
     </div>
   );
 }

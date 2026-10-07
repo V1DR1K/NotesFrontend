@@ -6,7 +6,7 @@ import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { dateLabel, todayIso, fieldError } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
-import { Button, CardActions, CompactSectionHeader, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, Pagination, SelectField, SkeletonGrid } from "../../ui/Primitives";
+import { Button, CardActions, CompactSectionHeader, ConfirmDialog, DateRangeFilter, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, Pagination, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { NoteBody } from "./NoteBody";
 import { MarkdownEditor } from "../../ui/MarkdownEditor";
 import { MarkdownAssistant } from "../../ui/MarkdownAssistant";
@@ -19,6 +19,8 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const [categoryFilter, setCategoryFilter] = useState({ contextProjectCode: projectCode, projectCode, value: "all" });
   const filter = categoryFilter.contextProjectCode === projectCode && categoryFilter.projectCode === filterProjectCode ? categoryFilter.value : "all";
   const [sort, setSort] = useState("recent");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [page, setPage] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const pendingPreviewEdit = useRef<Note | null>(null);
   const firstProject = projectCode === "all" ? config.projects.find((item) => item.code === "personal" && item.active !== false)?.code ?? config.projects.find((item) => item.active !== false)?.code ?? "personal" : projectCode;
   const [draft, setDraft] = useState({ title: "", body: "", categoryCode: defaultCategoryCode(config.categories, firstProject), date: todayIso(), projectCode: firstProject });
-  const data = useNotesData(page, filter, sort, filterProjectCode);
+  const data = useNotesData(page, filter, sort, filterProjectCode, from, to);
   const mutation = useMutationError();
   const categoryLabel = (code: string) => config.categories.find((item) => item.code === code)?.label ?? code;
   const notes = data.data?.content ?? [];
@@ -78,6 +80,7 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
         {!nested && <SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); setPage(0); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} />}
         <SelectField label="Categoría" compact value={filter} onChange={(value) => { setCategoryFilter({ contextProjectCode: projectCode, projectCode: filterProjectCode, value }); setPage(0); }} options={[{ value: "all", label: "Todas" }, ...activeCategories.map(({ code, label, projectCode: ownerProject }) => ({ value: `${ownerProject}:${code}`, label: filterProjectCode === "all" ? `${label} · ${config.projects.find((project) => project.code === ownerProject)?.label ?? ownerProject}` : label }))]} />
         <SelectField label="Ordenar" compact value={sort} onChange={setSort} options={[{ value: "recent", label: "Más recientes" }, { value: "old", label: "Más antiguas" }]} />
+        <DateRangeFilter from={from} to={to} onFromChange={(value) => { setFrom(value); setPage(0); }} onToChange={(value) => { setTo(value); setPage(0); }} onClear={() => { setFrom(""); setTo(""); setPage(0); }} idPrefix="note-filter" />
       </ModuleToolbar>
       {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : notes.length ? <div className="content-grid notes-grid">{notes.map((note) => <article id={`record-${note.id}`} className="content-card note-card" key={note.id}><div className="content-card-top"><span className="mono-date">{dateLabel(note.date, true)}</span><CardActions onEdit={() => startEdit(note)} onDelete={() => setPendingDelete(note.id)} /></div><button type="button" className="content-card-preview-trigger" onClick={() => setPreviewNote(note)} aria-label={`Ver nota ${note.title}`}><div className="note-card-heading"><span className="note-symbol">✎</span><span className="note-category">{note.category?.label ?? categoryLabel(note.categoryCode)} · {config.projects.find((item) => item.code === note.projectCode)?.label ?? note.projectCode}</span></div><h2>{note.title}</h2><NoteBody body={note.body} interactiveLinks={false} /><div className="card-footer"><span className="eyebrow">NOTA / {categoryLabel(note.categoryCode).toUpperCase()}</span><span className="card-arrow">↗</span></div></button></article>)}</div> : <EmptyState title="No hay notas con esa categoría" description="Las ideas aparecen cuando les dejás un espacio. Podés escribir la primera ahora." action="Escribir nota" onAction={startNew} />}
     {previewNote ? <Dialog ariaLabel={`Vista previa de ${previewNote.title}`} trackChanges={false} onClose={closePreview}><FormPanel mode="preview" eyebrow={`VISTA PREVIA · ${categoryLabel(previewNote.categoryCode).toUpperCase()}`} title={previewNote.title} description={`${dateLabel(previewNote.date, true)} · ${config.projects.find((item) => item.code === previewNote.projectCode)?.label ?? previewNote.projectCode}`} onClose={closePreview} onEdit={() => { pendingPreviewEdit.current = previewNote; }}><NoteBody body={previewNote.body} /></FormPanel></Dialog> : null}
