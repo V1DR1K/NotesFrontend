@@ -1099,14 +1099,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .compact-section-controls .select-wrap select { width: 100%; }
 }
 @media (max-width: 820px) {
-  .compact-section-header { align-items: center; flex-direction: row; flex-wrap: wrap; gap: 10px; padding-top: 24px; padding-bottom: 13px; }
-  .compact-section-heading { flex: 1 1 auto; flex-direction: column; align-items: flex-start; gap: 2px; }
-  .compact-section-controls { width: 100%; }
+  .compact-section-header { align-items: center; flex-direction: row; gap: 10px; padding-top: 24px; padding-bottom: 13px; }
+  .compact-section-heading { flex: 1 1 0; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .compact-section-controls { flex: 0 1 auto; width: auto; gap: 6px; }
   .compact-section-heading h1, .compact-section-heading h2 { font-size: clamp(27px, 7vw, 34px); }
   .compact-section-heading p { font-size: 10px; }
-  .compact-section-controls > .field-label { gap: 7px; }
+  .compact-section-controls > .field-label { flex: 1 1 auto; gap: 7px; width: auto; }
   .compact-section-controls .select-wrap select, .compact-section-controls > .button { min-height: 44px; }
-  .compact-section-controls > .button { padding-right: 12px; padding-left: 12px; font-size: 10px; white-space: nowrap; }
+  .compact-section-controls > .button { flex: 0 1 auto; padding-right: 8px; padding-left: 8px; font-size: 9px; white-space: nowrap; }
 }
 @media (min-width: 821px) {
   .view.module-view { padding-top: 0; }
