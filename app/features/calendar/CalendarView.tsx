@@ -7,7 +7,7 @@ import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { currentMonth, dateLabel, fieldError, isTaskOverdue, monthBounds, todayIso, weekdayLabel } from "../../lib/presentation";
 import { sortCategoryOptions } from "../../lib/categories";
 import { useFocusTarget } from "../../lib/ui/useFocusTarget";
-import { Button, CardActions, CompactSectionHeader, ConfirmDialog, DateRangeFilter, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, SelectField, SkeletonGrid } from "../../ui/Primitives";
+import { Button, CardActions, ConfirmDialog, DateRangeFilter, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { EventsCalendar } from "./EventsCalendar";
 import { useCalendarData, type CalendarItemType } from "./useCalendarData";
 
@@ -77,12 +77,9 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const visibleSelectedTasks = tasks.filter((task) => task.dueDate === visibleSelectedDate);
   const hasFilters = type !== "all" || categoryKey !== "all" || projectCode !== "all" || Boolean(from || to);
 
-  return <div className="view module-view">
+  return <div className="view module-view calendar-view">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
-    <CompactSectionHeader section="calendar" title="Agenda" className="compact-section-header-calendar">
-      <SelectField label="Proyecto" id="project-filter" compact value={projectCode} onChange={(nextProject) => { setProjectCode(nextProject); if (categoryKey !== "all" && nextProject !== "all" && !categoryKey.startsWith(`${nextProject}:`)) setCategoryKey("all"); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === projectCode).map(({ code, label }) => ({ value: code, label }))]} />
-      <Button onClick={() => startNew(visibleSelectedDate)}>Agregar evento <span aria-hidden="true">↗</span></Button>
-    </CompactSectionHeader>
+    <SectionHero section="calendar" title="Agenda" description="Que nada importante se te escape." compact onAction={() => startNew(visibleSelectedDate)} rightSlot={<div className="hero-project-filter"><SelectField label="Proyecto" id="project-filter" value={projectCode} onChange={(nextProject) => { setProjectCode(nextProject); if (categoryKey !== "all" && nextProject !== "all" && !categoryKey.startsWith(`${nextProject}:`)) setCategoryKey("all"); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === projectCode).map(({ code, label }) => ({ value: code, label }))]} /></div>} />
     <ModuleToolbar resultLabel={`${totalElements} ${totalElements === 1 ? "elemento" : "elementos"}`}>
       <FilterPills ariaLabel="Tipo de elemento" active={type} options={[{ value: "all", label: "Todo" }, { value: "events", label: "Eventos" }, { value: "tasks", label: "Tareas" }]} onChange={(value) => setType(value as CalendarItemType)} />
       <DateRangeFilter from={from} to={to} onFromChange={setFrom} onToChange={setTo} idPrefix="event-filter" />

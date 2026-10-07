@@ -255,28 +255,36 @@ export function Pagination({
 
 export function SectionHero({
   section,
+  title,
+  description,
+  compact = false,
   onAction,
   actionLabel,
   rightSlot,
   headingLevel = 1,
 }: {
   section: SectionKey;
+  title?: string;
+  description?: string;
+  compact?: boolean;
   onAction?: () => void;
   actionLabel?: string;
   rightSlot?: ReactNode;
   headingLevel?: 1 | 2;
 }) {
   const meta = SECTION_META[section];
+  const heading = title ?? meta.title;
+  const supportingCopy = description ?? meta.description;
 
   return (
-    <section className="section-hero">
+    <section className={`section-hero ${compact ? "section-hero-compact" : ""}`.trim()}>
       <div className="hero-copy">
         <div className="eyebrow-row">
           <span className="hero-mark" aria-hidden="true"><SectionIcon section={section} /></span>
           <span className="eyebrow">{meta.eyebrow}</span>
         </div>
-        {headingLevel === 1 ? <h1>{meta.title}</h1> : <h2>{meta.title}</h2>}
-        <p>{meta.description}</p>
+        {headingLevel === 1 ? <h1>{heading}</h1> : <h2>{heading}</h2>}
+        <p>{supportingCopy}</p>
         {onAction ? <Button onClick={onAction}>{actionLabel ?? meta.action}<span aria-hidden="true">↗</span></Button> : null}
       </div>
       {rightSlot ? <div className="hero-sidecar">{rightSlot}</div> : null}
@@ -304,8 +312,14 @@ export function CompactSectionHeader({
   return (
     <header className={`compact-section-header ${className}`.trim()}>
       <div className="compact-section-heading">
-        {headingLevel === 1 ? <h1>{heading}</h1> : <h2>{heading}</h2>}
-        <p>{description}</p>
+        <div className="eyebrow-row compact-section-eyebrow-row">
+          <span className="hero-mark" aria-hidden="true"><SectionIcon section={section} /></span>
+          <span className="eyebrow">{meta.eyebrow}</span>
+        </div>
+        <div className="compact-section-title-row">
+          {headingLevel === 1 ? <h1>{heading}</h1> : <h2>{heading}</h2>}
+          <p>{description}</p>
+        </div>
       </div>
       {children ? <div className="compact-section-controls">{children}</div> : null}
     </header>

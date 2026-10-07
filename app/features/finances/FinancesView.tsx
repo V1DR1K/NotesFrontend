@@ -315,7 +315,7 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
        error={mutation.error?.message ?? null}
        pending={mutation.pending}
      />
-     <SectionHero section="finances" rightSlot={<div className="rate-card"><span className="eyebrow">DÓLAR BLUE</span><strong>{rate ? formatARS(rate) : "—"}</strong><span>{rate ? `${rateSource}${rateUpdatedAt ? ` · ${rateUpdatedAt}` : ""}` : "Consultando cotización..."} <i>↗</i></span></div>} />
+     <SectionHero section="finances" compact rightSlot={<div className="rate-card"><span className="eyebrow">DÓLAR BLUE</span><strong>{rate ? formatARS(rate) : "—"}</strong><span>{rate ? `${rateSource}${rateUpdatedAt ? ` · ${rateUpdatedAt}` : ""}` : "Consultando cotización..."} <i>↗</i></span></div>} />
      <div className="finance-navigation">
        <div className="finance-tabs" role="tablist" aria-label="Secciones de Finanzas">
          {financeTabs.map((item, index) => <button key={item.id} id={`finance-tab-${item.id}`} type="button" role="tab" tabIndex={tab === item.id ? 0 : -1} aria-selected={tab === item.id} aria-controls={`finance-panel-${item.id}`} className={tab === item.id ? "finance-tab finance-tab-active" : "finance-tab"} onClick={() => onTabChange(item.id)} onKeyDown={(event) => {
