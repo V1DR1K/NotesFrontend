@@ -278,7 +278,26 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
       })}
     </section>}
     {draggingId ? <div className="task-drag-ghost" style={{ left: pointer.x + 14, top: pointer.y + 14 }} aria-hidden="true">{tasks.find((task) => task.id === draggingId)?.title}</div> : null}
-    {activePreviewTask ? <Dialog ariaLabel={`Vista previa de ${activePreviewTask.title}`} trackChanges={false} onClose={closePreview}><FormPanel mode="preview" eyebrow={`VISTA PREVIA · ${activePreviewTask.category.label.toUpperCase()}`} title={activePreviewTask.title} description={`${activePreviewTask.category.label} · ${config.projects.find((item) => item.code === activePreviewTask.projectCode)?.label ?? activePreviewTask.projectCode}`} onClose={closePreview} onEdit={() => setPreviewEditTask(activePreviewTask)}><div className="record-preview-meta"><span><strong>Estado</strong>{STATUS_META[activePreviewTask.status].label}</span><span><strong>Fecha límite</strong>{activePreviewTask.dueDate ? dateLabel(activePreviewTask.dueDate) : "Sin fecha límite"}</span></div>{activePreviewTask.detail ? <div className="record-preview-copy task-preview-markdown"><NoteBody body={activePreviewTask.detail} /></div> : <p className="record-preview-empty">Esta tarea no tiene detalles adicionales.</p>}</FormPanel></Dialog> : null}
+    {activePreviewTask ? (
+      <Dialog ariaLabel={`Vista previa de ${activePreviewTask.title}`} trackChanges={false} onClose={closePreview}>
+        <FormPanel
+          mode="preview"
+          eyebrow={`VISTA PREVIA · ${activePreviewTask.category.label.toUpperCase()}`}
+          title={activePreviewTask.title}
+          description={`${activePreviewTask.category.label} · ${config.projects.find((item) => item.code === activePreviewTask.projectCode)?.label ?? activePreviewTask.projectCode}`}
+          headerExtra={
+            <dl className="task-preview-header-meta" aria-label="Estado y fecha límite">
+              <div><dt>Estado</dt><dd>{STATUS_META[activePreviewTask.status].label}</dd></div>
+              <div><dt>Fecha límite</dt><dd>{activePreviewTask.dueDate ? dateLabel(activePreviewTask.dueDate) : "Sin fecha límite"}</dd></div>
+            </dl>
+          }
+          onClose={closePreview}
+          onEdit={() => setPreviewEditTask(activePreviewTask)}
+        >
+          {activePreviewTask.detail ? <div className="record-preview-copy task-preview-markdown"><NoteBody body={activePreviewTask.detail} /></div> : <p className="record-preview-empty">Esta tarea no tiene detalles adicionales.</p>}
+        </FormPanel>
+      </Dialog>
+    ) : null}
     {composerOpen ? (
       <Dialog ariaLabel={editing ? "Editar tarea" : "Crear tarea"} onClose={closeComposer} wide>
         <FormPanel eyebrow={editing ? "EDITAR TAREA" : "NUEVA TAREA"} title={editing ? "Editar tarea" : "Crear tarea"} description="Las tareas se guardan en tu espacio y podés moverlas cuando cambien de estado." onClose={closeComposer} onSubmit={() => void saveTask()}>

@@ -409,7 +409,7 @@ export function FormField({ label, value, onChange, placeholder, multiline = fal
   );
 }
 
-export function FormPanel({ children, title, description, onClose, onSubmit, eyebrow = "NUEVO REGISTRO", mode = "edit", onEdit, onEditLabel = "Editar" }: { children: ReactNode; title: string; description: string; onClose: () => void; onSubmit?: () => void; eyebrow?: string; mode?: "edit" | "preview"; onEdit?: () => void; onEditLabel?: string }) {
+export function FormPanel({ children, title, description, onClose, onSubmit, eyebrow = "NUEVO REGISTRO", mode = "edit", onEdit, onEditLabel = "Editar", headerExtra }: { children: ReactNode; title: string; description: string; onClose: () => void; onSubmit?: () => void; eyebrow?: string; mode?: "edit" | "preview"; onEdit?: () => void; onEditLabel?: string; headerExtra?: ReactNode }) {
   const dialogClose = useContext(DialogCloseContext);
   const childNodes = Children.toArray(children);
   const footer = childNodes.filter((child) => isValidElement<{ className?: string }>(child) && child.props.className?.split(/\s+/).includes("form-actions"));
@@ -417,7 +417,7 @@ export function FormPanel({ children, title, description, onClose, onSubmit, eye
   const closePanel = dialogClose ?? onClose;
   const panel = <>
     <div className="form-panel-heading">
-      <div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p></div>
+      <div><span className="eyebrow">{eyebrow}</span><h2>{title}</h2><p>{description}</p>{headerExtra}</div>
       <IconButton label={mode === "preview" ? "Cerrar vista previa" : "Cerrar formulario"} onClick={closePanel}>×</IconButton>
     </div>
     <div className="form-panel-content">{mode === "preview" ? children : content}</div>

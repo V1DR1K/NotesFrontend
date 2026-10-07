@@ -441,6 +441,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .record-preview-meta { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 22px; }
 .record-preview-meta > span { display: flex; flex-direction: column; gap: 6px; min-width: min(160px, 100%); max-width: 100%; padding: 12px 14px; color: var(--muted-strong); background: var(--panel-soft); border: 1px solid var(--line); overflow-wrap: anywhere; font-size: 11px; }
 .record-preview-meta strong { color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.task-preview-header-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 9px 0 0; padding: 0; }
+.task-preview-header-meta > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 6px; min-width: 0; }
+.task-preview-header-meta dt { color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.task-preview-header-meta dd { margin: 0; color: var(--muted-strong); font-size: 10px; overflow-wrap: anywhere; }
 .day-card .multiline-copy { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; max-height: calc(5 * 1.75em); overflow: hidden; }
 .finance-card .multiline-copy { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; max-height: calc(3 * 1.75em); overflow: hidden; }
 .day-card-heading { justify-content: flex-start; gap: 8px; margin-top: 27px; }
