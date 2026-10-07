@@ -6,7 +6,7 @@ import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { dateLabel, isTaskOverdue as isOverdue } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
-import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
+import { Button, CardActions, CompactSectionHeader, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { useTasksData } from "./useTasksData";
 import { NoteBody } from "../notes/NoteBody";
 import { MarkdownAssistant } from "../../ui/MarkdownAssistant";
@@ -239,9 +239,6 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   if (editing && editing.projectCode === draft.projectCode && editing.category.code === draft.categoryCode && !draftCategories.some((option) => option.code === editing.category.code)) draftCategories = sortCategoryOptions([...draftCategories, { ...editing.category, projectCode: draft.projectCode }]);
   const selectedDraftCategoryCode = draftCategories.some((option) => option.code === draft.categoryCode) ? draft.categoryCode : draftCategories[0]?.code ?? "";
   const changeDraftProject = (nextProject: string) => setDraft((current) => ({ ...current, projectCode: nextProject, categoryCode: config.categories.some((option) => option.projectCode === nextProject && option.code === current.categoryCode && option.active !== false) ? current.categoryCode : defaultCategoryCode(config.categories, nextProject) }));
-  const pendingCount = data.data?.statusCounts.PENDING ?? tasksByStatus.PENDING.length;
-  const inProgressCount = data.data?.statusCounts.IN_PROGRESS ?? tasksByStatus.IN_PROGRESS.length;
-  const totalOpen = pendingCount + inProgressCount;
   const togglePreviousTasks = async () => {
     if (showPreviousTasks) {
       setPreviousVisibility({ categoryCode: `${categoryCode}:${filterProjectCode}`, visible: false });
@@ -252,7 +249,9 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
 
   return <div className="view view-tasks">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
-    <SectionHero section="tasks" headingLevel={nested ? 2 : 1} onAction={openCreate} rightSlot={<div className="tasks-summary-card"><span className="eyebrow">TAREAS ABIERTAS</span><strong>{totalOpen}</strong><span>{pendingCount} pendientes · {inProgressCount} en proceso</span></div>} />
+    <CompactSectionHeader section="tasks" headingLevel={nested ? 2 : 1}>
+      <Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button>
+    </CompactSectionHeader>
     <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}>
       {!nested && <SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} />}
       <SelectField label="Categoría" compact value={categoryCode} onChange={(value) => setCategoryFilter({ contextProjectCode: projectCode, projectCode: filterProjectCode, value })} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: `${option.projectCode}:${option.code}`, label: filterProjectCode === "all" ? `${option.label} · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : option.label }))]} />

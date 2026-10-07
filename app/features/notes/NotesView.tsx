@@ -6,7 +6,7 @@ import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { dateLabel, todayIso, fieldError } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
-import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, Pagination, SectionHero, SelectField, SkeletonGrid, VisualTile } from "../../ui/Primitives";
+import { Button, CardActions, CompactSectionHeader, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, Pagination, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { NoteBody } from "./NoteBody";
 import { MarkdownEditor } from "../../ui/MarkdownEditor";
 import { MarkdownAssistant } from "../../ui/MarkdownAssistant";
@@ -64,7 +64,9 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const pageCount = data.data?.totalPages ?? 0;
 
   return <div className="view module-view">
-    <SectionHero section="notes" headingLevel={nested ? 2 : 1} onAction={startNew} rightSlot={<div className="notes-stamp"><VisualTile emoji="✎" label="Notas" /><div><span className="eyebrow">ÚLTIMA NOTA</span><strong>{notes[0]?.title ?? "Todavía no hay notas"}</strong><span>{notes[0] ? dateLabel(notes[0].date, true) : "Empezá cuando quieras"}</span></div></div>} />
+    <CompactSectionHeader section="notes" headingLevel={nested ? 2 : 1}>
+      <Button onClick={startNew}>Escribir nota <span aria-hidden="true">↗</span></Button>
+    </CompactSectionHeader>
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
     {composerOpen ? <Dialog ariaLabel="Escribir una nota" onClose={() => setComposerOpen(false)} wide><FormPanel eyebrow={editingId ? "EDITAR NOTA" : "NUEVA NOTA"} onSubmit={() => void save()} title={editingId ? "Editar nota" : "Escribir una nota"} description="Dale estructura a tus resúmenes con títulos, listas y otros formatos Markdown." onClose={() => setComposerOpen(false)}><div className="form-grid form-grid-notes">
        <FormField label="Título" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Una idea para mañana" /><SelectField label="Proyecto" value={draft.projectCode} onChange={changeDraftProject} options={config.projects.filter((item) => item.active !== false || item.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /><SelectField label="Categoría" id="note-category" value={selectedDraftCategoryCode} onChange={(categoryCode) => setDraft({ ...draft, categoryCode })} options={draftCategories.map(({ code, label }) => ({ value: code, label }))} disabled={!draftCategories.length} /><label className="form-field" htmlFor="note-date"><span>Fecha</span><input id="note-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label><div className="form-field-full note-content-field">

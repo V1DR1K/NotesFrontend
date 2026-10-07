@@ -284,6 +284,32 @@ export function SectionHero({
   );
 }
 
+export function CompactSectionHeader({
+  section,
+  title,
+  headingLevel = 1,
+  children,
+}: {
+  section: SectionKey;
+  title?: string;
+  headingLevel?: 1 | 2;
+  children?: ReactNode;
+}) {
+  const meta = SECTION_META[section];
+  const heading = title ?? meta.label;
+  const description = meta.title;
+
+  return (
+    <header className="compact-section-header">
+      <div className="compact-section-heading">
+        {headingLevel === 1 ? <h1>{heading}</h1> : <h2>{heading}</h2>}
+        <p>{description}</p>
+      </div>
+      {children ? <div className="compact-section-controls">{children}</div> : null}
+    </header>
+  );
+}
+
 export function ModuleToolbar({
   children,
   resultLabel,
