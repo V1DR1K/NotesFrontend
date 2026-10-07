@@ -335,6 +335,16 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .crypto-profit { color: #a5d9bf !important; }
 .crypto-loss { color: #f0a9a9 !important; }
 .crypto-form-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.crypto-order-ocr { display: grid; gap: 8px; margin-top: 20px; padding: 13px; border: 1px solid var(--line); background: var(--section-surface); }
+.crypto-order-ocr-action { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.crypto-order-ocr-action > div { display: grid; gap: 4px; min-width: 0; }
+.crypto-order-ocr-action strong { color: var(--ink); font-size: 11px; font-weight: 600; }
+.crypto-order-ocr-action small, .crypto-order-ocr-status, .crypto-sale-quick-action > span { color: var(--muted); font-size: 10px; line-height: 1.5; }
+.crypto-order-ocr-action .button { flex: 0 0 auto; min-height: 34px; }
+.crypto-order-ocr-status, .crypto-order-ocr-error { margin: 0; overflow-wrap: anywhere; }
+.crypto-order-ocr-error { color: var(--danger, #ff938f); font-size: 10px; line-height: 1.5; }
+.crypto-sale-quick-action { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); background: var(--section-surface); }
+.crypto-sale-quick-action .button { min-height: 32px; }
 .crypto-conversion-preview { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; min-width: 0; margin: 18px 0; padding: 14px; border: 1px solid var(--line); background: var(--section-surface); }
 .crypto-conversion-preview span, .crypto-conversion-preview small { color: var(--muted); font: 9px var(--font-mono); }
 .crypto-conversion-preview strong { min-width: 0; max-width: 100%; overflow-wrap: anywhere; color: var(--ink); font-family: var(--font-display); font-size: 22px; font-weight: 500; }

@@ -603,7 +603,7 @@ export const api = {
   syncFinanceAccount: (code: string, body: { balanceArs?: number; balanceUsd?: number }) => request<unknown>(`/finance/accounts/${encodeURIComponent(code)}/balance`, { method: "PUT", body }).then(normalizeAccount),
   exchangeRate: (signal?: AbortSignal) => request<unknown>("/finance/exchange-rate/usd", { signal }).then(normalizeExchangeRate),
   cryptoSummary: (signal?: AbortSignal) => request<unknown>("/finance/crypto/summary", { signal }).then(normalizeCryptoSummary),
-  cryptoInvest: (body: { date: string; assetCode: string; amountUsd: number; unitPriceUsd: number; note?: string }) => request<unknown>("/finance/crypto/investments", { method: "POST", body }).then(normalizeCryptoInvestment),
+  cryptoInvest: (body: { date: string; assetCode: string; amountUsd: number; unitPriceUsd: number; quantity?: number; note?: string }) => request<unknown>("/finance/crypto/investments", { method: "POST", body }).then(normalizeCryptoInvestment),
   completeCryptoPurchasePrice: async (id: string, unitPriceUsd: number) => {
     const path = `/finance/crypto/investments/${encodeURIComponent(id)}`;
     try {
@@ -619,6 +619,10 @@ export const api = {
     }
   },
   sellCrypto: (id: string, body: { date: string; quantity: number; proceedsUsd: number; note?: string }) => request<unknown>(`/finance/crypto/investments/${encodeURIComponent(id)}/sales`, { method: "POST", body }).then(normalizeCryptoSale),
+  sellCryptoPosition: (assetCode: string, body: { date: string; proceedsUsd: number; note?: string }) => request<unknown>(`/finance/crypto/assets/${encodeURIComponent(assetCode)}/sales`, { method: "POST", body }).then((payload) => {
+    if (!Array.isArray(payload)) throw new ApiError("La respuesta de la venta completa no es válida.", 502);
+    return payload.map(normalizeCryptoSale);
+  }),
   voidCryptoSale: (investmentId: string, saleId: string) => request<void>(`/finance/crypto/investments/${encodeURIComponent(investmentId)}/sales/${encodeURIComponent(saleId)}/void`, { method: "POST" }),
   cryptoTransfer: (body: { date: string; amountArs: number; exchangeRate: number; note?: string }) => request<unknown>("/finance/crypto/transfers", { method: "POST", body }).then(normalizeMovement),
   voidCryptoInvestment: (id: string) => request<void>(`/finance/crypto/investments/${encodeURIComponent(id)}/void`, { method: "POST" }),

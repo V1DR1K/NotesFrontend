@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ApiConfig, CryptoAssetCode, CryptoInvestment, FinanceAccount, FinanceBucket, FinanceMovement, FinanceSummary } from "../../lib/api/types";
+import type { ApiConfig, CryptoInvestment, FinanceAccount, FinanceBucket, FinanceMovement, FinanceSummary } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { asNumber, currentMonth, dateLabel, fieldError, formatARS, formatARSInputNumber, formatUSD, monthBounds, parseARSInput, parseCryptoDecimal, parseCryptoPrice, parseUSDInput, todayIso } from "../../lib/presentation";
@@ -12,7 +12,8 @@ import { ARSInput } from "./ARSInput";
 import { useFinanceData } from "./useFinanceData";
 import { useFocusTarget } from "../../lib/ui/useFocusTarget";
 import { CryptoInvestmentPanel } from "./CryptoInvestmentPanel";
-import { CryptoInvestmentDialogs } from "./CryptoInvestmentDialogs";
+import { CryptoInvestmentDialogs, type CryptoInvestmentDraft, type CryptoSaleDraft } from "./CryptoInvestmentDialogs";
+import type { CryptoOrderOcrResult } from "./cryptoOrderParser";
 import { FinanceTransferDialog, type TransferDraft } from "./FinanceTransferDialog";
 import { movementType, transferAccounts, transferDestinations, transferRoute } from "./financeFlow";
 
@@ -75,8 +76,8 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   const [transferDraft, setTransferDraft] = useState<TransferDraft>({ sourceAccountCode: "mercadopago", destinationAccountCode: "inversiones_pesos", date: todayIso(), amount: "", exchangeRate: "", note: "" });
   const [transferAmountError, setTransferAmountError] = useState("");
   const [investmentOpen, setInvestmentOpen] = useState(false);
-  const [investmentDraft, setInvestmentDraft] = useState({ date: todayIso(), assetCode: "BTCUSDT" as CryptoAssetCode, amountUsd: "", unitPriceUsd: "", note: "" });
-  const [saleDraft, setSaleDraft] = useState<{ investment: CryptoInvestment; date: string; quantity: string; proceedsUsd: string } | null>(null);
+  const [investmentDraft, setInvestmentDraft] = useState<CryptoInvestmentDraft>({ date: todayIso(), assetCode: "BTCUSDT", amountUsd: "", unitPriceUsd: "", quantity: "", note: "" });
+  const [saleDraft, setSaleDraft] = useState<CryptoSaleDraft | null>(null);
   const [legacyPriceTarget, setLegacyPriceTarget] = useState<CryptoInvestment | null>(null);
   const [legacyUnitPrice, setLegacyUnitPrice] = useState("");
   const [pendingCryptoVoid, setPendingCryptoVoid] = useState<{ kind: "purchase"; investmentId: string; label: string } | { kind: "sale"; investmentId: string; saleId: string; label: string } | null>(null);
@@ -132,14 +133,39 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   };
 
   const startInvestment = () => {
-    setInvestmentDraft({ date: todayIso(), assetCode: "BTCUSDT", amountUsd: "", unitPriceUsd: "", note: "" });
+    setInvestmentDraft({ date: todayIso(), assetCode: "BTCUSDT", amountUsd: "", unitPriceUsd: "", quantity: "", note: "" });
     mutation.clearError();
     setInvestmentOpen(true);
   };
 
   const startSale = (investment: CryptoInvestment) => {
-    setSaleDraft({ investment, date: todayIso(), quantity: "", proceedsUsd: "" });
+    const position = cryptoSummary?.positions.find((item) => item.assetCode === investment.assetCode);
+    setSaleDraft({ investment, date: todayIso(), quantity: "", proceedsUsd: "", note: "", sellAll: false,
+      totalQuantity: position?.quantity == null ? null : String(position.quantity), totalCostBasisUsd: position?.investedUsd ?? 0 });
     mutation.clearError();
+  };
+
+  const applyPurchaseOrder = (order: CryptoOrderOcrResult) => {
+    setInvestmentDraft((draft) => ({
+      ...draft,
+      date: order.date ?? draft.date,
+      assetCode: order.assetCode ?? draft.assetCode,
+      amountUsd: order.amountUsd ?? draft.amountUsd,
+      unitPriceUsd: order.unitPriceUsd ?? draft.unitPriceUsd,
+      quantity: order.quantity ?? draft.quantity,
+      note: [draft.note.trim(), order.note].filter(Boolean).join(" · ").slice(0, 1000),
+    }));
+  };
+
+  const applySaleOrder = (order: CryptoOrderOcrResult) => {
+    setSaleDraft((draft) => draft ? ({
+      ...draft,
+      date: order.date ?? draft.date,
+      quantity: order.quantity ?? draft.quantity,
+      proceedsUsd: order.proceedsUsd ?? draft.proceedsUsd,
+      note: [draft.note.trim(), order.note].filter(Boolean).join(" · ").slice(0, 1000),
+      sellAll: false,
+    }) : null);
   };
 
   const startLegacyPrice = (investment: CryptoInvestment) => {
@@ -169,9 +195,11 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   const saveInvestment = async () => {
     const amountUsd = parseUSDInput(investmentDraft.amountUsd);
     const unitPriceUsd = parseCryptoPrice(investmentDraft.unitPriceUsd);
+    const quantity = investmentDraft.quantity.trim() ? parseCryptoDecimal(investmentDraft.quantity) : null;
+    if (investmentDraft.quantity.trim() && (quantity === null || quantity <= 0)) return;
     if (amountUsd === null || amountUsd <= 0 || unitPriceUsd === null || unitPriceUsd <= 0 || mutation.pending) return;
     try {
-      await mutation.run(() => api.cryptoInvest({ date: investmentDraft.date, assetCode: investmentDraft.assetCode, amountUsd, unitPriceUsd, note: investmentDraft.note.trim() || undefined }));
+      await mutation.run(() => api.cryptoInvest({ date: investmentDraft.date, assetCode: investmentDraft.assetCode, amountUsd, unitPriceUsd, quantity: quantity ?? undefined, note: investmentDraft.note.trim() || undefined }));
       setInvestmentOpen(false);
       invalidateApiQueryCache();
       data.reload();
@@ -184,7 +212,12 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
     const proceedsUsd = parseUSDInput(saleDraft.proceedsUsd);
     if (quantity === null || quantity <= 0 || proceedsUsd === null || proceedsUsd <= 0) return;
     try {
-      await mutation.run(() => api.sellCrypto(saleDraft.investment.id, { date: saleDraft.date, quantity, proceedsUsd }));
+      const body = { date: saleDraft.date, quantity, proceedsUsd, note: saleDraft.note.trim() || undefined };
+      if (saleDraft.sellAll) {
+        await mutation.run(() => api.sellCryptoPosition(saleDraft.investment.assetCode, { date: saleDraft.date, proceedsUsd, note: body.note }));
+      } else {
+        await mutation.run(() => api.sellCrypto(saleDraft.investment.id, body));
+      }
       setSaleDraft(null);
       invalidateApiQueryCache();
       data.reload();
@@ -300,9 +333,11 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
        setInvestmentOpen={setInvestmentOpen}
        investmentDraft={investmentDraft}
        setInvestmentDraft={setInvestmentDraft}
+       onApplyPurchaseOrder={applyPurchaseOrder}
        onSaveInvestment={() => void saveInvestment()}
        saleDraft={saleDraft}
        setSaleDraft={setSaleDraft}
+       onApplySaleOrder={applySaleOrder}
        onSaveSale={() => void saveCryptoSale()}
        legacyPriceTarget={legacyPriceTarget}
        setLegacyPriceTarget={setLegacyPriceTarget}
