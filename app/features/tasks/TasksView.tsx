@@ -113,7 +113,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     if (!focusId || editId) return;
     let cancelled = false;
     void api.getTask(focusId).then((task) => {
-      if (!cancelled) { setFocusError(""); if (task.dueDate) { setFrom(task.dueDate); setTo(task.dueDate); setPage(0); } setPreviewTask(task); }
+      if (!cancelled) { setFocusError(""); if (task.dueDate) { setFrom(task.dueDate); setTo(task.dueDate); } setPreviewTask(task); }
     }).catch(() => {
       if (!cancelled) setFocusError("No pudimos abrir esa tarea. Puede que se haya eliminado o que ya no esté disponible.");
     });
@@ -254,7 +254,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
   return <div className="view view-tasks">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
     {!nested ? <SectionHero section="tasks" rightSlot={<div className="form-actions finance-main-actions hero-sidecar-actions"><Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button></div>} /> : null}
-    <PeriodRangeFilter from={from} to={to} defaultFrom={defaultRange.from} defaultTo={defaultRange.to} onFromChange={(value) => { setFrom(value); setPage(0); }} onToChange={(value) => { setTo(value); setPage(0); }} onReset={() => { setFrom(defaultRange.from); setTo(defaultRange.to); setPage(0); }} idPrefix="task-filter" />
+    <PeriodRangeFilter from={from} to={to} defaultFrom={defaultRange.from} defaultTo={defaultRange.to} onFromChange={setFrom} onToChange={setTo} onReset={() => { setFrom(defaultRange.from); setTo(defaultRange.to); }} idPrefix="task-filter" />
     {nested ? <div className="form-actions finance-main-actions module-main-actions"><Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button></div> : null}
     <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}>
       {!nested && <SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} />}
