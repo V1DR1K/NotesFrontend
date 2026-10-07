@@ -253,9 +253,17 @@ export function Pagination({
   );
 }
 
-export function SectionHero({ section, rightSlot }: {
+type SectionHeroSidecar = {
+  eyebrow: string;
+  title: ReactNode;
+  description?: ReactNode;
+  content?: ReactNode;
+  variant?: "default" | "metric" | "selector";
+};
+
+export function SectionHero({ section, sidecar }: {
   section: SectionKey;
-  rightSlot: ReactNode;
+  sidecar: SectionHeroSidecar;
 }) {
   const meta = SECTION_META[section];
 
@@ -269,7 +277,17 @@ export function SectionHero({ section, rightSlot }: {
         <h1>{meta.heroTitle ?? meta.label}</h1>
         <p>{meta.heroDescription}</p>
       </div>
-      <div className="hero-sidecar">{rightSlot}</div>
+      <aside className="hero-sidecar" aria-label={`${meta.label}: información y acciones`}>
+        <div className={`hero-sidecar-card hero-sidecar-card--${sidecar.variant ?? "default"}`}>
+          <div className="hero-sidecar-card-heading">
+            <span className="hero-sidecar-card-eyebrow">{sidecar.eyebrow}</span>
+            <span className="hero-sidecar-card-mark" aria-hidden="true" />
+          </div>
+          <strong className="hero-sidecar-card-title">{sidecar.title}</strong>
+          {sidecar.description ? <p className="hero-sidecar-card-description">{sidecar.description}</p> : null}
+          {sidecar.content ? <div className="hero-sidecar-card-content">{sidecar.content}</div> : null}
+        </div>
+      </aside>
     </section>
   );
 }
@@ -282,7 +300,6 @@ export function ProjectChoiceFilter({ value, options, onChange }: {
 }) {
   return (
     <div className="hero-project-choices">
-      <span className="hero-project-choices-label">Proyecto</span>
       <div className="hero-project-choice-list" role="group" aria-label="Filtrar por proyecto">
         {options.map((option) => (
           <button

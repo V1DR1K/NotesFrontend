@@ -66,7 +66,11 @@ export function SettingsView({ config, onConfigChanged }: { config: ApiConfig; o
   };
 
   return <div className="view settings-view">
-    <SectionHero section="settings" rightSlot={<div className="settings-note"><span className="eyebrow">TODO A TU MEDIDA</span><strong>La configuración también es parte del cuaderno.</strong><span>Los cambios se guardan en tu espacio y alimentan formularios y filtros.</span></div>} />
+    <SectionHero section="settings" sidecar={{
+      eyebrow: "TODO A TU MEDIDA",
+      title: "La configuración también es parte del cuaderno.",
+      description: "Los cambios se guardan en tu espacio y alimentan formularios y filtros.",
+    }} />
     {error && !editing ? <div className="inline-error" role="alert">{error}</div> : null}
     <div className="settings-grid">
       {GROUPS.map((group) => {

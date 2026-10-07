@@ -67,7 +67,12 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const pageCount = data.data?.totalPages ?? 0;
 
   return <div className="view module-view">
-    {!nested ? <SectionHero section="notes" rightSlot={<div className="form-actions finance-main-actions hero-sidecar-actions"><Button onClick={startNew}>Escribir nota <span aria-hidden="true">↗</span></Button></div>} /> : null}
+    {!nested ? <SectionHero section="notes" sidecar={{
+      eyebrow: "CAPTURAR UNA IDEA",
+      title: "Una nota para volver",
+      description: "Guardá apuntes e ideas en tu espacio.",
+      content: <div className="hero-sidecar-actions"><Button onClick={startNew}>Escribir nota <span aria-hidden="true">↗</span></Button></div>,
+    }} /> : null}
     <PeriodRangeFilter from={from} to={to} defaultFrom={defaultRange.from} defaultTo={defaultRange.to} onFromChange={(value) => { setFrom(value); setPage(0); }} onToChange={(value) => { setTo(value); setPage(0); }} onReset={() => { setFrom(defaultRange.from); setTo(defaultRange.to); setPage(0); }} idPrefix="note-filter" />
     {nested ? <div className="form-actions finance-main-actions module-main-actions"><Button onClick={startNew}>Escribir nota <span aria-hidden="true">↗</span></Button></div> : null}
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}

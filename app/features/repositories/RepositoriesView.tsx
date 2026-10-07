@@ -225,15 +225,13 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
     <div className="repositories-view">
       <SectionHero
         section="repositories"
-        rightSlot={
-          <div className="repository-refresh-card">
-            <span className="repository-field-label">ÚLTIMA CONSULTA A GITHUB</span>
-            <strong>{Number.isFinite(checkedAt) ? timeAgo(data?.checkedAt) : loading ? "Consultando…" : "Todavía sin datos"}</strong>
-            <span className="repository-refresh-note">
-              {nextCheck
-                ? "Próxima consulta automática " + nextCheck + "."
-                : "Consulta automática cada 4 horas."}
-            </span>
+        sidecar={{
+          eyebrow: "ÚLTIMA CONSULTA A GITHUB",
+          title: Number.isFinite(checkedAt) ? timeAgo(data?.checkedAt) : loading ? "Consultando…" : "Todavía sin datos",
+          description: nextCheck
+            ? "Próxima consulta automática " + nextCheck + "."
+            : "Consulta automática cada 4 horas.",
+          content: <div className="hero-sidecar-actions">
             <button
               type="button"
               className="repository-refresh-button"
@@ -245,8 +243,8 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
               <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.1 6A5.2 5.2 0 0 0 3.4 4.8L2 6.2m0-3v3h3m-2.1 3.8A5.2 5.2 0 0 0 12.6 11l1.4-1.4m0 3v-3h-3" /></svg>
               <span>{refreshing ? "Consultando GitHub…" : "Consultar ahora"}</span>
             </button>
-          </div>
-        }
+          </div>,
+        }}
       />
 
       <nav className="repository-tabs" role="tablist" aria-label="Secciones de repositorios">

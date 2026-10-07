@@ -253,7 +253,12 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
 
   return <div className="view view-tasks">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
-    {!nested ? <SectionHero section="tasks" rightSlot={<div className="form-actions finance-main-actions hero-sidecar-actions"><Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button></div>} /> : null}
+    {!nested ? <SectionHero section="tasks" sidecar={{
+      eyebrow: "ACCIÓN RÁPIDA",
+      title: "Dale lugar al próximo paso",
+      description: "Sumá un pendiente a tu tablero.",
+      content: <div className="hero-sidecar-actions"><Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button></div>,
+    }} /> : null}
     <PeriodRangeFilter from={from} to={to} defaultFrom={defaultRange.from} defaultTo={defaultRange.to} onFromChange={setFrom} onToChange={setTo} onReset={() => { setFrom(defaultRange.from); setTo(defaultRange.to); }} idPrefix="task-filter" />
     {nested ? <div className="form-actions finance-main-actions module-main-actions"><Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button></div> : null}
     <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}>

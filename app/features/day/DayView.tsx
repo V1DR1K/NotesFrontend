@@ -136,7 +136,13 @@ export function DayView({ config, focusId }: { config: ApiConfig; focusId?: stri
   const exactDate = from === to ? from : "";
 
   return <div className="view module-view">
-     <SectionHero section="day" rightSlot={<div className="streak-card"><span className="eyebrow">RACHA ACTUAL</span><strong>—</strong><span>calculada con tus registros</span><div className="streak-dots"><i /><i /><i /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /></div></div>} />
+     <SectionHero section="day" sidecar={{
+       eyebrow: "RACHA ACTUAL",
+       title: "—",
+       description: "calculada con tus registros",
+       variant: "metric",
+       content: <div className="streak-dots" aria-hidden="true"><i /><i /><i /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /><i className="streak-empty" /></div>,
+     }} />
      <PeriodRangeFilter from={from} to={to} defaultFrom={defaultRange.from} defaultTo={defaultRange.to} onFromChange={changeFrom} onToChange={(value) => { setTo(value); setPage(0); }} onReset={() => { setFrom(defaultRange.from); setTo(defaultRange.to); setCalendarMonth(defaultMonth); setPage(0); }} idPrefix="day-filter" />
      <div className="form-actions finance-main-actions module-main-actions"><Button onClick={startNew}>Anotar el día <span aria-hidden="true">↗</span></Button></div>
      {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}

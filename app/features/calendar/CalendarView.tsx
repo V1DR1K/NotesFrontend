@@ -106,7 +106,13 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
 
   return <div className="view module-view calendar-view">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
-    <SectionHero section="calendar" rightSlot={<ProjectChoiceFilter value={projectCode} options={[{ value: "all", label: "Todos" }, ...config.projects.filter((item) => item.active !== false || item.code === projectCode).map(({ code, label }) => ({ value: code, label }))]} onChange={(nextProject) => { setProjectCode(nextProject); if (categoryKey !== "all" && nextProject !== "all" && !categoryKey.startsWith(`${nextProject}:`)) setCategoryKey("all"); }} />} />
+    <SectionHero section="calendar" sidecar={{
+      eyebrow: "PROYECTO EN AGENDA",
+      title: projectCode === "all" ? "Todos los proyectos" : projectLabel(projectCode),
+      description: "Elegí qué proyectos querés ver en la agenda.",
+      variant: "selector",
+      content: <ProjectChoiceFilter value={projectCode} options={[{ value: "all", label: "Todos" }, ...config.projects.filter((item) => item.active !== false || item.code === projectCode).map(({ code, label }) => ({ value: code, label }))]} onChange={(nextProject) => { setProjectCode(nextProject); if (categoryKey !== "all" && nextProject !== "all" && !categoryKey.startsWith(`${nextProject}:`)) setCategoryKey("all"); }} />,
+    }} />
     <PeriodRangeFilter from={from} to={to} defaultFrom={range.from} defaultTo={range.to} onFromChange={changeFrom} onToChange={setTo} onReset={clearFilters} idPrefix="event-filter" />
     <div className="form-actions finance-main-actions module-main-actions"><Button onClick={() => startNew(visibleSelectedDate)}>Agregar evento <span aria-hidden="true">↗</span></Button></div>
     <ModuleToolbar resultLabel={`${totalElements} ${totalElements === 1 ? "elemento" : "elementos"}`}>

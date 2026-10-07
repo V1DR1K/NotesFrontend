@@ -18,9 +18,16 @@ export function ProjectsView({ config, tab, onTabChange, focusId, editId }: { co
   const [projectCode, setProjectCode] = useState("all");
   const visibleProjects = config.projects.filter((item) => item.active !== false || item.code === projectCode);
   const projectOptions = [{ value: "all", label: "Todos" }, ...visibleProjects.map(({ code, label }) => ({ value: code, label }))];
+  const selectedProjectLabel = projectCode === "all" ? "Todos los proyectos" : projectOptions.find((option) => option.value === projectCode)?.label ?? "Todos los proyectos";
 
   return <div className="projects-view">
-    <SectionHero section="projects" rightSlot={<ProjectChoiceFilter value={projectCode} options={projectOptions} onChange={setProjectCode} />} />
+    <SectionHero section="projects" sidecar={{
+      eyebrow: "PROYECTO EN VISTA",
+      title: selectedProjectLabel,
+      description: "Elegí qué proyecto querés organizar.",
+      variant: "selector",
+      content: <ProjectChoiceFilter value={projectCode} options={projectOptions} onChange={setProjectCode} />,
+    }} />
     <div className="projects-navigation">
       <div className="projects-tabs" role="tablist" aria-label="Contenido del proyecto">
         {tabs.map((item, index) => <button key={item.id} id={`project-tab-${item.id}`} type="button" role="tab" tabIndex={tab === item.id ? 0 : -1} aria-selected={tab === item.id} aria-controls={`project-panel-${item.id}`} className={tab === item.id ? "projects-tab projects-tab-active" : "projects-tab"} onClick={() => onTabChange(item.id)} onKeyDown={(event) => {
