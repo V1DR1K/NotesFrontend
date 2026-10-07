@@ -86,6 +86,8 @@ export const SECTION_TOKENS: Record<SectionKey, SectionTokens> = {
 
 export const SECTION_META: Record<SectionKey, {
   label: string;
+  heroTitle?: string;
+  heroDescription: string;
   eyebrow: string;
   title: string;
   description: string;
@@ -94,6 +96,7 @@ export const SECTION_META: Record<SectionKey, {
 }> = {
   overview: {
     label: "Resumen",
+    heroDescription: "Una mirada clara a tu cuaderno.",
     eyebrow: "CUADERNO PERSONAL / 01",
     title: "Ordená el ruido.",
     description: "Un lugar tranquilo para dejar registro de lo que pasa, lo que importa y lo que querés recordar.",
@@ -102,6 +105,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   day: {
     label: "Mi día",
+    heroDescription: "Registrá lo que pasó hoy.",
     eyebrow: "REGISTRO DIARIO / 02",
     title: "¿Cómo estuvo hoy?",
     description: "Poné en palabras el día, elegí un color y dejá que el registro haga memoria por vos.",
@@ -110,6 +114,8 @@ export const SECTION_META: Record<SectionKey, {
   },
   calendar: {
     label: "Calendario",
+    heroTitle: "Agenda",
+    heroDescription: "Eventos y tareas, ordenados por fecha.",
     eyebrow: "FECHAS Y PENDIENTES / 03",
     title: "Que nada importante se te escape.",
     description: "Una agenda simple para guardar tus eventos, encontrarlos por fecha y mantener cada pendiente en su lugar.",
@@ -118,6 +124,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   projects: {
     label: "Proyecto",
+    heroDescription: "Tareas, notas y archivos reunidos.",
     eyebrow: "TUS PROYECTOS / 04",
     title: "Todo lo que pertenece, junto.",
     description: "Tareas, notas y archivos reunidos por proyecto.",
@@ -126,6 +133,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   tasks: {
     label: "Tareas",
+    heroDescription: "Ordená tus pendientes paso a paso.",
     eyebrow: "TODO LO QUE SIGUE / 04",
     title: "Una cosa a la vez.",
     description: "Bajá tus pendientes a tierra, elegí el próximo paso y mové cada tarea cuando avance.",
@@ -134,6 +142,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   finances: {
     label: "Finanzas",
+    heroDescription: "Ingresos, gastos e inversiones.",
     eyebrow: "MOVIMIENTO DE DINERO / 05",
     title: "Que cada peso tenga un lugar.",
     description: "Ingresos, egresos, caja e inversiones en una sola vista, con el dólar siempre a mano.",
@@ -142,6 +151,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   files: {
     label: "Archivos",
+    heroDescription: "Guardá y encontrá tus archivos.",
     eyebrow: "REPOSITORIO PERSONAL / 06",
     title: "Todo lo importante, cerca.",
     description: "Guardá archivos, armá carpetas y encontrá cada cosa sin perder tiempo buscándola.",
@@ -150,6 +160,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   notes: {
     label: "Notas",
+    heroDescription: "Ideas y apuntes para volver a ellos.",
     eyebrow: "IDEAS Y APUNTES / 07",
     title: "Pensamientos que merecen quedarse.",
     description: "Notas simples, rápidas y ordenadas para cuando una idea aparece y no querés dejarla escapar.",
@@ -158,6 +169,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   repositories: {
     label: "Repositorios",
+    heroDescription: "Pipelines, commits e imágenes activas.",
     eyebrow: "ESTADO DE LOS SERVICIOS",
     title: "Repositorios",
     description: "Últimas pipelines, commits y las imágenes activas en la VPS.",
@@ -166,6 +178,7 @@ export const SECTION_META: Record<SectionKey, {
   },
   settings: {
     label: "Configuración",
+    heroDescription: "Preferencias de tu cuaderno.",
     eyebrow: "ORDEN Y PREFERENCIAS / 08",
     title: "Hacé tuyo el sistema.",
     description: "Administrá las opciones que aparecen en tus registros y filtros cotidianos.",

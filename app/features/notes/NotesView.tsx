@@ -4,9 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import type { ApiConfig, Note } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
-import { dateLabel, todayIso, fieldError } from "../../lib/presentation";
+import { currentMonth, dateLabel, todayIso, fieldError, monthBounds } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
-import { Button, CardActions, CompactSectionHeader, ConfirmDialog, DateRangeFilter, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, Pagination, SelectField, SkeletonGrid } from "../../ui/Primitives";
+import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, Pagination, PeriodRangeFilter, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { NoteBody } from "./NoteBody";
 import { MarkdownEditor } from "../../ui/MarkdownEditor";
 import { MarkdownAssistant } from "../../ui/MarkdownAssistant";
@@ -14,13 +14,14 @@ import { useNotesData } from "./useNotesData";
 import { useFocusTarget } from "../../lib/ui/useFocusTarget";
 
 export function NotesView({ config, focusId, projectCode = "all", nested = false }: { config: ApiConfig; focusId?: string | null; projectCode?: string; nested?: boolean }) {
+  const defaultRange = monthBounds(currentMonth());
   const [projectFilterSelection, setProjectFilterSelection] = useState({ contextProjectCode: projectCode, value: projectCode });
   const filterProjectCode = nested ? projectCode : projectFilterSelection.contextProjectCode === projectCode ? projectFilterSelection.value : projectCode;
   const [categoryFilter, setCategoryFilter] = useState({ contextProjectCode: projectCode, projectCode, value: "all" });
   const filter = categoryFilter.contextProjectCode === projectCode && categoryFilter.projectCode === filterProjectCode ? categoryFilter.value : "all";
   const [sort, setSort] = useState("recent");
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(defaultRange.from);
+  const [to, setTo] = useState(defaultRange.to);
   const [page, setPage] = useState(0);
   const [composerOpen, setComposerOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,7 +40,7 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
     if (!focusId) return;
     let cancelled = false;
     void api.getNote(focusId).then((note) => {
-      if (!cancelled) { setFocusError(""); setPreviewNote(note); }
+      if (!cancelled) { setFocusError(""); setFrom(note.date); setTo(note.date); setPage(0); setPreviewNote(note); }
     }).catch(() => {
       if (!cancelled) setFocusError("No pudimos abrir esa nota. Puede que se haya eliminado o que ya no esté disponible.");
     });
@@ -66,9 +67,9 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
   const pageCount = data.data?.totalPages ?? 0;
 
   return <div className="view module-view">
-    <CompactSectionHeader section="notes" headingLevel={nested ? 2 : 1}>
-      <Button onClick={startNew}>Escribir nota <span aria-hidden="true">↗</span></Button>
-    </CompactSectionHeader>
+    {!nested ? <SectionHero section="notes" rightSlot={<div className="form-actions finance-main-actions hero-sidecar-actions"><Button onClick={startNew}>Escribir nota <span aria-hidden="true">↗</span></Button></div>} /> : null}
+    <PeriodRangeFilter from={from} to={to} defaultFrom={defaultRange.from} defaultTo={defaultRange.to} onFromChange={(value) => { setFrom(value); setPage(0); }} onToChange={(value) => { setTo(value); setPage(0); }} onReset={() => { setFrom(defaultRange.from); setTo(defaultRange.to); setPage(0); }} idPrefix="note-filter" />
+    {nested ? <div className="form-actions finance-main-actions module-main-actions"><Button onClick={startNew}>Escribir nota <span aria-hidden="true">↗</span></Button></div> : null}
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
     {composerOpen ? <Dialog ariaLabel="Escribir una nota" onClose={() => setComposerOpen(false)} wide><FormPanel eyebrow={editingId ? "EDITAR NOTA" : "NUEVA NOTA"} onSubmit={() => void save()} title={editingId ? "Editar nota" : "Escribir una nota"} description="Dale estructura a tus resúmenes con títulos, listas y otros formatos Markdown." onClose={() => setComposerOpen(false)}><div className="form-grid form-grid-notes">
        <FormField label="Título" value={draft.title} onChange={(title) => setDraft({ ...draft, title })} placeholder="Ej. Una idea para mañana" /><SelectField label="Proyecto" value={draft.projectCode} onChange={changeDraftProject} options={config.projects.filter((item) => item.active !== false || item.code === draft.projectCode).map(({ code, label }) => ({ value: code, label }))} /><SelectField label="Categoría" id="note-category" value={selectedDraftCategoryCode} onChange={(categoryCode) => setDraft({ ...draft, categoryCode })} options={draftCategories.map(({ code, label }) => ({ value: code, label }))} disabled={!draftCategories.length} /><label className="form-field" htmlFor="note-date"><span>Fecha</span><input id="note-date" type="date" value={draft.date} onChange={(event) => setDraft({ ...draft, date: event.target.value })} required /></label><div className="form-field-full note-content-field">
@@ -80,7 +81,6 @@ export function NotesView({ config, focusId, projectCode = "all", nested = false
         {!nested && <SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); setPage(0); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} />}
         <SelectField label="Categoría" compact value={filter} onChange={(value) => { setCategoryFilter({ contextProjectCode: projectCode, projectCode: filterProjectCode, value }); setPage(0); }} options={[{ value: "all", label: "Todas" }, ...activeCategories.map(({ code, label, projectCode: ownerProject }) => ({ value: `${ownerProject}:${code}`, label: filterProjectCode === "all" ? `${label} · ${config.projects.find((project) => project.code === ownerProject)?.label ?? ownerProject}` : label }))]} />
         <SelectField label="Ordenar" compact value={sort} onChange={setSort} options={[{ value: "recent", label: "Más recientes" }, { value: "old", label: "Más antiguas" }]} />
-        <DateRangeFilter from={from} to={to} onFromChange={(value) => { setFrom(value); setPage(0); }} onToChange={(value) => { setTo(value); setPage(0); }} onClear={() => { setFrom(""); setTo(""); setPage(0); }} idPrefix="note-filter" />
       </ModuleToolbar>
       {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : notes.length ? <div className="content-grid notes-grid">{notes.map((note) => <article id={`record-${note.id}`} className="content-card note-card" key={note.id}><div className="content-card-top"><span className="mono-date">{dateLabel(note.date, true)}</span><CardActions onEdit={() => startEdit(note)} onDelete={() => setPendingDelete(note.id)} /></div><button type="button" className="content-card-preview-trigger" onClick={() => setPreviewNote(note)} aria-label={`Ver nota ${note.title}`}><div className="note-card-heading"><span className="note-symbol">✎</span><span className="note-category">{note.category?.label ?? categoryLabel(note.categoryCode)} · {config.projects.find((item) => item.code === note.projectCode)?.label ?? note.projectCode}</span></div><h2>{note.title}</h2><NoteBody body={note.body} interactiveLinks={false} /><div className="card-footer"><span className="eyebrow">NOTA / {categoryLabel(note.categoryCode).toUpperCase()}</span><span className="card-arrow">↗</span></div></button></article>)}</div> : <EmptyState title="No hay notas con esa categoría" description="Las ideas aparecen cuando les dejás un espacio. Podés escribir la primera ahora." action="Escribir nota" onAction={startNew} />}
     {previewNote ? <Dialog ariaLabel={`Vista previa de ${previewNote.title}`} trackChanges={false} onClose={closePreview}><FormPanel mode="preview" eyebrow={`VISTA PREVIA · ${categoryLabel(previewNote.categoryCode).toUpperCase()}`} title={previewNote.title} description={`${dateLabel(previewNote.date, true)} · ${config.projects.find((item) => item.code === previewNote.projectCode)?.label ?? previewNote.projectCode}`} onClose={closePreview} onEdit={() => { pendingPreviewEdit.current = previewNote; }}><NoteBody body={previewNote.body} /></FormPanel></Dialog> : null}

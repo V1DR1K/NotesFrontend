@@ -253,76 +253,72 @@ export function Pagination({
   );
 }
 
-export function SectionHero({
-  section,
-  title,
-  description,
-  compact = false,
-  onAction,
-  actionLabel,
-  rightSlot,
-  headingLevel = 1,
-}: {
+export function SectionHero({ section, rightSlot }: {
   section: SectionKey;
-  title?: string;
-  description?: string;
-  compact?: boolean;
-  onAction?: () => void;
-  actionLabel?: string;
-  rightSlot?: ReactNode;
-  headingLevel?: 1 | 2;
+  rightSlot: ReactNode;
 }) {
   const meta = SECTION_META[section];
-  const heading = title ?? meta.title;
-  const supportingCopy = description ?? meta.description;
 
   return (
-    <section className={`section-hero ${compact ? "section-hero-compact" : ""}`.trim()}>
+    <section className="section-hero">
       <div className="hero-copy">
         <div className="eyebrow-row">
           <span className="hero-mark" aria-hidden="true"><SectionIcon section={section} /></span>
           <span className="eyebrow">{meta.eyebrow}</span>
         </div>
-        {headingLevel === 1 ? <h1>{heading}</h1> : <h2>{heading}</h2>}
-        <p>{supportingCopy}</p>
-        {onAction ? <Button onClick={onAction}>{actionLabel ?? meta.action}<span aria-hidden="true">↗</span></Button> : null}
+        <h1>{meta.heroTitle ?? meta.label}</h1>
+        <p>{meta.heroDescription}</p>
       </div>
-      {rightSlot ? <div className="hero-sidecar">{rightSlot}</div> : null}
+      <div className="hero-sidecar">{rightSlot}</div>
     </section>
   );
 }
 
-export function CompactSectionHeader({
-  section,
-  title,
-  headingLevel = 1,
-  className = "",
-  children,
-}: {
-  section: SectionKey;
-  title?: string;
-  headingLevel?: 1 | 2;
-  className?: string;
-  children?: ReactNode;
-}) {
-  const meta = SECTION_META[section];
-  const heading = title ?? meta.label;
-  const description = meta.title;
 
+export function ProjectChoiceFilter({ value, options, onChange }: {
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  onChange: (value: string) => void;
+}) {
   return (
-    <header className={`compact-section-header ${className}`.trim()}>
-      <div className="compact-section-heading">
-        <div className="eyebrow-row compact-section-eyebrow-row">
-          <span className="hero-mark" aria-hidden="true"><SectionIcon section={section} /></span>
-          <span className="eyebrow">{meta.eyebrow}</span>
-        </div>
-        <div className="compact-section-title-row">
-          {headingLevel === 1 ? <h1>{heading}</h1> : <h2>{heading}</h2>}
-          <p>{description}</p>
-        </div>
+    <div className="hero-project-choices">
+      <span className="hero-project-choices-label">Proyecto</span>
+      <div className="hero-project-choice-list" role="group" aria-label="Filtrar por proyecto">
+        {options.map((option) => (
+          <button
+            type="button"
+            className={`hero-project-choice ${value === option.value ? "hero-project-choice-active" : ""}`}
+            aria-pressed={value === option.value}
+            onClick={() => onChange(option.value)}
+            key={option.value}
+          >{option.label}</button>
+        ))}
       </div>
-      {children ? <div className="compact-section-controls">{children}</div> : null}
-    </header>
+    </div>
+  );
+}
+
+export function PeriodRangeFilter({ from, to, defaultFrom, defaultTo, onFromChange, onToChange, onReset, idPrefix, label = "Rango compartido" }: {
+  from: string;
+  to: string;
+  defaultFrom: string;
+  defaultTo: string;
+  onFromChange: (value: string) => void;
+  onToChange: (value: string) => void;
+  onReset: () => void;
+  idPrefix: string;
+  label?: string;
+}) {
+  const isDefaultRange = from === defaultFrom && to === defaultTo;
+  return (
+    <div className="finance-period-row">
+      <span className="finance-period-label">{label}</span>
+      <div className="finance-period-fields" role="group" aria-label="Filtrar por fecha">
+        <label className="toolbar-date-field" htmlFor={`${idPrefix}-from`}><span>Desde</span><input id={`${idPrefix}-from`} type="date" value={from} onChange={(event) => onFromChange(event.target.value)} /></label>
+        <label className="toolbar-date-field" htmlFor={`${idPrefix}-to`}><span>Hasta</span><input id={`${idPrefix}-to`} type="date" value={to} onChange={(event) => onToChange(event.target.value)} /></label>
+        {!isDefaultRange ? <Button variant="quiet" className="filter-clear" onClick={onReset}>Mes actual</Button> : null}
+      </div>
+    </div>
   );
 }
 
@@ -337,23 +333,6 @@ export function ModuleToolbar({
     <div className="module-toolbar">
       <div className="toolbar-filters">{children}</div>
       {resultLabel ? <span className="toolbar-result">{resultLabel}</span> : null}
-    </div>
-  );
-}
-
-export function DateRangeFilter({ from, to, onFromChange, onToChange, onClear, idPrefix }: {
-  from: string;
-  to: string;
-  onFromChange: (value: string) => void;
-  onToChange: (value: string) => void;
-  onClear?: () => void;
-  idPrefix: string;
-}) {
-  return (
-    <div className="finance-period-fields module-date-range" role="group" aria-label="Filtrar por fecha">
-      <label className="toolbar-date-field" htmlFor={`${idPrefix}-from`}><span>Desde</span><input id={`${idPrefix}-from`} type="date" value={from} onChange={(event) => onFromChange(event.target.value)} /></label>
-      <label className="toolbar-date-field" htmlFor={`${idPrefix}-to`}><span>Hasta</span><input id={`${idPrefix}-to`} type="date" value={to} onChange={(event) => onToChange(event.target.value)} /></label>
-      {onClear && (from || to) ? <Button variant="quiet" className="filter-clear module-date-clear" onClick={onClear}>Limpiar fechas</Button> : null}
     </div>
   );
 }

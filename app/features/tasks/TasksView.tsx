@@ -4,9 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as
 import type { ApiConfig, Task, TaskStatus } from "../../lib/api/types";
 import { api } from "../../lib/api/client";
 import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
-import { dateLabel, isTaskOverdue as isOverdue } from "../../lib/presentation";
+import { currentMonth, dateLabel, isTaskOverdue as isOverdue, monthBounds } from "../../lib/presentation";
 import { defaultCategoryCode, sortCategoryOptions } from "../../lib/categories";
-import { Button, CardActions, CompactSectionHeader, ConfirmDialog, DateRangeFilter, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, SelectField, SkeletonGrid } from "../../ui/Primitives";
+import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FormField, FormPanel, ModuleToolbar, PeriodRangeFilter, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { useTasksData } from "./useTasksData";
 import { NoteBody } from "../notes/NoteBody";
 import { MarkdownAssistant } from "../../ui/MarkdownAssistant";
@@ -58,12 +58,13 @@ function TaskCard({ task, projectLabel, onEdit, onDelete, onPreview, onStatusCha
 }
 
 export function TasksView({ config, focusId, editId, projectCode = "all", nested = false }: { config: ApiConfig; focusId?: string | null; editId?: string | null; projectCode?: string; nested?: boolean }) {
+  const defaultRange = monthBounds(currentMonth());
   const [projectFilterSelection, setProjectFilterSelection] = useState({ contextProjectCode: projectCode, value: projectCode });
   const filterProjectCode = nested ? projectCode : projectFilterSelection.contextProjectCode === projectCode ? projectFilterSelection.value : projectCode;
   const [categoryFilter, setCategoryFilter] = useState({ contextProjectCode: projectCode, projectCode, value: "all" });
   const categoryCode = categoryFilter.contextProjectCode === projectCode && categoryFilter.projectCode === filterProjectCode ? categoryFilter.value : "all";
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(defaultRange.from);
+  const [to, setTo] = useState(defaultRange.to);
   const data = useTasksData(categoryCode, filterProjectCode, from, to);
   const { reload: reloadTasks } = data;
   const [previousVisibility, setPreviousVisibility] = useState<{ categoryCode: string; visible: boolean } | null>(null);
@@ -112,7 +113,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
     if (!focusId || editId) return;
     let cancelled = false;
     void api.getTask(focusId).then((task) => {
-      if (!cancelled) { setFocusError(""); setPreviewTask(task); }
+      if (!cancelled) { setFocusError(""); if (task.dueDate) { setFrom(task.dueDate); setTo(task.dueDate); setPage(0); } setPreviewTask(task); }
     }).catch(() => {
       if (!cancelled) setFocusError("No pudimos abrir esa tarea. Puede que se haya eliminado o que ya no esté disponible.");
     });
@@ -252,13 +253,12 @@ export function TasksView({ config, focusId, editId, projectCode = "all", nested
 
   return <div className="view view-tasks">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
-    <CompactSectionHeader section="tasks" headingLevel={nested ? 2 : 1}>
-      <Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button>
-    </CompactSectionHeader>
+    {!nested ? <SectionHero section="tasks" rightSlot={<div className="form-actions finance-main-actions hero-sidecar-actions"><Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button></div>} /> : null}
+    <PeriodRangeFilter from={from} to={to} defaultFrom={defaultRange.from} defaultTo={defaultRange.to} onFromChange={(value) => { setFrom(value); setPage(0); }} onToChange={(value) => { setTo(value); setPage(0); }} onReset={() => { setFrom(defaultRange.from); setTo(defaultRange.to); setPage(0); }} idPrefix="task-filter" />
+    {nested ? <div className="form-actions finance-main-actions module-main-actions"><Button onClick={openCreate}>Crear tarea <span aria-hidden="true">↗</span></Button></div> : null}
     <ModuleToolbar resultLabel={`${totalTaskCount} ${totalTaskCount === 1 ? "tarea" : "tareas"}`}>
       {!nested && <SelectField label="Proyecto" compact value={filterProjectCode} onChange={(nextProject) => { setProjectFilterSelection({ contextProjectCode: projectCode, value: nextProject }); setCategoryFilter({ contextProjectCode: projectCode, projectCode: nextProject, value: "all" }); }} options={[{ value: "all", label: "Todos los proyectos" }, ...config.projects.filter((item) => item.active !== false || item.code === filterProjectCode).map(({ code, label }) => ({ value: code, label }))]} />}
       <SelectField label="Categoría" compact value={categoryCode} onChange={(value) => setCategoryFilter({ contextProjectCode: projectCode, projectCode: filterProjectCode, value })} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: `${option.projectCode}:${option.code}`, label: filterProjectCode === "all" ? `${option.label} · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : option.label }))]} />
-      <DateRangeFilter from={from} to={to} onFromChange={setFrom} onToChange={setTo} onClear={() => { setFrom(""); setTo(""); }} idPrefix="task-filter" />
     </ModuleToolbar>
     {mutation.error ? <div className="inline-error task-global-error" role="alert">{mutation.error.message || "No se pudo actualizar la tarea. Probá de nuevo."}</div> : null}
     {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : !tasks.length && previousCount === 0 ? <EmptyState title="Todavía no hay tareas" description="Creá la primera y movela entre columnas a medida que avance." action="Crear tarea" onAction={openCreate} /> : <section className={`tasks-board ${completedColumnVisible ? "" : "tasks-board-two-columns"}`} aria-label="Tablero de tareas">
