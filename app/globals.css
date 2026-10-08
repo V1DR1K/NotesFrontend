@@ -1067,6 +1067,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .project-category-filter-track-category { transform: translateX(-50%); }
 .project-category-filter-panel { display: flex; flex: 0 0 50%; flex-direction: column; gap: 8px; min-width: 0; }
 .hero-project-choice-list, .hero-category-choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: 124px; overflow: auto; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; }
+.hero-category-choice-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .hero-project-choice { min-width: 0; min-height: 34px; padding: 7px 9px; overflow-wrap: anywhere; color: var(--muted-strong); background: var(--panel); border: 1px solid var(--line); font-size: 10px; text-align: left; transition: color .18s ease, border-color .18s ease, background .18s ease; }
 .hero-project-choice:hover { color: var(--ink); border-color: var(--section-accent); }
 .hero-project-choice-active { color: var(--section-contrast); background: var(--section-accent); border-color: var(--section-accent); }
@@ -1086,6 +1087,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .category-filter-modal-list { display: grid; flex: 1 1 auto; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; gap: 8px; min-height: 0; margin-top: 22px; padding: 2px 5px 6px 0; overflow-x: hidden; overflow-y: auto; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; }
 .category-filter-modal-choice { min-width: 0; min-height: 42px; padding: 9px 11px; overflow-wrap: anywhere; color: var(--muted-strong); background: var(--panel); border: 1px solid var(--line); font-size: 10px; line-height: 1.4; text-align: left; transition: color .18s ease, border-color .18s ease, background .18s ease; }
 .category-filter-modal-choice:hover { color: var(--ink); border-color: var(--section-accent); }
+.category-filter-modal-choice.hero-category-choice-active,
+.category-filter-modal-choice.hero-category-choice-active:hover { color: var(--section-contrast); background: var(--section-accent); border-color: var(--section-accent); }
 .category-filter-modal-actions { display: flex; flex: 0 0 auto; justify-content: space-between; gap: 10px; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); }
 .category-filter-modal-count { align-self: center; color: var(--muted); font: 9px var(--font-mono); }
 .project-category-filter :focus-visible, .category-filter-modal :focus-visible { outline: 2px solid var(--section-accent); outline-offset: 2px; }
