@@ -317,7 +317,7 @@ export function ProjectCategoryFilter({
   const filterId = useId();
   const canChooseCategories = projectValue !== "all";
   const currentStep = canChooseCategories ? activeStep : "project";
-  const visibleCategories = categoryOptions.slice(0, 4);
+  const visibleCategories = categoryOptions.slice(0, 6);
   const hasMoreCategories = categoryOptions.length > visibleCategories.length;
   const hasFilters = projectValue !== "all" || selectedCategories.length > 0;
   const selectedProject = projectOptions.find((option) => option.value === projectValue)?.label ?? "Todos";

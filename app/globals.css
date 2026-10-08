@@ -169,6 +169,13 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .projects-view .hero-sidecar, .calendar-view .hero-sidecar { width: min(100%, 600px); }
   .projects-view .hero-sidecar-card--selector, .calendar-view .hero-sidecar-card--selector { width: 100%; }
 }
+@media (min-width: 1181px) {
+  .projects-view .section-hero, .calendar-view .section-hero { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: clamp(24px, 3vw, 48px); }
+  .projects-view .hero-copy, .calendar-view .hero-copy { max-width: none; min-width: 0; }
+  .projects-view .hero-sidecar, .calendar-view .hero-sidecar { align-self: stretch; width: 100%; min-width: 0; }
+  .projects-view .hero-sidecar-card--selector, .calendar-view .hero-sidecar-card--selector { width: 100%; }
+  .projects-view .hero-project-choice-list, .calendar-view .hero-project-choice-list { grid-template-columns: repeat(5, minmax(0, 1fr)); max-height: 84px; }
+}
 .hero-note-footer { display: flex; justify-content: space-between; color: var(--muted); font: 9px var(--font-mono); letter-spacing: .08em; }
 .hero-note-footer span { color: var(--section-accent); }
 .streak-dots { display: flex; gap: 6px; margin-top: 3px; }
@@ -1083,7 +1090,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .project-category-filter-track { display: flex; width: 200%; transform: translateX(0); transition: transform .42s cubic-bezier(.16, 1, .3, 1); will-change: transform; }
 .project-category-filter-track-category { transform: translateX(-50%); }
 .project-category-filter-panel { display: flex; flex: 0 0 50%; flex-direction: column; gap: 8px; min-width: 0; }
-.hero-project-choice-list, .hero-category-choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: 124px; overflow: auto; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; }
+.hero-project-choice-list, .hero-category-choice-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; max-height: 124px; padding: 4px; overflow: auto; scrollbar-color: var(--section-accent) transparent; scrollbar-width: thin; }
 .hero-category-choice-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .hero-project-choice { min-width: 0; min-height: 34px; padding: 7px 9px; overflow-wrap: anywhere; color: var(--muted-strong); background: var(--panel); border: 1px solid var(--line); font-size: 10px; text-align: left; transition: color .18s ease, border-color .18s ease, background .18s ease; }
 .hero-project-choice:hover { color: var(--ink); border-color: var(--section-accent); }
@@ -1138,7 +1145,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .finance-period-fields .toolbar-date-field input { width: 100%; }
   .finance-period-fields > .filter-clear { grid-column: 1 / -1; width: 100%; }
   .project-category-filter { width: 100%; }
-  .hero-project-choice-list, .hero-category-choice-list { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 136px; }
+  .hero-project-choice-list, .hero-category-choice-list { grid-template-columns: repeat(2, minmax(0, 1fr)); max-height: 160px; }
   .hero-project-choice, .hero-category-choice { min-height: 44px; }
   .hero-category-more { min-height: 44px; }
   .hero-category-filter-actions > .button { min-height: 44px; font-size: 9px; }
