@@ -349,7 +349,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", catego
           onClose={closePreview}
           onEdit={() => setPreviewEditTask(activePreviewTask)}
         >
-          {activePreviewTask.detail ? <div className="record-preview-copy task-preview-markdown"><NoteBody body={activePreviewTask.detail} /></div> : <p className="record-preview-empty">Esta tarea no tiene detalles adicionales.</p>}
+          {activePreviewTask.detail ? <div className="record-preview-copy task-preview-markdown"><NoteBody body={activePreviewTask.detail} withContentsIndex /></div> : <p className="record-preview-empty">Esta tarea no tiene detalles adicionales.</p>}
         </FormPanel>
       </Dialog>
     ) : null}
