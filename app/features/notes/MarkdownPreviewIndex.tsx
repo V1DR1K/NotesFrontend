@@ -47,7 +47,12 @@ export function MarkdownPreviewIndex({ headings }: { headings: MarkdownPreviewHe
             aria-label={`${isCollapsed ? "Expandir" : "Contraer"} secciones de ${heading.label}`}
             aria-expanded={!isCollapsed}
             onClick={() => toggle(heading.id)}
-          ><span aria-hidden="true">⌄</span></button> : <span className="markdown-preview-index-marker" aria-hidden="true" />}
+          >
+            <svg aria-hidden="true" focusable="false" viewBox="0 0 12 12">
+              <path d="M2 6h8" />
+              <path className="markdown-preview-index-toggle-plus" d="M6 2v8" />
+            </svg>
+          </button> : <span className="markdown-preview-index-marker" aria-hidden="true" />}
           <a className="markdown-preview-index-link" href={`#${heading.id}`} onClick={(event) => {
             event.preventDefault();
             const target = document.getElementById(heading.id);
