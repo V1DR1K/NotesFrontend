@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { Task, TaskStatus } from "../../lib/api/types";
 import { useApiQuery } from "../../lib/api/hooks";
 import { api } from "../../lib/api/client";
@@ -13,13 +13,13 @@ type TaskBoardData = {
   completedAfter: string;
   totalCount: number;
   statusCounts: Record<TaskStatus, number>;
-  nextPages: Record<TaskStatus, number | null>;
+  nextPages: Record<TaskStatus, Record<string, number | null>>;
 };
 
 type AdditionalTasksState = {
   key: string;
   tasks: Task[];
-  nextPages: Record<TaskStatus, number | null>;
+  nextPages: Record<TaskStatus, Record<string, number | null>>;
   loadingStatus: TaskStatus | null;
   error: string | null;
   errorStatus: TaskStatus | null;
@@ -38,32 +38,46 @@ function taskQuery(categoryCode: string, projectCode: string, status: TaskStatus
   return query;
 }
 
-export function useTasksData(categoryCode: string, projectCode = "all", from = "", to = "") {
-  const queryKey = `tasks-board:${categoryCode}:${projectCode}:${from}:${to}`;
+function emptyCategoryPages(categoryScopes: string[] = [], initialPage: number | null = null): Record<TaskStatus, Record<string, number | null>> {
+  const pages = Object.fromEntries(categoryScopes.map((scope) => [scope, initialPage]));
+  return { PENDING: { ...pages }, IN_PROGRESS: { ...pages }, COMPLETED: { ...pages } };
+}
+
+export function useTasksData(categoryCode: string | string[], projectCode = "all", from = "", to = "") {
+  const categoryScopes = useMemo(() => {
+    const selected = Array.isArray(categoryCode) ? categoryCode : categoryCode === "all" ? [] : [categoryCode];
+    return selected.length ? [...new Set(selected)].sort() : ["all"];
+  }, [categoryCode]);
+  const categoryScopeKey = JSON.stringify(categoryScopes);
+  const queryKey = `tasks-board:${categoryScopeKey}:${projectCode}:${from}:${to}`;
   const query = useApiQuery<TaskBoardData>(queryKey, async (signal) => {
     const completedAfter = new Date(Date.now() - COMPLETED_WINDOW_MS).toISOString();
-    const [pending, inProgress, recent, previousCountPage] = await Promise.all([
-      api.tasks(taskQuery(categoryCode, projectCode, "PENDING", 0, "dueDate,asc", undefined, undefined, from, to), signal),
-      api.tasks(taskQuery(categoryCode, projectCode, "IN_PROGRESS", 0, "dueDate,asc", undefined, undefined, from, to), signal),
-      api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", 0, "completedAt,desc", completedAfter, undefined, from, to), signal),
-      api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", 0, "completedAt,desc", undefined, completedAfter, from, to, 1), signal),
-    ]);
+    const categoryBoards = await Promise.all(categoryScopes.map(async (categoryScope) => Promise.all([
+      api.tasks(taskQuery(categoryScope, projectCode, "PENDING", 0, "dueDate,asc", undefined, undefined, from, to), signal),
+      api.tasks(taskQuery(categoryScope, projectCode, "IN_PROGRESS", 0, "dueDate,asc", undefined, undefined, from, to), signal),
+      api.tasks(taskQuery(categoryScope, projectCode, "COMPLETED", 0, "completedAt,desc", completedAfter, undefined, from, to), signal),
+      api.tasks(taskQuery(categoryScope, projectCode, "COMPLETED", 0, "completedAt,desc", undefined, completedAfter, from, to, 1), signal),
+    ])));
+    const pending = categoryBoards.map(([page]) => page);
+    const inProgress = categoryBoards.map(([, page]) => page);
+    const recent = categoryBoards.map(([, , page]) => page);
+    const previousCountPages = categoryBoards.map(([, , , page]) => page);
     const statusCounts: Record<TaskStatus, number> = {
-      PENDING: pending.totalElements,
-      IN_PROGRESS: inProgress.totalElements,
-      COMPLETED: recent.totalElements + previousCountPage.totalElements,
+      PENDING: pending.reduce((total, page) => total + page.totalElements, 0),
+      IN_PROGRESS: inProgress.reduce((total, page) => total + page.totalElements, 0),
+      COMPLETED: recent.reduce((total, page) => total + page.totalElements, 0) + previousCountPages.reduce((total, page) => total + page.totalElements, 0),
     };
 
     return {
-      content: [...pending.content, ...inProgress.content, ...recent.content],
-      previousCount: previousCountPage.totalElements,
+      content: categoryBoards.flatMap(([pendingPage, inProgressPage, recentPage]) => [...pendingPage.content, ...inProgressPage.content, ...recentPage.content]),
+      previousCount: previousCountPages.reduce((total, page) => total + page.totalElements, 0),
       completedAfter,
       statusCounts,
       totalCount: statusCounts.PENDING + statusCounts.IN_PROGRESS + statusCounts.COMPLETED,
       nextPages: {
-        PENDING: pending.last ? null : 1,
-        IN_PROGRESS: inProgress.last ? null : 1,
-        COMPLETED: recent.last ? null : 1,
+        PENDING: Object.fromEntries(pending.map((page, index) => [categoryScopes[index], page.last ? null : 1])),
+        IN_PROGRESS: Object.fromEntries(inProgress.map((page, index) => [categoryScopes[index], page.last ? null : 1])),
+        COMPLETED: Object.fromEntries(recent.map((page, index) => [categoryScopes[index], page.last ? null : 1])),
       },
     };
   });
@@ -72,38 +86,44 @@ export function useTasksData(categoryCode: string, projectCode = "all", from = "
   const [additionalTasks, setAdditionalTasks] = useState<AdditionalTasksState>({
     key: "",
     tasks: [],
-    nextPages: { PENDING: null, IN_PROGRESS: null, COMPLETED: null },
+    nextPages: emptyCategoryPages(),
     loadingStatus: null,
     error: null,
     errorStatus: null,
   });
-  const currentAdditionalTasks = additionalTasks.key === boardKey
+  const currentAdditionalTasks = useMemo(() => additionalTasks.key === boardKey
     ? additionalTasks
     : {
         key: boardKey,
         tasks: [],
-        nextPages: query.data?.nextPages ?? { PENDING: null, IN_PROGRESS: null, COMPLETED: null },
+        nextPages: query.data?.nextPages ?? emptyCategoryPages(categoryScopes),
         loadingStatus: null,
         error: null,
         errorStatus: null,
-      };
+      }, [additionalTasks, boardKey, categoryScopes, query.data?.nextPages]);
 
   const loadMore = useCallback(async (status: TaskStatus) => {
     const board = query.data;
-    const page = currentAdditionalTasks.nextPages[status];
-    if (!board || page === null || currentAdditionalTasks.loadingStatus) return false;
+    const pagesByScope = currentAdditionalTasks.nextPages[status];
+    const requests = categoryScopes.flatMap((categoryScope) => {
+      const page = pagesByScope[categoryScope];
+      return page === null || page === undefined ? [] : [{ categoryScope, page }];
+    });
+    if (!board || !requests.length || currentAdditionalTasks.loadingStatus) return false;
 
     setAdditionalTasks({ ...currentAdditionalTasks, loadingStatus: status, error: null, errorStatus: null });
     try {
       const sort = status === "COMPLETED" ? "completedAt,desc" : "dueDate,asc";
       const completedAfter = status === "COMPLETED" ? board.completedAfter : undefined;
-      const result = await api.tasks(taskQuery(categoryCode, projectCode, status, page, sort, completedAfter, undefined, from, to));
+      const results = await Promise.all(requests.map(({ categoryScope, page }) => api.tasks(taskQuery(categoryScope, projectCode, status, page, sort, completedAfter, undefined, from, to))));
       setAdditionalTasks((current) => {
         const base = current.key === boardKey ? current : currentAdditionalTasks;
+        const nextPagesForStatus = { ...base.nextPages[status] };
+        requests.forEach(({ categoryScope, page }, index) => { nextPagesForStatus[categoryScope] = results[index].last ? null : page + 1; });
         return {
           ...base,
-          tasks: [...base.tasks, ...result.content],
-          nextPages: { ...base.nextPages, [status]: result.last ? null : page + 1 },
+          tasks: [...base.tasks, ...results.flatMap((result) => result.content)],
+          nextPages: { ...base.nextPages, [status]: nextPagesForStatus },
           loadingStatus: null,
           error: null,
           errorStatus: null,
@@ -117,9 +137,9 @@ export function useTasksData(categoryCode: string, projectCode = "all", from = "
       });
       return false;
     }
-  }, [boardKey, categoryCode, currentAdditionalTasks, from, projectCode, query.data, to]);
+  }, [boardKey, categoryScopes, currentAdditionalTasks, from, projectCode, query.data, to]);
 
-  const archiveKey = `${categoryCode}:${projectCode}:${from}:${to}:${query.data?.completedAfter ?? ""}`;
+  const archiveKey = `${categoryScopeKey}:${projectCode}:${from}:${to}:${query.data?.completedAfter ?? ""}`;
   const [archiveState, setArchiveState] = useState<{ key: string; tasks: Task[]; loading: boolean; loaded: boolean; error: string | null }>({ key: "", tasks: [], loading: false, loaded: false, error: null });
   const currentArchive = archiveState.key === archiveKey ? archiveState : { key: archiveKey, tasks: [], loading: false, loaded: false, error: null };
 
@@ -129,21 +149,29 @@ export function useTasksData(categoryCode: string, projectCode = "all", from = "
     if (currentArchive.loaded) return true;
     setArchiveState({ key: archiveKey, tasks: [], loading: true, loaded: false, error: null });
     try {
-      const tasks: Task[] = [];
-      let page = 0;
-      while (true) {
-        const result = await api.tasks(taskQuery(categoryCode, projectCode, "COMPLETED", page, "completedAt,desc", undefined, board.completedAfter, from, to));
-        tasks.push(...result.content);
-        if (result.last) break;
-        page += 1;
-      }
+      const taskGroups = await Promise.all(categoryScopes.map(async (categoryScope) => {
+        const tasks: Task[] = [];
+        let page = 0;
+        while (true) {
+          const result = await api.tasks(taskQuery(categoryScope, projectCode, "COMPLETED", page, "completedAt,desc", undefined, board.completedAfter, from, to));
+          tasks.push(...result.content);
+          if (result.last) break;
+          page += 1;
+        }
+        return tasks;
+      }));
+      const tasks = taskGroups.flat();
       setArchiveState({ key: archiveKey, tasks, loading: false, loaded: true, error: null });
       return true;
     } catch {
       setArchiveState({ key: archiveKey, tasks: [], loading: false, loaded: false, error: "No se pudieron cargar las tareas anteriores. Probá de nuevo." });
       return false;
     }
-  }, [archiveKey, currentArchive.loaded, currentArchive.loading, query.data, categoryCode, from, projectCode, to]);
+  }, [archiveKey, currentArchive.loaded, currentArchive.loading, query.data, categoryScopes, from, projectCode, to]);
+
+  const hasMore = query.data
+    ? Object.fromEntries((Object.keys(query.data.nextPages) as TaskStatus[]).map((status) => [status, Object.values(currentAdditionalTasks.nextPages[status]).some((page) => page !== null)])) as Record<TaskStatus, boolean>
+    : { PENDING: false, IN_PROGRESS: false, COMPLETED: false };
 
   const data = query.data
     ? { ...query.data, content: [...query.data.content, ...currentAdditionalTasks.tasks] }
@@ -152,7 +180,7 @@ export function useTasksData(categoryCode: string, projectCode = "all", from = "
   return {
     ...query,
     data,
-    hasMore: currentAdditionalTasks.nextPages,
+    hasMore,
     loadingMore: currentAdditionalTasks.loadingStatus,
     loadMoreError: currentAdditionalTasks.error
       ? { status: currentAdditionalTasks.errorStatus, message: currentAdditionalTasks.error }

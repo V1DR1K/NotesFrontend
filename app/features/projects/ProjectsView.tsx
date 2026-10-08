@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { ApiConfig } from "../../lib/api/types";
-import { ProjectChoiceFilter, SectionHero } from "../../ui/Primitives";
+import { ProjectCategoryFilter, SectionHero } from "../../ui/Primitives";
 import { TasksView } from "../tasks/TasksView";
 import { NotesView } from "../notes/NotesView";
 import { FilesView } from "../files/FilesView";
@@ -16,9 +16,15 @@ const tabs: { id: ProjectTab; label: string }[] = [
 
 export function ProjectsView({ config, tab, onTabChange, focusId, editId }: { config: ApiConfig; tab: ProjectTab; onTabChange: (tab: ProjectTab) => void; focusId?: string | null; editId?: string | null }) {
   const [projectCode, setProjectCode] = useState("all");
+  const [categoryFilterKeys, setCategoryFilterKeys] = useState<string[]>([]);
   const visibleProjects = config.projects.filter((item) => item.active !== false || item.code === projectCode);
   const projectOptions = [{ value: "all", label: "Todos" }, ...visibleProjects.map(({ code, label }) => ({ value: code, label }))];
   const selectedProjectLabel = projectCode === "all" ? "Todos los proyectos" : projectOptions.find((option) => option.value === projectCode)?.label ?? "Todos los proyectos";
+  const categoryOptions = config.categories.filter((item) => item.active !== false && (projectCode === "all" || item.projectCode === projectCode)).map((item) => ({
+    value: `${item.projectCode}:${item.code}`,
+    label: projectCode === "all" ? `${item.label} · ${config.projects.find((project) => project.code === item.projectCode)?.label ?? item.projectCode}` : item.label,
+  }));
+  const clearFilters = () => { setProjectCode("all"); setCategoryFilterKeys([]); };
 
   return <div className="projects-view">
     <SectionHero section="projects" sidecar={{
@@ -26,7 +32,7 @@ export function ProjectsView({ config, tab, onTabChange, focusId, editId }: { co
       title: selectedProjectLabel,
       description: "Elegí qué proyecto querés organizar.",
       variant: "selector",
-      content: <ProjectChoiceFilter value={projectCode} options={projectOptions} onChange={setProjectCode} />,
+      content: <ProjectCategoryFilter projectValue={projectCode} projectOptions={projectOptions} categoryOptions={categoryOptions} selectedCategories={categoryFilterKeys} onProjectChange={setProjectCode} onCategoriesChange={setCategoryFilterKeys} onClearFilters={clearFilters} />,
     }} />
     <div className="projects-navigation">
       <div className="projects-tabs" role="tablist" aria-label="Contenido del proyecto">
@@ -40,7 +46,7 @@ export function ProjectsView({ config, tab, onTabChange, focusId, editId }: { co
       </div>
     </div>
     <div id={`project-panel-${tab}`} role="tabpanel" aria-labelledby={`project-tab-${tab}`}>
-      {tab === "tasks" ? <TasksView key={`tasks:${projectCode}`} config={config} projectCode={projectCode} focusId={focusId} editId={editId} nested /> : tab === "notes" ? <NotesView key={`notes:${projectCode}`} config={config} projectCode={projectCode} focusId={focusId} nested /> : <FilesView key={`files:${projectCode}`} config={config} projectCode={projectCode} focusId={focusId} nested />}
+      {tab === "tasks" ? <TasksView key={`tasks:${projectCode}`} config={config} projectCode={projectCode} categoryFilterKeys={categoryFilterKeys} focusId={focusId} editId={editId} nested /> : tab === "notes" ? <NotesView key={`notes:${projectCode}`} config={config} projectCode={projectCode} categoryFilterKeys={categoryFilterKeys} focusId={focusId} nested /> : <FilesView key={`files:${projectCode}`} config={config} projectCode={projectCode} focusId={focusId} nested />}
     </div>
   </div>;
 }

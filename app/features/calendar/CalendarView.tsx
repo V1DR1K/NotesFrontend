@@ -7,7 +7,7 @@ import { invalidateApiQueryCache, useMutationError } from "../../lib/api/hooks";
 import { currentMonth, dateLabel, fieldError, isTaskOverdue, monthBounds, todayIso, weekdayLabel } from "../../lib/presentation";
 import { sortCategoryOptions } from "../../lib/categories";
 import { useFocusTarget } from "../../lib/ui/useFocusTarget";
-import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, PeriodRangeFilter, ProjectChoiceFilter, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
+import { Button, CardActions, ConfirmDialog, Dialog, EmptyState, ErrorState, FilterPills, FormField, FormPanel, ModuleToolbar, PeriodRangeFilter, ProjectCategoryFilter, SectionHero, SelectField, SkeletonGrid } from "../../ui/Primitives";
 import { EventsCalendar } from "./EventsCalendar";
 import { useCalendarData, type CalendarItemType } from "./useCalendarData";
 
@@ -23,7 +23,7 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const [month, setMonth] = useState(initialMonth);
   const [selectedDate, setSelectedDate] = useState(() => focusDate ?? todayIso());
   const [type, setType] = useState<CalendarItemType>("all");
-  const [categoryKey, setCategoryKey] = useState("all");
+  const [categoryFilterKeys, setCategoryFilterKeys] = useState<string[]>([]);
   const [projectCode, setProjectCode] = useState("all");
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
@@ -34,7 +34,7 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const pendingPreviewEdit = useRef<CalendarEvent | null>(null);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [draft, setDraft] = useState({ date: todayIso(), description: "", categoryCode: "", projectCode: "personal" });
-  const data = useCalendarData(month, type, categoryKey, from, to, projectCode);
+  const data = useCalendarData(month, type, categoryFilterKeys, from, to, projectCode);
   useFocusTarget(focusId, Boolean(data.data));
   useEffect(() => {
     if (!focusId) return;
@@ -57,7 +57,6 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const mutation = useMutationError();
   const events = data.data?.events ?? [];
   const tasks = data.data?.tasks ?? [];
-  const calendarCategories = sortCategoryOptions(config.categories.filter((item) => item.active !== false || `${item.projectCode}:${item.code}` === categoryKey));
   let draftCategories = sortCategoryOptions(config.categories.filter((item) => item.projectCode === draft.projectCode && (item.active !== false || item.code === draft.categoryCode)));
   const currentEventCategory = events.find((event) => event.id === editing?.id)?.category;
   if (currentEventCategory && editing?.projectCode === draft.projectCode && currentEventCategory.code === draft.categoryCode && !draftCategories.some((item) => item.code === currentEventCategory.code)) draftCategories = sortCategoryOptions([...draftCategories, { ...currentEventCategory, projectCode: draft.projectCode }]);
@@ -79,7 +78,7 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const categoryLabel = (code: string) => config.categories.find((item) => item.code === code)?.label ?? code;
   const projectLabel = (code: string) => config.projects.find((item) => item.code === code)?.label ?? code;
   const range = monthBounds(month);
-  const clearFilters = () => { setType("all"); setCategoryKey("all"); setProjectCode("all"); setFrom(range.from); setTo(range.to); };
+  const clearFilters = () => { setType("all"); setCategoryFilterKeys([]); setProjectCode("all"); setFrom(range.from); setTo(range.to); };
   const changeMonth = (nextMonth: string) => {
     const currentRange = monthBounds(month);
     const nextRange = monthBounds(nextMonth);
@@ -102,7 +101,12 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
   const visibleSelectedDate = selectedDate.startsWith(month) ? selectedDate : range.from;
   const visibleSelectedEvents = events.filter((event) => event.date === visibleSelectedDate);
   const visibleSelectedTasks = tasks.filter((task) => task.dueDate === visibleSelectedDate);
-  const hasOtherFilters = type !== "all" || categoryKey !== "all" || projectCode !== "all";
+  const hasOtherFilters = type !== "all" || categoryFilterKeys.length > 0 || projectCode !== "all";
+  const projectOptions = [{ value: "all", label: "Todos" }, ...config.projects.filter((item) => item.active !== false || item.code === projectCode).map(({ code, label }) => ({ value: code, label }))];
+  const categoryOptions = sortCategoryOptions(config.categories.filter((item) => item.active !== false && (projectCode === "all" || item.projectCode === projectCode))).map((item) => ({
+    value: `${item.projectCode}:${item.code}`,
+    label: projectCode === "all" ? `${item.label} · ${projectLabel(item.projectCode ?? "")}` : item.label,
+  }));
 
   return <div className="view module-view calendar-view">
     {focusError ? <div className="analysis-notice" role="alert">{focusError}</div> : null}
@@ -111,13 +115,12 @@ export function CalendarView({ config, onOpenTask, focusId, focusDate }: { confi
       title: projectCode === "all" ? "Todos los proyectos" : projectLabel(projectCode),
       description: "Elegí qué proyectos querés ver en la agenda.",
       variant: "selector",
-      content: <ProjectChoiceFilter value={projectCode} options={[{ value: "all", label: "Todos" }, ...config.projects.filter((item) => item.active !== false || item.code === projectCode).map(({ code, label }) => ({ value: code, label }))]} onChange={(nextProject) => { setProjectCode(nextProject); if (categoryKey !== "all" && nextProject !== "all" && !categoryKey.startsWith(`${nextProject}:`)) setCategoryKey("all"); }} />,
+      content: <ProjectCategoryFilter projectValue={projectCode} projectOptions={projectOptions} categoryOptions={categoryOptions} selectedCategories={categoryFilterKeys} onProjectChange={setProjectCode} onCategoriesChange={setCategoryFilterKeys} onClearFilters={clearFilters} />,
     }} />
     <PeriodRangeFilter from={from} to={to} defaultFrom={range.from} defaultTo={range.to} onFromChange={changeFrom} onToChange={setTo} onReset={clearFilters} idPrefix="event-filter" />
     <div className="form-actions finance-main-actions module-main-actions"><Button onClick={() => startNew(visibleSelectedDate)}>Agregar evento <span aria-hidden="true">↗</span></Button></div>
     <ModuleToolbar resultLabel={`${totalElements} ${totalElements === 1 ? "elemento" : "elementos"}`}>
       <FilterPills ariaLabel="Tipo de elemento" active={type} options={[{ value: "all", label: "Todo" }, { value: "events", label: "Eventos" }, { value: "tasks", label: "Tareas" }]} onChange={(value) => setType(value as CalendarItemType)} />
-      <SelectField label="Categoría" compact value={categoryKey} onChange={setCategoryKey} options={[{ value: "all", label: "Todas" }, ...calendarCategories.filter((item) => projectCode === "all" || item.projectCode === projectCode).map(({ code, label, projectCode: ownerProject }) => ({ value: `${ownerProject}:${code}`, label: projectCode === "all" ? `${label} · ${projectLabel(ownerProject ?? "")}` : label }))]} />
       {hasOtherFilters && from === range.from && to === range.to ? <Button className="filter-clear" variant="quiet" onClick={clearFilters}>Limpiar filtros</Button> : null}
     </ModuleToolbar>
     {data.loading ? <SkeletonGrid count={1} /> : data.error ? <ErrorState onRetry={data.reload} /> : <>
