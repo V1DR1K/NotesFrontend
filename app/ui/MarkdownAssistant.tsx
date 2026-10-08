@@ -23,7 +23,7 @@ export function MarkdownAssistant({ kind, title, content, onGenerated }: {
     setFailure(null);
     setPending(true);
     try {
-      const markdown = await api.formatMarkdown({ kind, title: title.trim(), content: content.trim() });
+      const markdown = await api.formatMarkdown({ kind, title: title.trim(), content });
       const latest = sourceRef.current;
       if (latest.kind !== kind || latest.title !== title || latest.content !== content) {
         setFailure({ signature: JSON.stringify([latest.kind, latest.title, latest.content]), message: "El texto cambió mientras Gemini lo organizaba. Volvé a intentarlo para incluir esos cambios." });
@@ -42,6 +42,7 @@ export function MarkdownAssistant({ kind, title, content, onGenerated }: {
       <Button variant="quiet" onClick={() => void generate()} disabled={pending || !content.trim()}>
         {pending ? "Organizando…" : "Organizar con Gemini"}
       </Button>
+      <p className="markdown-assistant-hint">Gemini propone títulos y secciones; no reescribe el contenido.</p>
       {error ? <p className="markdown-assistant-error" role="alert">{error}</p> : null}
     </div>
   );
