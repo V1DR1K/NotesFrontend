@@ -5,6 +5,7 @@ import { api } from "../../lib/api/client";
 import type { RepositoryComponent, RepositoryPipeline, RepositoryStatuses } from "../../lib/api/types";
 import { SectionHero } from "../../ui/Primitives";
 import { DatabaseManager } from "./DatabaseManager";
+import { CentralUsersPanel } from "./CentralUsersPanel";
 
 const relativeTime = new Intl.RelativeTimeFormat("es-AR", { numeric: "auto" });
 
@@ -158,8 +159,9 @@ function RepositorySkeleton() {
 }
 
 export function RepositoriesView({ role = "USER" }: { role?: string }) {
-  const [activeTab, setActiveTab] = useState<"pipelines" | "datos">("pipelines");
+  const [activeTab, setActiveTab] = useState<"pipelines" | "datos" | "usuarios">("pipelines");
   const canManageData = role.toUpperCase() === "ADMIN";
+  const visibleTab = canManageData ? activeTab : "pipelines";
   const [data, setData] = useState<RepositoryStatuses | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -248,10 +250,11 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
       />
 
       <nav className="repository-tabs" role="tablist" aria-label="Secciones de repositorios">
-        <button type="button" role="tab" aria-selected={activeTab === "pipelines"} className={activeTab === "pipelines" ? "active" : ""} onClick={() => setActiveTab("pipelines")}>Pipelines</button>
-        {canManageData ? <button type="button" role="tab" aria-selected={activeTab === "datos"} className={activeTab === "datos" ? "active" : ""} onClick={() => setActiveTab("datos")}>Datos</button> : null}
+        <button type="button" role="tab" aria-selected={visibleTab === "pipelines"} className={visibleTab === "pipelines" ? "active" : ""} onClick={() => setActiveTab("pipelines")}>Pipelines</button>
+        {canManageData ? <button type="button" role="tab" aria-selected={visibleTab === "datos"} className={visibleTab === "datos" ? "active" : ""} onClick={() => setActiveTab("datos")}>Datos</button> : null}
+        {canManageData ? <button type="button" role="tab" aria-selected={visibleTab === "usuarios"} className={visibleTab === "usuarios" ? "active" : ""} onClick={() => setActiveTab("usuarios")}>Usuarios</button> : null}
       </nav>
-      {activeTab === "pipelines" && error && !data ? (
+      {visibleTab === "pipelines" && error && !data ? (
         <section className="repository-message repository-error" role="alert">
           <strong>No pudimos consultar los repositorios</strong>
           <p>{error}</p>
@@ -259,9 +262,9 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
         </section>
       ) : null}
 
-      {activeTab === "pipelines" && loading && !data ? <RepositorySkeleton /> : null}
+      {visibleTab === "pipelines" && loading && !data ? <RepositorySkeleton /> : null}
 
-      {activeTab === "pipelines" && data ? (
+      {visibleTab === "pipelines" && data ? (
         <div className="repository-project-list" aria-live="polite">
           {data.projects.map((project) => (
             <section className="repository-project" key={project.id}>
@@ -276,8 +279,9 @@ export function RepositoriesView({ role = "USER" }: { role?: string }) {
           ))}
         </div>
       ) : null}
-      {activeTab === "pipelines" && error && data ? <p className="repository-inline-error" role="status">No se pudo actualizar. Se conservan los datos cargados. <button type="button" onClick={() => { setLoading(true); void load(); }}>Reintentar</button></p> : null}
-      {activeTab === "datos" && canManageData ? <DatabaseManager /> : null}
+      {visibleTab === "pipelines" && error && data ? <p className="repository-inline-error" role="status">No se pudo actualizar. Se conservan los datos cargados. <button type="button" onClick={() => { setLoading(true); void load(); }}>Reintentar</button></p> : null}
+      {visibleTab === "datos" && canManageData ? <DatabaseManager /> : null}
+      {visibleTab === "usuarios" && canManageData ? <CentralUsersPanel /> : null}
     </div>
   );
 }

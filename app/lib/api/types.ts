@@ -86,6 +86,18 @@ export type AuthUser = {
   mustChangePassword: boolean;
 };
 
+export type CentralAppCode = "notes" | "whatplan" | "scalegrams";
+export type CentralAppAccess = { appCode: CentralAppCode; role: "USER" | "ADMIN"; enabled: boolean };
+export type CentralAuthUserAdmin = {
+  id: string;
+  username: string;
+  status: "ACTIVE" | "DISABLED" | "DELETED" | string;
+  created: string;
+  lastLogin: string | null;
+  mustChangePassword: boolean;
+  applications: CentralAppAccess[];
+};
+
 export type AuthSession = {
   accessToken: string;
   refreshToken: string;

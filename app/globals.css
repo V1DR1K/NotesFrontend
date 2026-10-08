@@ -1318,6 +1318,48 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .repository-tabs button:hover,.repository-tabs button:focus-visible { color:var(--ink); }
 .repository-tabs button.active { border-bottom-color:var(--section-accent); color:var(--ink); }
 .repository-tabs button:focus-visible,.database-manager button:focus-visible,.database-manager select:focus-visible,.database-manager input:focus-visible { outline:2px solid var(--section-accent); outline-offset:2px; }
+.central-users { min-width:0; padding:0 0 24px; color:var(--ink); }
+.central-users-header { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; margin:0 0 14px; }
+.central-users-header h2 { margin:0; font-family:var(--font-display); font-size:20px; font-weight:550; letter-spacing:-.025em; }
+.central-users-header p { max-width:66ch; margin:6px 0 0; color:var(--muted); font-size:11px; line-height:1.55; }
+.central-users-count { flex:0 0 auto; color:var(--muted); font:10px/1.4 var(--font-mono); }
+.central-user-create { display:grid; grid-template-columns:minmax(170px,1fr) minmax(150px,.8fr) minmax(180px,.9fr) auto; align-items:end; gap:12px; padding:14px 16px; border:1px solid var(--line); background:var(--panel); }
+.central-user-create-copy h3,.central-user-access-heading h3 { margin:0; color:var(--ink); font-size:12px; font-weight:650; }
+.central-user-create-copy p { margin:5px 0 0; color:var(--muted); font-size:10px; line-height:1.5; }
+.central-user-create label,.central-user-account-fields > label { display:grid; gap:5px; min-width:0; }
+.central-user-create label > span,.central-user-account-fields > label > span,.central-user-role > span { color:var(--muted); font:9px/1.25 var(--font-mono); letter-spacing:.04em; }
+.central-user-create input,.central-user-account-fields input:not([type=checkbox]),.central-user-role select { width:100%; min-width:0; min-height:34px; padding:6px 9px; border:1px solid var(--line); border-radius:0; background:var(--panel-soft); color:var(--ink); font:11px/1.4 var(--font-sans); }
+.central-user-create input:focus-visible,.central-user-account-fields input:focus-visible,.central-user-role select:focus-visible,.central-user-check input:focus-visible { outline:2px solid var(--section-accent); outline-offset:2px; }
+.central-user-create .db-button { min-height:34px; white-space:nowrap; }
+.central-user-feedback { margin:12px 0 0; padding:10px 12px; border:1px solid rgba(155,215,179,.28); color:#9bd7b3; background:rgba(155,215,179,.06); font-size:11px; line-height:1.5; }
+.central-user-error { border-color:rgba(240,155,145,.35); color:#f0a29a; background:rgba(240,155,145,.06); }
+.central-users-loading { display:grid; gap:1px; margin-top:14px; border:1px solid var(--line); background:var(--line); }
+.central-users-loading span { height:78px; background:linear-gradient(90deg,var(--panel) 0%,var(--panel-soft) 50%,var(--panel) 100%); background-size:200% 100%; animation:db-shimmer 1.2s linear infinite; }
+.central-users-empty { margin:14px 0 0; padding:18px; border:1px solid var(--line); background:var(--panel); color:var(--muted); font-size:11px; line-height:1.55; }
+.central-users-list { display:grid; gap:10px; margin-top:14px; }
+.central-user-row { display:grid; grid-template-columns:minmax(280px,.85fr) minmax(340px,1.15fr); min-width:0; border:1px solid var(--line); background:var(--panel); }
+.central-user-account,.central-user-access { min-width:0; padding:15px 16px; }
+.central-user-access { border-left:1px solid var(--line); }
+.central-user-name-line { display:flex; align-items:center; flex-wrap:wrap; gap:9px; }
+.central-user-name-line strong { color:var(--ink); font-size:14px; font-weight:650; overflow-wrap:anywhere; }
+.central-user-status { padding:3px 6px; border:1px solid var(--line); color:var(--muted); font:9px/1.2 var(--font-mono); text-transform:uppercase; }
+.central-user-status.is-active { border-color:rgba(155,215,179,.24); color:#9bd7b3; background:rgba(155,215,179,.06); }
+.central-user-dates { display:block; margin-top:6px; color:var(--muted); font-size:9px; line-height:1.4; }
+.central-user-account-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-top:13px; }
+.central-user-check { display:inline-flex; align-items:center; gap:7px; min-width:0; color:var(--muted-strong); font-size:10px; line-height:1.4; cursor:pointer; }
+.central-user-check input { flex:0 0 auto; width:14px; height:14px; margin:0; accent-color:var(--section-accent); }
+.central-user-account-fields > .central-user-check { align-self:center; }
+.central-user-account-fields > .central-user-check span { color:var(--muted-strong); font:10px/1.4 var(--font-sans); letter-spacing:0; }
+.central-user-save { margin-top:12px; }
+.central-user-access-heading { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:5px 12px; }
+.central-user-access-heading > span { color:var(--muted); font-size:9px; line-height:1.4; }
+.central-user-apps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px; }
+.central-user-app { display:grid; align-content:start; gap:9px; min-width:0; padding:9px; border:1px solid var(--line); background:var(--panel-soft); }
+.central-user-app > .central-user-check { color:var(--ink); font-size:10px; font-weight:600; }
+.central-user-role { display:grid; gap:4px; min-width:0; }
+.central-user-role select { min-height:30px; padding:4px 6px; font-size:10px; }
+.central-user-row button:focus-visible { outline:2px solid var(--section-accent); outline-offset:2px; }
+.central-user-row button:disabled { opacity:.55; cursor:not-allowed; }
 .database-manager { min-width:0; padding-bottom:24px; color:var(--ink); }
 .db-toolbar { display:flex; flex-wrap:wrap; align-items:end; gap:18px; min-height:64px; padding:12px 16px; border:1px solid var(--line); background:var(--panel); }
 .db-project-select { display:grid; gap:6px; min-width:160px; }
@@ -1432,6 +1474,10 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 @media (max-width:760px) {
   .repository-tabs { margin-top:14px; }
   .repository-tabs button { min-height:38px; padding:0 14px; }
+  .central-user-create { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .central-user-create-copy { grid-column:1/-1; }
+  .central-user-row { grid-template-columns:minmax(0,1fr); }
+  .central-user-access { border-top:1px solid var(--line); border-left:0; }
   .db-workbench { grid-template-columns:minmax(0,1fr); }
   .db-explorer { position:static; border-right:0; border-bottom:1px solid var(--line); }
   .db-explorer-list { display:flex; max-height:none; overflow-x:auto; overflow-y:hidden; padding:8px; }
@@ -1455,6 +1501,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .db-cell-detail-footer { align-items:flex-start; padding:10px 12px; }
 }
 @media (max-width:420px) {
+  .central-users-header { align-items:flex-start; flex-direction:column; gap:5px; }
+  .central-user-create { grid-template-columns:minmax(0,1fr); padding:12px; }
+  .central-user-create-copy { grid-column:auto; }
+  .central-user-create .db-button { justify-self:start; }
+  .central-user-account,.central-user-access { padding:12px; }
+  .central-user-account-fields { grid-template-columns:minmax(0,1fr); }
+  .central-user-apps { grid-template-columns:minmax(0,1fr); }
+  .central-user-app { grid-template-columns:minmax(0,1fr) minmax(110px,.7fr); align-items:center; }
   .db-toolbar { align-items:stretch; gap:9px 12px; padding:10px; }
   .db-project-select { flex:1 1 150px; }
   .db-connection { flex:1 1 130px; font-size:9px; }
