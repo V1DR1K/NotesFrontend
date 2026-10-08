@@ -334,7 +334,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", catego
     </>}
     {draggingId ? <div className="task-drag-ghost" style={{ left: pointer.x + 14, top: pointer.y + 14 }} aria-hidden="true">{tasks.find((task) => task.id === draggingId)?.title}</div> : null}
     {activePreviewTask ? (
-      <Dialog ariaLabel={`Vista previa de ${activePreviewTask.title}`} trackChanges={false} onClose={closePreview}>
+      <Dialog ariaLabel={`Vista previa de ${activePreviewTask.title}`} trackChanges={false} onClose={closePreview} documentPreview>
         <FormPanel
           mode="preview"
           eyebrow={`VISTA PREVIA · ${activePreviewTask.category.label.toUpperCase()}`}

@@ -559,7 +559,7 @@ export function FormPanel({ children, title, description, onClose, onSubmit, eye
   );
 }
 
-export function Dialog({ children, onClose, ariaLabel, trackChanges = true, wide = false }: { children: ReactNode; onClose: () => void; ariaLabel: string; trackChanges?: boolean; wide?: boolean }) {
+export function Dialog({ children, onClose, ariaLabel, trackChanges = true, wide = false, documentPreview = false }: { children: ReactNode; onClose: () => void; ariaLabel: string; trackChanges?: boolean; wide?: boolean; documentPreview?: boolean }) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const dialog = useDialogHistory(onClose);
   const { requestClose } = dialog;
@@ -590,7 +590,7 @@ export function Dialog({ children, onClose, ariaLabel, trackChanges = true, wide
     <div className="dialog-backdrop" role="presentation" onMouseDown={dialog.requestClose}>
       <DialogCloseContext.Provider value={dialog.requestClose}>
         <DialogDirtyContext.Provider value={trackChanges ? dialog.markDirty : null}>
-        <div ref={dialogRef} className={`modal-dialog ${wide ? "modal-dialog-wide" : ""}`} role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={trackChanges ? dialog.markDirty : undefined} onChangeCapture={trackChanges ? dialog.markDirty : undefined} onDropCapture={trackChanges ? dialog.markDirty : undefined}>
+        <div ref={dialogRef} className={`modal-dialog ${wide ? "modal-dialog-wide" : ""} ${documentPreview ? "modal-dialog-document-preview" : ""}`} role="dialog" aria-modal="true" aria-label={ariaLabel} onMouseDown={(event) => event.stopPropagation()} onInputCapture={trackChanges ? dialog.markDirty : undefined} onChangeCapture={trackChanges ? dialog.markDirty : undefined} onDropCapture={trackChanges ? dialog.markDirty : undefined}>
           {children}
         </div>
         </DialogDirtyContext.Provider>
