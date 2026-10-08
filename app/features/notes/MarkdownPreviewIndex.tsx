@@ -35,11 +35,11 @@ export function MarkdownPreviewIndex({ headings }: { headings: MarkdownPreviewHe
     });
   };
 
-  const renderItems = (items: HeadingNode[]) => items.map((heading) => {
+  const renderItems = (items: HeadingNode[], depth = 0) => items.map((heading) => {
     const hasChildren = heading.children.length > 0;
     const isCollapsed = collapsed.has(heading.id);
     return (
-      <li key={heading.id} data-level={heading.level}>
+      <li key={heading.id} data-depth={depth} data-heading-level={heading.level}>
         <div className="markdown-preview-index-item">
           {hasChildren ? <button
             type="button"
@@ -60,7 +60,7 @@ export function MarkdownPreviewIndex({ headings }: { headings: MarkdownPreviewHe
             target?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
           }}>{heading.label}</a>
         </div>
-        {hasChildren && !isCollapsed ? <ol className="markdown-preview-index-children">{renderItems(heading.children)}</ol> : null}
+        {hasChildren && !isCollapsed ? <ol className="markdown-preview-index-children">{renderItems(heading.children, depth + 1)}</ol> : null}
       </li>
     );
   });
