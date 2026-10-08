@@ -39,11 +39,11 @@ function decimalValue(raw: string) {
 function fieldAfterLabel(text: string, labels: string[]): NumberField | null {
   const lines = text.split(/\r?\n/);
   for (let index = 0; index < lines.length; index++) {
-    const normalized = normalizeText(lines[index]);
+    const normalized = normalizeText(`${lines[index]} ${lines[index + 1] ?? ""}`).replace(/\s+/g, " ");
     const label = labels.find((candidate) => normalized.includes(candidate));
     if (!label) continue;
     const offset = normalized.indexOf(label) + label.length;
-    const candidates = [lines[index].slice(offset), lines[index + 1] ?? ""];
+    const candidates = [normalized.slice(offset), normalizeText(lines[index + 2] ?? "")];
     for (const candidate of candidates) {
       const match = candidate.match(numericWithCurrency);
       if (!match) continue;
@@ -56,7 +56,9 @@ function fieldAfterLabel(text: string, labels: string[]): NumberField | null {
 }
 
 function dateFromText(text: string) {
-  const match = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/);
+  const orderTimestamp = text.match(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\s+\d{1,2}:\d{2}(?::\d{2})?\b/);
+  const dates = Array.from(text.matchAll(/\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/g));
+  const match = orderTimestamp ?? dates.at(-1);
   if (!match) return null;
   return `${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`;
 }
@@ -80,7 +82,7 @@ export function parseCryptoOrderText(text: string): CryptoOrderOcrResult {
   const assetCode = assetFromText(text);
   const date = dateFromText(text);
   const quantity = fieldAfterLabel(text, ["cantidad completada", "filled quantity", "executed quantity", "filled qty", "cantidad de la orden", "order quantity"]);
-  const averagePrice = fieldAfterLabel(text, ["precio completado promedio", "average completed price", "average filled price", "filled avg price", "avg. price", "average price"])
+  const averagePrice = fieldAfterLabel(text, ["precio completado promedio", "precio completado", "average completed price", "completed price", "average filled price", "filled avg price", "avg. price", "average price"])
     ?? fieldAfterLabel(text, ["precio de la orden", "order price"]);
   const orderPrice = fieldAfterLabel(text, ["precio de la orden", "order price"]);
   const executionValue = fieldAfterLabel(text, ["valor de ejecucion", "execution value", "executed value", "filled value"]);

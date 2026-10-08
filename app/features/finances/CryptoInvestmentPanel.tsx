@@ -42,13 +42,24 @@ export function CryptoInvestmentPanel({ summary, onInvest, onSell, onCompletePri
           {!investment.voided && !hasActiveSales ? <Button variant="quiet" ariaLabel={`Anular compra ${investment.assetLabel}`} onClick={() => onVoidPurchase(investment)}>Anular</Button> : null}
           {investment.voided ? <span className="crypto-voided-label">ANULADA</span> : null}
         </div></div>
-        <div className="crypto-lot-details"><span>Invertido <strong>{formatUSD(investment.amount.usd)}</strong></span><span>Precio de compra <strong>{investment.unitPriceUsd == null ? "Pendiente" : `${unitPrice(investment.unitPriceUsd)} / unidad`}</strong></span><span>Compradas <strong>{units(investment.quantity)}</strong></span><span>Restantes <strong>{units(investment.remainingQuantity)}</strong></span><span>Costo abierto <strong>{formatUSD(investment.remainingCostBasis.usd)}</strong></span></div>
+        <div className="crypto-lot-kpis">
+          <div className="crypto-kpi"><span>Precio de entrada</span><strong>{investment.unitPriceUsd == null ? "Pendiente" : unitPrice(investment.unitPriceUsd)}</strong><small>por unidad</small></div>
+          <div className="crypto-kpi"><span>Balance invertido</span><strong>{formatUSD(investment.amount.usd)}</strong><small>monto de la compra</small></div>
+          <div className="crypto-kpi"><span>Unidades compradas</span><strong>{units(investment.quantity)}</strong><small>cantidad total</small></div>
+          <div className="crypto-kpi"><span>Unidades restantes</span><strong>{units(investment.remainingQuantity)}</strong><small>disponibles para vender</small></div>
+          <div className="crypto-kpi"><span>Costo abierto</span><strong>{formatUSD(investment.remainingCostBasis.usd)}</strong><small>balance aún invertido</small></div>
+        </div>
         {investment.note ? <p className="crypto-lot-note">{investment.note}</p> : null}
         {investment.sales.map((sale) => <div className={`crypto-sale-row ${sale.voided ? "crypto-sale-voided" : ""}`} key={sale.id}>
-          <div><span className="crypto-operation-kind">VENTA · {sale.date}{sale.voided ? " · ANULADA" : ""}</span><strong>{units(sale.quantity)} unidades × {unitPrice(sale.unitPriceUsd)}</strong></div>
-          <div><span>Recibido</span><strong>{formatUSD(sale.proceedsUsd)}</strong></div>
-          <div><span>Ganancia</span><strong className={asNumber(sale.realizedProfitUsd) < 0 ? "crypto-loss" : "crypto-profit"}>{formatUSD(sale.realizedProfitUsd)}</strong></div>
-          {!sale.voided ? <Button variant="quiet" ariaLabel={`Anular venta ${investment.assetLabel} del ${sale.date}`} onClick={() => onVoidSale(investment, sale)}>Anular venta</Button> : null}
+          <div className="crypto-sale-heading">
+            <div><span className="crypto-operation-kind">VENTA · {sale.date}{sale.voided ? " · ANULADA" : ""}</span><strong>{units(sale.quantity)} unidades vendidas</strong></div>
+            {!sale.voided ? <Button variant="quiet" ariaLabel={`Anular venta ${investment.assetLabel} del ${sale.date}`} onClick={() => onVoidSale(investment, sale)}>Anular venta</Button> : null}
+          </div>
+          <div className="crypto-sale-kpis">
+            <div className="crypto-kpi"><span>Precio de salida</span><strong>{unitPrice(sale.unitPriceUsd)}</strong><small>por unidad</small></div>
+            <div className="crypto-kpi"><span>Balance recibido</span><strong>{formatUSD(sale.proceedsUsd)}</strong><small>total de la venta</small></div>
+            <div className={`crypto-kpi ${asNumber(sale.realizedProfitUsd) < 0 ? "crypto-kpi--loss" : "crypto-kpi--profit"}`}><span>Ganancia realizada</span><strong className={asNumber(sale.realizedProfitUsd) < 0 ? "crypto-loss" : "crypto-profit"}>{formatUSD(sale.realizedProfitUsd)}</strong><small>sobre el costo vendido</small></div>
+          </div>
           {sale.note ? <small className="crypto-sale-note">{sale.note}</small> : null}
         </div>)}
       </article>;
