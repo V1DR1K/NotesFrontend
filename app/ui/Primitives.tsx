@@ -315,6 +315,8 @@ export function ProjectCategoryFilter({
   const [activeStep, setActiveStep] = useState<"project" | "category">("project");
   const [moreOpen, setMoreOpen] = useState(false);
   const filterId = useId();
+  const canChooseCategories = projectValue !== "all";
+  const currentStep = canChooseCategories ? activeStep : "project";
   const visibleCategories = categoryOptions.slice(0, 4);
   const hasMoreCategories = categoryOptions.length > visibleCategories.length;
   const hasFilters = projectValue !== "all" || selectedCategories.length > 0;
@@ -323,7 +325,7 @@ export function ProjectCategoryFilter({
   const chooseProject = (value: string) => {
     if (value !== projectValue) onCategoriesChange([]);
     onProjectChange(value);
-    setActiveStep("category");
+    setActiveStep(value === "all" ? "project" : "category");
   };
 
   const toggleCategory = (value: string) => {
@@ -334,12 +336,12 @@ export function ProjectCategoryFilter({
   };
 
   const handleTabKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
-    const nextStep = event.key === "ArrowRight" ? (activeStep === "project" ? "category" : "project")
-      : event.key === "ArrowLeft" ? (activeStep === "project" ? "category" : "project")
+    const nextStep = event.key === "ArrowRight" ? (currentStep === "project" ? "category" : "project")
+      : event.key === "ArrowLeft" ? (currentStep === "project" ? "category" : "project")
         : event.key === "Home" ? "project"
           : event.key === "End" ? "category"
             : null;
-    if (!nextStep) return;
+    if (!nextStep || (nextStep === "category" && !canChooseCategories)) return;
     event.preventDefault();
     setActiveStep(nextStep);
     window.requestAnimationFrame(() => document.getElementById(`${filterId}-${nextStep}-tab`)?.focus());
@@ -365,23 +367,23 @@ export function ProjectCategoryFilter({
   return (
     <div className="project-category-filter">
       <div className="project-category-filter-tabs" role="tablist" aria-label="Filtros de proyecto y categoría">
-        <button id={`${filterId}-project-tab`} type="button" role="tab" aria-selected={activeStep === "project"} aria-controls={`${filterId}-project-panel`} tabIndex={activeStep === "project" ? 0 : -1} className={activeStep === "project" ? "project-category-filter-tab project-category-filter-tab-active" : "project-category-filter-tab"} onClick={() => setActiveStep("project")} onKeyDown={handleTabKeyDown}>
+        <button id={`${filterId}-project-tab`} type="button" role="tab" aria-selected={currentStep === "project"} aria-controls={`${filterId}-project-panel`} tabIndex={currentStep === "project" ? 0 : -1} className={currentStep === "project" ? "project-category-filter-tab project-category-filter-tab-active" : "project-category-filter-tab"} onClick={() => setActiveStep("project")} onKeyDown={handleTabKeyDown}>
           <span>Proyecto</span><small>{selectedProject}</small>
         </button>
-        <button id={`${filterId}-category-tab`} type="button" role="tab" aria-selected={activeStep === "category"} aria-controls={`${filterId}-category-panel`} tabIndex={activeStep === "category" ? 0 : -1} className={activeStep === "category" ? "project-category-filter-tab project-category-filter-tab-active" : "project-category-filter-tab"} onClick={() => setActiveStep("category")} onKeyDown={handleTabKeyDown}>
-          <span>Categorías</span><small>{selectedCategories.length ? `${selectedCategories.length} elegidas` : "Todas"}</small>
+        <button id={`${filterId}-category-tab`} type="button" role="tab" aria-selected={currentStep === "category"} aria-controls={`${filterId}-category-panel`} tabIndex={currentStep === "category" ? 0 : -1} disabled={!canChooseCategories} className={currentStep === "category" ? "project-category-filter-tab project-category-filter-tab-active" : "project-category-filter-tab"} onClick={() => setActiveStep("category")} onKeyDown={handleTabKeyDown}>
+          <span>Categorías</span><small>{canChooseCategories ? selectedCategories.length ? `${selectedCategories.length} elegidas` : "Todas" : "Elegí un proyecto"}</small>
         </button>
       </div>
       <div className="project-category-filter-viewport">
-        <div className={`project-category-filter-track project-category-filter-track-${activeStep}`}>
-          <div id={`${filterId}-project-panel`} role="tabpanel" aria-labelledby={`${filterId}-project-tab`} aria-hidden={activeStep !== "project"} className="project-category-filter-panel">
+        <div className={`project-category-filter-track project-category-filter-track-${currentStep}`}>
+          <div id={`${filterId}-project-panel`} role="tabpanel" aria-labelledby={`${filterId}-project-tab`} aria-hidden={currentStep !== "project"} className="project-category-filter-panel">
             <div className="hero-project-choice-list" role="group" aria-label="Elegir proyecto">
-              {projectOptions.map((option) => <button type="button" className={`hero-project-choice ${projectValue === option.value ? "hero-project-choice-active" : ""}`} aria-pressed={projectValue === option.value} onClick={() => chooseProject(option.value)} key={option.value} tabIndex={activeStep === "project" ? 0 : -1}>{option.label}</button>)}
+              {projectOptions.map((option) => <button type="button" className={`hero-project-choice ${projectValue === option.value ? "hero-project-choice-active" : ""}`} aria-pressed={projectValue === option.value} onClick={() => chooseProject(option.value)} key={option.value} tabIndex={currentStep === "project" ? 0 : -1}>{option.label}</button>)}
             </div>
           </div>
-          <div id={`${filterId}-category-panel`} role="tabpanel" aria-labelledby={`${filterId}-category-tab`} aria-hidden={activeStep !== "category"} className="project-category-filter-panel">
+          <div id={`${filterId}-category-panel`} role="tabpanel" aria-labelledby={`${filterId}-category-tab`} aria-hidden={currentStep !== "category"} className="project-category-filter-panel">
             {categoryOptions.length ? <div className="hero-category-choice-list" role="group" aria-label="Elegir categorías">
-              {visibleCategories.map((option) => renderCategoryChoice(option, "hero-category-choice", activeStep === "category" ? 0 : -1))}
+              {visibleCategories.map((option) => renderCategoryChoice(option, "hero-category-choice", currentStep === "category" ? 0 : -1))}
             </div> : <p className="hero-category-empty">Este proyecto todavía no tiene categorías activas.</p>}
             {hasMoreCategories ? <Button variant="quiet" className="hero-category-more" ariaHasPopup="dialog" ariaExpanded={moreOpen} onClick={() => setMoreOpen(true)}>Ver más categorías <span aria-hidden="true">{categoryOptions.length}</span></Button> : null}
             <div className="hero-category-filter-actions">
