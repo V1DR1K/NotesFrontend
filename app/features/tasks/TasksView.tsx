@@ -144,8 +144,6 @@ export function TasksView({ config, focusId, editId, projectCode = "all", catego
     return Number.isFinite(completedAt) && completedAt < completedCutoff;
   });
   const previousCount = data.data?.previousCount ?? 0;
-  const completedColumnVisible = recentCompleted.length > 0 || previousCount > 0;
-  const visibleStatuses = completedColumnVisible ? STATUSES : STATUSES.slice(0, 2);
   const totalTaskCount = data.data?.totalCount ?? tasks.length + (data.previousTasks.length ? 0 : previousCount);
 
   const openCreate = () => { mutation.clearError(); setEditing(null); const nextProject = projectCode === "all" ? config.projects.find((option) => option.code === "personal" && option.active !== false)?.code ?? config.projects.find((option) => option.active !== false)?.code ?? "personal" : projectCode; setDraft(emptyDraft(defaultCategoryCode(config.categories, nextProject), nextProject)); setComposerOpen(true); };
@@ -311,8 +309,10 @@ export function TasksView({ config, focusId, editId, projectCode = "all", catego
       {!nested && <SelectField label="Categoría" compact value={categoryCode} onChange={(value) => setCategoryFilter({ contextProjectCode: projectCode, projectCode: filterProjectCode, value })} options={[{ value: "all", label: "Todas" }, ...activeCategories.map((option) => ({ value: `${option.projectCode}:${option.code}`, label: filterProjectCode === "all" ? `${option.label} · ${config.projects.find((project) => project.code === option.projectCode)?.label ?? option.projectCode}` : option.label }))]} />}
     </ModuleToolbar>
     {mutation.error ? <div className="inline-error task-global-error" role="alert">{mutation.error.message || "No se pudo actualizar la tarea. Probá de nuevo."}</div> : null}
-    {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : !tasks.length && previousCount === 0 ? <EmptyState title="Todavía no hay tareas" description="Creá la primera y movela entre columnas a medida que avance." action="Crear tarea" onAction={openCreate} /> : <section className={`tasks-board ${completedColumnVisible ? "" : "tasks-board-two-columns"}`} aria-label="Tablero de tareas">
-      {visibleStatuses.map((status) => {
+    {data.loading ? <SkeletonGrid count={3} /> : data.error ? <ErrorState onRetry={data.reload} /> : <>
+      {!tasks.length && previousCount === 0 ? <EmptyState title="Todavía no hay tareas" description="Creá la primera y movela entre columnas a medida que avance." action="Crear tarea" onAction={openCreate} /> : null}
+      <section className="tasks-board" aria-label="Tablero de tareas">
+      {STATUSES.map((status) => {
         const columnTasks = status === "COMPLETED"
           ? [...recentCompleted, ...(showPreviousTasks ? previousCompleted : [])]
           : tasksByStatus[status];
@@ -330,7 +330,8 @@ export function TasksView({ config, focusId, editId, projectCode = "all", catego
           </> : null}
         </section>;
       })}
-    </section>}
+      </section>
+    </>}
     {draggingId ? <div className="task-drag-ghost" style={{ left: pointer.x + 14, top: pointer.y + 14 }} aria-hidden="true">{tasks.find((task) => task.id === draggingId)?.title}</div> : null}
     {activePreviewTask ? (
       <Dialog ariaLabel={`Vista previa de ${activePreviewTask.title}`} trackChanges={false} onClose={closePreview}>
