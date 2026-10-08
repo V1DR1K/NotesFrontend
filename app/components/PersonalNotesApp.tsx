@@ -36,6 +36,7 @@ export function PersonalNotesApp() {
   const [projectTab, setProjectTab] = useState<ProjectTab>(() => typeof window === "undefined" ? "tasks" : projectTabFor(new URLSearchParams(window.location.search).get("tab") ?? new URLSearchParams(window.location.search).get("section")));
   const [financeTab, setFinanceTab] = useState<FinanceTab>(() => typeof window === "undefined" ? "inicio" : financeTabFor(new URLSearchParams(window.location.search).get("financeTab")));
   const [focusId, setFocusId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("focus"));
+  const focusIdRef = useRef(focusId);
   const [focusDate, setFocusDate] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("focusDate"));
   const [editId, setEditId] = useState<string | null>(() => typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("edit"));
   const [focusRevision, setFocusRevision] = useState(0);
@@ -69,12 +70,13 @@ export function PersonalNotesApp() {
     setActiveSection(nextSection);
     setProjectTab(nextTab);
     setFinanceTab(nextFinanceTab);
-    setFocusId(targetId ?? null);
+    focusIdRef.current = targetId ?? null;
+    setFocusId(focusIdRef.current);
     setFocusDate(section === "calendar" ? targetDate ?? null : null);
     setEditId(targetId && mode === "edit" ? targetId : null);
   };
-  const changeProjectTab = (tab: ProjectTab) => { const url = new URL(window.location.href); url.searchParams.set("section", "projects"); url.searchParams.set("tab", tab); url.searchParams.delete("focus"); url.searchParams.delete("edit"); url.searchParams.delete("focusDate"); window.history.pushState({ ...window.history.state, notesSection: "projects" }, "", url); setProjectTab(tab); setFocusId(null); setEditId(null); setFocusDate(null); };
-  const changeFinanceTab = (tab: FinanceTab) => { const url = new URL(window.location.href); url.searchParams.set("section", "finances"); url.searchParams.set("financeTab", tab); url.searchParams.delete("tab"); url.searchParams.delete("focus"); url.searchParams.delete("edit"); window.history.pushState({ ...window.history.state, notesSection: "finances" }, "", url); setFinanceTab(tab); setFocusId(null); setEditId(null); };
+  const changeProjectTab = (tab: ProjectTab) => { const url = new URL(window.location.href); url.searchParams.set("section", "projects"); url.searchParams.set("tab", tab); url.searchParams.delete("focus"); url.searchParams.delete("edit"); url.searchParams.delete("focusDate"); window.history.pushState({ ...window.history.state, notesSection: "projects" }, "", url); setProjectTab(tab); focusIdRef.current = null; setFocusId(null); setEditId(null); setFocusDate(null); };
+  const changeFinanceTab = (tab: FinanceTab) => { const url = new URL(window.location.href); url.searchParams.set("section", "finances"); url.searchParams.set("financeTab", tab); url.searchParams.delete("tab"); url.searchParams.delete("focus"); url.searchParams.delete("edit"); window.history.pushState({ ...window.history.state, notesSection: "finances" }, "", url); setFinanceTab(tab); focusIdRef.current = null; setFocusId(null); setEditId(null); };
 
   useEffect(() => {
     const currentSection = new URLSearchParams(window.location.search).get("section") ?? window.history.state?.notesSection;
@@ -103,10 +105,12 @@ export function PersonalNotesApp() {
       const params = new URLSearchParams(window.location.search);
       setProjectTab(projectTabFor(params.get("tab") ?? section));
       setFinanceTab(financeTabFor(params.get("financeTab")));
-      setFocusId(params.get("focus"));
+      const nextFocusId = params.get("focus");
+      if (nextFocusId && nextFocusId !== focusIdRef.current) setFocusRevision((current) => current + 1);
+      focusIdRef.current = nextFocusId;
+      setFocusId(nextFocusId);
       setFocusDate(params.get("focusDate"));
       setEditId(params.get("edit"));
-      if (params.has("focus")) setFocusRevision((current) => current + 1);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
