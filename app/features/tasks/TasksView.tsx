@@ -52,7 +52,7 @@ function TaskCard({ task, projectLabel, onEdit, onDelete, onPreview, onStatusCha
     <div className="task-card-top"><span className="task-grip" aria-hidden="true">⠿</span><span className="task-category">{task.category.label} · {projectLabel}</span><CardActions onEdit={onEdit} onDelete={onDelete} /></div>
     <button type="button" className="task-card-preview-trigger" onClick={onPreview} aria-label={`Ver tarea ${task.title}`}><h3>{task.title}</h3>{task.detail ? <div className="task-card-markdown"><NoteBody body={task.detail} interactiveLinks={false} /></div> : null}<div className={`task-due ${isOverdue(task) ? "task-due-overdue" : ""}`}><span aria-hidden="true">◷</span>{taskDueLabel(task)}</div></button>
     <div className="task-card-footer">
-      <span className="task-drag-hint">{arming ? chargeProgress >= 1 ? "Lista · arrastrá a otra columna" : "Preparando arrastre…" : "Mantené 2 s para mover"}</span>
+      <span className="task-drag-hint">{arming ? chargeProgress >= 1 ? "Lista · arrastrá a otra columna" : "Preparando arrastre…" : "Mantené 0,5 s para mover"}</span>
       <label className="task-status-select"><span className="visually-hidden">Cambiar estado de {task.title}</span><select value={task.status} onChange={(event) => onStatusChange(event.target.value as TaskStatus)}><option value="PENDING">Pendientes</option><option value="IN_PROGRESS">En proceso</option><option value="COMPLETED">Finalizadas</option></select></label>
     </div>
   </article>;
@@ -231,7 +231,7 @@ export function TasksView({ config, focusId, editId, projectCode = "all", catego
     const updateProgress = () => {
       const drag = dragRef.current;
       if (!drag || drag.task.id !== holdingTaskId || drag.armed) return;
-      const progress = Math.min((performance.now() - drag.startedAt) / 2000, 1);
+      const progress = Math.min((performance.now() - drag.startedAt) / 500, 1);
       if (progress >= 1) {
         drag.armed = true;
         setHoldProgress(1);
