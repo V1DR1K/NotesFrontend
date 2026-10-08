@@ -2,8 +2,8 @@ import Markdown from "react-markdown";
 import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 import { Children, createElement, isValidElement, type ReactNode } from "react";
+import { MarkdownPreviewIndex, type MarkdownPreviewHeading } from "./MarkdownPreviewIndex";
 
-type MarkdownHeading = { label: string; level: number; id: string };
 type HeadingTag = "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
 
 function plainHeadingText(source: string) {
@@ -26,9 +26,9 @@ function headingSlug(source: string) {
     .replace(/^-|-$/g, "") || "seccion";
 }
 
-function collectHeadings(markdown: string): MarkdownHeading[] {
+function collectHeadings(markdown: string): MarkdownPreviewHeading[] {
   const lines = markdown.split("\n");
-  const headings: MarkdownHeading[] = [];
+  const headings: MarkdownPreviewHeading[] = [];
   const occurrences = new Map<string, number>();
   let fence: { marker: string; length: number } | null = null;
   const addHeading = (rawLabel: string, level: number) => {
@@ -137,17 +137,7 @@ export function NoteBody({ body, interactiveLinks = true, withContentsIndex = fa
 
   return (
     <div className={`markdown-preview-layout${hasIndex ? " markdown-preview-layout--indexed" : ""}`}>
-      {hasIndex ? <nav className="markdown-preview-index" aria-label="Índice del contenido">
-        <span className="markdown-preview-index-title">EN ESTE TEXTO</span>
-        <ol>
-          {headings.map((heading) => <li key={heading.id} data-level={heading.level}><a href={`#${heading.id}`} onClick={(event) => {
-            event.preventDefault();
-            const target = document.getElementById(heading.id);
-            target?.focus({ preventScroll: true });
-            target?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
-          }}>{heading.label}</a></li>)}
-        </ol>
-      </nav> : null}
+      {hasIndex ? <MarkdownPreviewIndex headings={headings} /> : null}
       {markdownContent}
     </div>
   );
