@@ -23,11 +23,11 @@ function buildHeadingTree(headings: MarkdownPreviewHeading[]): HeadingNode[] {
 }
 
 export function MarkdownPreviewIndex({ headings }: { headings: MarkdownPreviewHeading[] }) {
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const tree = buildHeadingTree(headings);
 
   const toggle = (id: string) => {
-    setCollapsed((current) => {
+    setExpanded((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -37,7 +37,7 @@ export function MarkdownPreviewIndex({ headings }: { headings: MarkdownPreviewHe
 
   const renderItems = (items: HeadingNode[], depth = 0) => items.map((heading) => {
     const hasChildren = heading.children.length > 0;
-    const isCollapsed = collapsed.has(heading.id);
+    const isCollapsed = hasChildren && !expanded.has(heading.id);
     return (
       <li key={heading.id} data-depth={depth} data-heading-level={heading.level}>
         <div className="markdown-preview-index-item">
