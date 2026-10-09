@@ -538,7 +538,7 @@ export const api = {
   centralUsers: () => get<CentralAuthUserAdmin[]>("/users"),
   createCentralUser: (body: { username: string; password: string; mustChangePassword: boolean }) => post<CentralAuthUserAdmin>("/users", body),
   updateCentralUser: (id: string, body: { username: string; password?: string; enabled: boolean; mustChangePassword: boolean }) => request<CentralAuthUserAdmin>(`/users/${encodeURIComponent(id)}`, { method: "PUT", body }),
-  updateCentralUserApplications: (id: string, applications: Record<CentralAppCode, { enabled: boolean; role: "USER" | "ADMIN" }>) => request<CentralAuthUserAdmin>(`/users/${encodeURIComponent(id)}/applications`, { method: "PUT", body: { applications } }),
+  updateCentralUserApplications: (id: string, applications: Record<CentralAppCode, { enabled: boolean; role: "USER" | "ADMIN"; status: "NONE" | "PENDING" | "APPROVED" | "REJECTED" }>) => request<CentralAuthUserAdmin>(`/users/${encodeURIComponent(id)}/applications`, { method: "PUT", body: { applications } }),
   config: async (signal?: AbortSignal): Promise<ApiConfig> => {
     const results = await Promise.allSettled([
       request<unknown>("/config/day-statuses", { signal }), request<unknown>("/config/day-feelings", { signal }), request<unknown>("/config/finance-items", { signal }), request<unknown>("/config/categories", { signal }), request<unknown>("/config/projects", { signal }),

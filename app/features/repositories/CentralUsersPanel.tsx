@@ -2,7 +2,7 @@
 
 import { type FormEvent, useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api/client";
-import type { CentralAppCode, CentralAuthUserAdmin } from "../../lib/api/types";
+import type { CentralAppAccessStatus, CentralAppCode, CentralAuthUserAdmin } from "../../lib/api/types";
 
 const apps: Array<{ code: CentralAppCode; label: string }> = [
   { code: "notes", label: "Notes" },
@@ -10,14 +10,22 @@ const apps: Array<{ code: CentralAppCode; label: string }> = [
   { code: "scalegrams", label: "ScaleGrams" },
 ];
 
-type AppDraft = Record<CentralAppCode, { enabled: boolean; role: "USER" | "ADMIN" }>;
+type AppDraft = Record<CentralAppCode, { status: CentralAppAccessStatus; role: "USER" | "ADMIN" }>;
 type AccountDraft = { username: string; password: string; enabled: boolean; mustChangePassword: boolean };
+
+const accessStatusLabels: Record<CentralAppAccessStatus, string> = {
+  NONE: "Sin acceso",
+  PENDING: "Pendiente de aprobación",
+  APPROVED: "Aprobado",
+  REJECTED: "Rechazado",
+};
 
 function appDraft(user: CentralAuthUserAdmin): AppDraft {
   const grants = new Map(user.applications.map((grant) => [grant.appCode, grant]));
   return Object.fromEntries(apps.map(({ code }) => {
     const grant = grants.get(code);
-    return [code, { enabled: grant?.enabled ?? false, role: grant?.role ?? "USER" }];
+    const status = grant?.status ?? (grant?.enabled ? "APPROVED" : "NONE");
+    return [code, { status, role: grant?.role ?? "USER" }];
   })) as AppDraft;
 }
 
@@ -95,7 +103,11 @@ export function CentralUsersPanel() {
     setError("");
     setNotice("");
     try {
-      const updated = await api.updateCentralUserApplications(user.id, drafts[user.id]);
+      const applications = Object.fromEntries(apps.map(({ code }) => {
+        const access = drafts[user.id][code];
+        return [code, { ...access, enabled: access.status === "APPROVED" }];
+      })) as Record<CentralAppCode, { enabled: boolean; role: "USER" | "ADMIN"; status: CentralAppAccessStatus }>;
+      const updated = await api.updateCentralUserApplications(user.id, applications);
       replaceUser(updated);
       setNotice(`Accesos de ${updated.username} actualizados.`);
     } catch (cause) {
@@ -132,7 +144,7 @@ export function CentralUsersPanel() {
       <header className="central-users-header">
         <div>
           <h2 id="central-users-heading">Usuarios del acceso central</h2>
-          <p>Administrá las cuentas y el rol de cada usuario en Notes, WhatPlan y ScaleGrams.</p>
+          <p>Administrá las cuentas y aprobá el acceso a Notes, WhatPlan y ScaleGrams.</p>
         </div>
         <span className="central-users-count">{loading ? "Cargando usuarios" : `${users.length} ${users.length === 1 ? "usuario" : "usuarios"}`}</span>
       </header>
@@ -182,8 +194,12 @@ export function CentralUsersPanel() {
             <div className="central-user-access">
               <div className="central-user-access-heading"><h3>Acceso por aplicación</h3><span>El rol se aplica dentro de cada app.</span></div>
               <div className="central-user-apps">
-                {apps.map(({ code, label }) => <div className="central-user-app" key={code}>
-                  <label className="central-user-check"><input type="checkbox" checked={draft[code].enabled} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, [code]: { ...draft[code], enabled: event.target.checked } } }))} /><span>{label}</span></label>
+                {apps.map(({ code, label }) => <div className={`central-user-app central-user-app--${draft[code].status.toLowerCase()}`} key={code}>
+                  <div className="central-user-app-heading">
+                    <strong>{label}</strong>
+                    <span className={`central-user-app-status is-${draft[code].status.toLowerCase()}`}>{accessStatusLabels[draft[code].status]}</span>
+                  </div>
+                  <label className="central-user-role"><span>Estado de acceso</span><select value={draft[code].status} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, [code]: { ...draft[code], status: event.target.value as CentralAppAccessStatus } } }))}><option value="NONE">Sin acceso</option><option value="PENDING">Pendiente de aprobación</option><option value="APPROVED">Aprobado</option><option value="REJECTED">Rechazado</option></select></label>
                   <label className="central-user-role"><span>Rol</span><select value={draft[code].role} onChange={(event) => setDrafts((current) => ({ ...current, [user.id]: { ...draft, [code]: { ...draft[code], role: event.target.value as "USER" | "ADMIN" } } }))}><option value="USER">Usuario</option><option value="ADMIN">Administrador</option></select></label>
                 </div>)}
               </div>

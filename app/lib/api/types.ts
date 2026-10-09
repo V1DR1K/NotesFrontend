@@ -87,7 +87,8 @@ export type AuthUser = {
 };
 
 export type CentralAppCode = "notes" | "whatplan" | "scalegrams";
-export type CentralAppAccess = { appCode: CentralAppCode; role: "USER" | "ADMIN"; enabled: boolean };
+export type CentralAppAccessStatus = "NONE" | "PENDING" | "APPROVED" | "REJECTED";
+export type CentralAppAccess = { appCode: CentralAppCode; role: "USER" | "ADMIN"; enabled: boolean; status?: CentralAppAccessStatus };
 export type CentralAuthUserAdmin = {
   id: string;
   username: string;

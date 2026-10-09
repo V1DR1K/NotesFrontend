@@ -1375,12 +1375,17 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .central-user-check input { flex:0 0 auto; width:14px; height:14px; margin:0; accent-color:var(--section-accent); }
 .central-user-account-fields > .central-user-check { align-self:center; }
 .central-user-account-fields > .central-user-check span { color:var(--muted-strong); font:10px/1.4 var(--font-sans); letter-spacing:0; }
-.central-user-save { margin-top:12px; }
+.central-user-save { display:block; width:max-content; max-width:100%; margin:12px 0 0 auto; }
 .central-user-access-heading { display:flex; align-items:baseline; justify-content:space-between; flex-wrap:wrap; gap:5px 12px; }
 .central-user-access-heading > span { color:var(--muted); font-size:9px; line-height:1.4; }
 .central-user-apps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; margin-top:12px; }
 .central-user-app { display:grid; align-content:start; gap:9px; min-width:0; padding:9px; border:1px solid var(--line); background:var(--panel-soft); }
-.central-user-app > .central-user-check { color:var(--ink); font-size:10px; font-weight:600; }
+.central-user-app-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; min-width:0; }
+.central-user-app-heading > strong { color:var(--ink); font-size:10px; font-weight:650; }
+.central-user-app-status { flex:0 1 auto; padding:3px 6px; border:1px solid var(--line); color:var(--muted); font:8px/1.3 var(--font-mono); text-align:right; }
+.central-user-app-status.is-pending { border-color:rgba(233,198,107,.32); color:#e9c66b; background:rgba(233,198,107,.07); }
+.central-user-app-status.is-approved { border-color:rgba(155,215,179,.24); color:#9bd7b3; background:rgba(155,215,179,.06); }
+.central-user-app-status.is-rejected { border-color:rgba(240,155,145,.3); color:#f0a29a; background:rgba(240,155,145,.06); }
 .central-user-role { display:grid; gap:4px; min-width:0; }
 .central-user-role select { min-height:30px; padding:4px 6px; font-size:10px; }
 .central-user-row button:focus-visible { outline:2px solid var(--section-accent); outline-offset:2px; }
@@ -1533,7 +1538,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .central-user-account,.central-user-access { padding:12px; }
   .central-user-account-fields { grid-template-columns:minmax(0,1fr); }
   .central-user-apps { grid-template-columns:minmax(0,1fr); }
-  .central-user-app { grid-template-columns:minmax(0,1fr) minmax(110px,.7fr); align-items:center; }
+  .central-user-app { grid-template-columns:repeat(2,minmax(0,1fr)); align-items:start; }
+  .central-user-app-heading { grid-column:1/-1; }
   .db-toolbar { align-items:stretch; gap:9px 12px; padding:10px; }
   .db-project-select { flex:1 1 150px; }
   .db-connection { flex:1 1 130px; font-size:9px; }
