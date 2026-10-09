@@ -64,8 +64,8 @@ function dateFromText(text: string) {
 }
 
 function assetFromText(text: string): CryptoAssetCode | null {
-  const match = text.match(/\b(BTC|ETH|SOL|PEPE)\s*(?:[\/|]?\s*)USDT\b/i);
-  return match ? `${match[1].toUpperCase()}USDT` as CryptoAssetCode : null;
+  const match = text.match(/\b((?=[A-Z0-9]{1,15}\b)(?=[A-Z0-9]*[A-Z])[A-Z0-9]+)\s*(?:\/\s*)?USDT\b/i);
+  return match ? `${match[1].toUpperCase()}USDT` : null;
 }
 
 function currencyIsQuote(currency: string | null) {

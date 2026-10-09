@@ -316,12 +316,18 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .crypto-summary-grid span, .crypto-summary-grid small { display: block; color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
 .crypto-summary-grid strong { display: block; margin: 12px 0 5px; color: var(--ink); font-family: var(--font-display); font-size: 25px; font-weight: 500; letter-spacing: -.05em; }
 .crypto-summary-grid small { letter-spacing: 0; text-transform: none; }
-.crypto-position-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
-.crypto-position { padding: 15px; border: 1px solid var(--line); background: var(--panel-soft); }
+.crypto-position-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 10px; margin-top: 10px; }
+.crypto-position { display: grid; gap: 14px; min-width: 0; padding: 16px; border: 1px solid var(--line); background: var(--panel-soft); }
+.crypto-position-heading, .crypto-position-cost { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.crypto-position-lots { flex: 0 0 auto; color: var(--muted); font: 9px var(--font-mono); }
 .crypto-symbol { color: var(--section-accent); font: 11px var(--font-mono); letter-spacing: .08em; }
 .crypto-pair { color: var(--muted); font: 9px var(--font-mono); }
-.crypto-position strong { display: block; margin-top: 18px; color: var(--ink); font-family: var(--font-display); font-size: 21px; font-weight: 500; }
-.crypto-position small { display: block; margin-top: 4px; color: var(--muted); font: 9px var(--font-mono); }
+.crypto-position-quantity { display: grid; gap: 7px; min-width: 0; }
+.crypto-position-quantity > span { color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; }
+.crypto-position-quantity > strong { min-width: 0; color: var(--ink); font: 500 clamp(19px, 2vw, 24px)/1.2 var(--font-mono); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.crypto-position-cost { padding-top: 11px; border-top: 1px solid var(--line); }
+.crypto-position-cost > span { color: var(--muted); font: 9px var(--font-mono); }
+.crypto-position-cost > strong { color: var(--ink); font: 500 14px var(--font-mono); font-variant-numeric: tabular-nums; }
 .crypto-history { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
 .crypto-history-row { display: grid; grid-template-columns: 90px 1fr 110px 150px; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid var(--line); color: var(--muted); font: 10px var(--font-mono); }
 .crypto-history-row strong { color: var(--ink); font-family: var(--font-display); font-size: 15px; font-weight: 500; }
@@ -335,8 +341,12 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .crypto-lot-heading > div:first-child { display: grid; gap: 5px; }
 .crypto-operation-kind, .crypto-voided-label { color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; }
 .crypto-lot-heading strong { color: var(--ink); font: 500 17px var(--font-display); }
-.crypto-lot-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
-.crypto-lot-actions .button, .crypto-sale-row .button { min-height: 28px; padding: 0 9px; font-size: 9px; }
+.crypto-lot-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 7px; }
+.crypto-lot-actions .button { min-height: 40px; padding: 0 13px; font-size: 10px; font-weight: 600; }
+.crypto-sale-row .button { min-height: 38px; padding: 0 12px; font-size: 10px; font-weight: 600; }
+.crypto-action-sell { box-shadow: 0 5px 16px rgba(162, 222, 228, .12); }
+.crypto-action-edit { border-color: color-mix(in srgb, var(--section-accent) 50%, var(--line)); color: var(--section-accent); }
+.crypto-action-void { border-color: color-mix(in srgb, var(--danger, #ff938f) 45%, var(--line)); }
 .crypto-lot-kpis { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
 .crypto-kpi { display: grid; align-content: start; gap: 7px; min-width: 0; padding: 12px; border: 1px solid var(--line); background: rgba(12, 14, 17, .42); }
 .crypto-kpi > span { color: var(--muted); font: 8px var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
@@ -351,6 +361,8 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
 .crypto-sale-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .crypto-kpi--profit { border-color: rgba(165, 217, 191, .38); }
 .crypto-kpi--loss { border-color: rgba(240, 169, 169, .38); }
+.crypto-kpi--important { border-color: color-mix(in srgb, var(--section-accent) 38%, var(--line)); background: color-mix(in srgb, var(--section-accent) 5%, rgba(12, 14, 17, .42)); }
+.crypto-new-asset-notice { margin-top: 10px; padding: 11px 13px; border: 1px solid color-mix(in srgb, var(--section-accent) 45%, var(--line)); color: var(--ink); background: color-mix(in srgb, var(--section-accent) 8%, var(--section-surface)); font-size: 11px; line-height: 1.5; }
 .crypto-sale-note { color: var(--muted); font-size: 9px; line-height: 1.5; overflow-wrap: anywhere; }
 .crypto-profit { color: #a5d9bf !important; }
 .crypto-loss { color: #f0a9a9 !important; }
@@ -1027,9 +1039,14 @@ button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-
   .crypto-history-row > span:nth-of-type(2), .crypto-history-row small { text-align: left; }
   .crypto-lot-heading { align-items: flex-start; flex-direction: column; }
   .crypto-lot-actions { justify-content: flex-start; }
+  .crypto-lot-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 8px; }
+  .crypto-lot-actions .button { width: 100%; min-height: 46px; padding: 7px 9px; font-size: 11px; line-height: 1.25; white-space: normal; }
+  .crypto-lot-actions .crypto-action-sell { grid-column: 1 / -1; }
+  .crypto-lot-actions .crypto-action-void { grid-column: auto; }
   .crypto-lot-kpis, .crypto-sale-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .crypto-lot-kpis > .crypto-kpi:last-child { grid-column: 1 / -1; }
   .crypto-sale-heading { align-items: flex-start; }
-  .crypto-sale-heading .button { justify-self: start; }
+  .crypto-sale-heading .button { justify-self: start; min-height: 42px; }
   .crypto-sale-kpis > .crypto-kpi--profit, .crypto-sale-kpis > .crypto-kpi--loss { grid-column: 1 / -1; }
   .finance-account-actions { justify-content: stretch; width: 100%; }
   .finance-account-actions .button { flex: 1; }

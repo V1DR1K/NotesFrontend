@@ -201,7 +201,9 @@ export type FinanceAccount = {
   usdBalanceEstimated?: boolean;
 };
 
-export type CryptoAssetCode = "BTCUSDT" | "SOLUSDT" | "ETHUSDT" | "PEPEUSDT";
+// Crypto pairs are stored as user-entered symbols, so new USDT assets do not
+// require a frontend release before they can be recorded.
+export type CryptoAssetCode = string;
 export type CryptoSale = {
   id: string;
   investmentId: string;

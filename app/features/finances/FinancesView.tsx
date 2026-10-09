@@ -77,6 +77,7 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   const [transferAmountError, setTransferAmountError] = useState("");
   const [investmentOpen, setInvestmentOpen] = useState(false);
   const [investmentDraft, setInvestmentDraft] = useState<CryptoInvestmentDraft>({ date: todayIso(), assetCode: "BTCUSDT", amountUsd: "", unitPriceUsd: "", quantity: "", note: "" });
+  const [cryptoAssetNotice, setCryptoAssetNotice] = useState("");
   const [saleDraft, setSaleDraft] = useState<CryptoSaleDraft | null>(null);
   const [legacyPriceTarget, setLegacyPriceTarget] = useState<CryptoInvestment | null>(null);
   const [legacyUnitPrice, setLegacyUnitPrice] = useState("");
@@ -87,6 +88,11 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   const data = useFinanceData(page, bucket, from, to, itemCode, sort);
   const mutation = useMutationError();
   const [movements, summary, analytics, ratePayload, accountsPayload, cryptoSummary] = data.data;
+  const cryptoAssetCodes = Array.from(new Set([
+    "BTCUSDT", "SOLUSDT", "ETHUSDT", "PEPEUSDT",
+    ...(cryptoSummary?.positions.map((position) => position.assetCode) ?? []),
+    ...(cryptoSummary?.investments.map((investment) => investment.assetCode) ?? []),
+  ]));
   const accounts = accountsPayload ?? [];
   const rate = asNumber(ratePayload?.average);
   const rateSource = ratePayload?.source === "provider" ? "DolarApi Blue" : "Fallback configurado";
@@ -134,6 +140,7 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
 
   const startInvestment = () => {
     setInvestmentDraft({ date: todayIso(), assetCode: "BTCUSDT", amountUsd: "", unitPriceUsd: "", quantity: "", note: "" });
+    setCryptoAssetNotice("");
     mutation.clearError();
     setInvestmentOpen(true);
   };
@@ -146,6 +153,12 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
   };
 
   const applyPurchaseOrder = (order: CryptoOrderOcrResult) => {
+    if (order.assetCode && !cryptoAssetCodes.includes(order.assetCode)) {
+      const symbol = order.assetCode.replace(/USDT$/, "");
+      setCryptoAssetNotice(`${symbol} no estaba en tu lista. Se agregó para esta compra y quedará registrada al guardar.`);
+    } else if (order.assetCode) {
+      setCryptoAssetNotice("");
+    }
     setInvestmentDraft((draft) => ({
       ...draft,
       date: order.date ?? draft.date,
@@ -201,6 +214,7 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
     try {
       await mutation.run(() => api.cryptoInvest({ date: investmentDraft.date, assetCode: investmentDraft.assetCode, amountUsd, unitPriceUsd, quantity: quantity ?? undefined, note: investmentDraft.note.trim() || undefined }));
       setInvestmentOpen(false);
+      setCryptoAssetNotice("");
       invalidateApiQueryCache();
       data.reload();
     } catch { /* the mutation error is shown in the form */ }
@@ -333,6 +347,9 @@ export function FinancesView({ config, focusId, tab, onTabChange }: { config: Ap
        setInvestmentOpen={setInvestmentOpen}
        investmentDraft={investmentDraft}
        setInvestmentDraft={setInvestmentDraft}
+       assetCodes={cryptoAssetCodes}
+       newAssetNotice={cryptoAssetNotice}
+       setNewAssetNotice={setCryptoAssetNotice}
        onApplyPurchaseOrder={applyPurchaseOrder}
        onSaveInvestment={() => void saveInvestment()}
        saleDraft={saleDraft}

@@ -26,6 +26,9 @@ type Props = {
   setInvestmentOpen: (open: boolean) => void;
   investmentDraft: CryptoInvestmentDraft;
   setInvestmentDraft: Dispatch<SetStateAction<CryptoInvestmentDraft>>;
+  assetCodes: string[];
+  newAssetNotice: string;
+  setNewAssetNotice: (notice: string) => void;
   onApplyPurchaseOrder: (order: CryptoOrderOcrResult) => void;
   onSaveInvestment: () => void;
   saleDraft: CryptoSaleDraft | null;
@@ -61,14 +64,16 @@ export function CryptoInvestmentDialogs(props: Props) {
   const oldCost = asNumber(props.legacyPriceTarget?.amount.usd);
   const oldPrice = parseCryptoPrice(props.legacyUnitPrice);
   const saleOpenQuantity = asNumber(props.saleDraft?.investment.remainingQuantity);
+  const assetOptions = Array.from(new Set([...props.assetCodes, props.investmentDraft.assetCode])).sort();
 
   return <>
     {props.investmentOpen ? <Dialog ariaLabel="Registrar compra de cripto" onClose={() => props.setInvestmentOpen(false)}>
       <FormPanel title="Registrar compra" description={props.availableUsd === null ? "Actualizando el disponible de Bitget..." : `Usá los dólares que ya tenés en Bitget. Disponible: ${formatUSD(props.availableUsd)}. La compra no mueve dinero desde Mercado Pago.`} onClose={() => props.setInvestmentOpen(false)} onSubmit={props.onSaveInvestment} eyebrow="NUEVO LOTE">
         <CryptoOrderOcr expectedSide="BUY" onApply={props.onApplyPurchaseOrder} />
+        {props.newAssetNotice ? <div className="crypto-new-asset-notice" role="status" aria-live="polite">{props.newAssetNotice}</div> : null}
         <div className="form-grid crypto-form-grid">
           <label className="form-field" htmlFor="crypto-investment-date"><span>Fecha</span><input id="crypto-investment-date" type="date" value={props.investmentDraft.date} onChange={(event) => props.setInvestmentDraft({ ...props.investmentDraft, date: event.target.value })} required /></label>
-          <SelectField label="Cripto" id="crypto-investment-asset" value={props.investmentDraft.assetCode} onChange={(value) => props.setInvestmentDraft({ ...props.investmentDraft, assetCode: value as CryptoAssetCode })} options={[{ value: "BTCUSDT", label: "BTC / USDT" }, { value: "SOLUSDT", label: "SOL / USDT" }, { value: "ETHUSDT", label: "ETH / USDT" }, { value: "PEPEUSDT", label: "PEPE / USDT" }]} />
+          <SelectField label="Cripto" id="crypto-investment-asset" value={props.investmentDraft.assetCode} onChange={(value) => { props.setInvestmentDraft({ ...props.investmentDraft, assetCode: value as CryptoAssetCode }); props.setNewAssetNotice(""); }} options={assetOptions.map((value) => ({ value, label: `${value.replace(/USDT$/, "")} / USDT` }))} />
           <label className="form-field" htmlFor="crypto-investment-amount"><span>Invertido en USD</span><input id="crypto-investment-amount" inputMode="decimal" value={props.investmentDraft.amountUsd} onChange={(event) => props.setInvestmentDraft({ ...props.investmentDraft, amountUsd: event.target.value })} placeholder="500.00" required /></label>
           <label className="form-field" htmlFor="crypto-investment-price"><span>Precio por unidad (USD)</span><input id="crypto-investment-price" inputMode="decimal" value={props.investmentDraft.unitPriceUsd} onChange={(event) => props.setInvestmentDraft({ ...props.investmentDraft, unitPriceUsd: event.target.value })} placeholder="1.00" required /></label>
           <label className="form-field" htmlFor="crypto-investment-quantity"><span>Unidades recibidas (opcional)</span><input id="crypto-investment-quantity" inputMode="decimal" value={props.investmentDraft.quantity} onChange={(event) => props.setInvestmentDraft({ ...props.investmentDraft, quantity: event.target.value })} placeholder="Se calcula con el precio si queda vacío" /></label>
